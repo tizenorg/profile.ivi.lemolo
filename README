@@ -1,0 +1,32 @@
+Connection Manager
+******************
+
+Copyright (C) 2012  Intel Corporation. All rights reserved.
+
+
+ABOUT
+=====
+
+Graphical User Interface for oFono using EFL (Enlightenment Foundation
+Libraries) to be used with Tizen platform.
+
+
+DEBUGGING
+=========
+
+To help debug, the following environment variables could be set:
+
+	EINA_LOG_LEVEL=4
+		toggles debug (level=4) of whole EFL
+
+	EINA_LOG_LEVELS=dialer:4
+		toggles debug of dialer logging domain.
+
+	EINA_LOG_ABORT=1
+		make it abort on critical errors.
+
+	EINA_LOG_ABORT_LEVEL=2
+		make it also abort on errors.
+
+	EINA_LOG_BACKTRACE=2
+		make it produce backtraces whenever a log level is reached.

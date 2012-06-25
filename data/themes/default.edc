@@ -1,0 +1,508 @@
+collections {
+   group {
+      name: "elm/layout/dialer/main";
+      parts {
+         part {
+            name: "bg";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 0 0 0 255;
+            }
+         }
+
+         part {
+            name: "elm.swallow.keypad";
+            type: SWALLOW;
+            description {
+               state: "default" 0.0;
+               rel2.relative: 1.0 0.9;
+            }
+         }
+
+      }
+   }
+
+   group {
+      name: "elm/layout/dialer/keypad";
+      parts {
+         part {
+            name: "elm.text.display";
+            type: TEXT;
+            mouse_events: 0;
+            scale: 1;
+            description {
+               state: "default" 0.0;
+               color: 220 220 220 255;
+               rel2 {
+                  relative: 1.0 0.0;
+                  offset: -1.0 100;
+               }
+               text {
+                  text: "+1 (12) 3456-7890";
+                  font: "Verdana";
+                  size: 42;
+                  size_range: 16 42;
+                  fit: 1 1;
+                  align: 0.5 0.5;
+                  ellipsis: 1.0;
+               }
+            }
+         }
+
+         part {
+            name: "bg.buttons";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 0 0 0 255;
+               rel1 {
+                  relative: 0.0 1.0;
+                  to_y: "elm.text.display";
+               }
+            }
+         }
+
+#define BUTTON(id, label, sub, r1, r2)                                  \
+         part {                                                         \
+            name: "button."##id;                                        \
+            type: RECT;                                                 \
+            mouse_events: 1;                                            \
+            description {                                               \
+               state: "default" 0.0;                                    \
+               color: 96 96 96 255;                                     \
+               rel1 {                                                   \
+                  to: "bg.buttons";                                     \
+                  relative: r1;                                         \
+               }                                                        \
+               rel2 {                                                   \
+                  to: "bg.buttons";                                     \
+                  relative: r2;                                         \
+                  offset: -2 -2;                                        \
+               }                                                        \
+            }                                                           \
+            description {                                               \
+               state: "pressed" 0.0;                                    \
+               inherit: "default" 0.0;                                  \
+               color: 128 128 128 255;                                  \
+            }                                                           \
+         }                                                              \
+         part {                                                         \
+            name: "label."##id;                                         \
+            type: TEXT;                                                 \
+            effect: SHADOW;                                             \
+            mouse_events: 0;                                            \
+            description {                                               \
+               state: "default" 0.0;                                    \
+               color: 220 220 220 255;                                  \
+               color3: 32 32 32 128;                                    \
+               rel1.to: "button."##id;                                  \
+               rel2 {                                                   \
+                  to: "button."##id;                                    \
+                  relative: 1.0 0.8;                                    \
+               }                                                        \
+               text {                                                   \
+                  text: label;                                          \
+                  font: "Verdana:style=Bold";                           \
+                  size: 36;                                             \
+                  align: 0.5 0.5;                                       \
+               }                                                        \
+            }                                                           \
+            description {                                               \
+               state: "pressed" 0.0;                                    \
+               inherit: "default" 0.0;                                  \
+               color: 255 255 255 255;                                  \
+            }                                                           \
+         }                                                              \
+         part {                                                         \
+            name: "sub."##id;                                           \
+            type: TEXT;                                                 \
+            mouse_events: 0;                                            \
+            description {                                               \
+               state: "default" 0.0;                                    \
+               color: 180 180 180 255;                                  \
+               rel1 {                                                   \
+                  to: "button."##id;                                    \
+                  relative: 0.0 0.5;                                    \
+                  offset: 0 2;                                          \
+               }                                                        \
+               rel2.to: "button."##id;                                  \
+               text {                                                   \
+                  text: sub;                                            \
+                  font: "Verdana:style=Bold";                           \
+                  size: 16;                                             \
+                  align: 0.5 0.5;                                       \
+               }                                                        \
+            }                                                           \
+         }                                                              \
+         programs {                                                     \
+            program {                                                   \
+               signal: "mouse,up,1";                                    \
+               source: "button."##id;                                   \
+               action: SIGNAL_EMIT "released,"##id "keypad";            \
+               after: "show_up_"##id;                                   \
+            }                                                           \
+            program {                                                   \
+               name: "show_up_"##id;                                    \
+               action: STATE_SET "default" 0.0;                         \
+               transition: DECELERATE 0.1;                              \
+               target: "button."##id;                                   \
+               target: "label."##id;                                    \
+               target: "sub."##id;                                      \
+            }                                                           \
+            program {                                                   \
+               signal: "mouse,down,1";                                  \
+               source: "button."##id;                                   \
+               after: "show_down_"##id;                                 \
+               action: SIGNAL_EMIT "pressed,"##id "keypad";             \
+            }                                                           \
+            program {                                                   \
+               name: "show_down_"##id;                                  \
+               action: STATE_SET "pressed" 0.0;                         \
+               transition: ACCELERATE 0.3;                              \
+               target: "button."##id;                                   \
+               target: "label."##id;                                    \
+               target: "sub."##id;                                      \
+            }                                                           \
+            program {                                                   \
+               signal: "mouse,clicked,1";                               \
+               source: "button."##id;                                   \
+               action: SIGNAL_EMIT "clicked,"##id "keypad";             \
+            }                                                           \
+         }
+
+         BUTTON("1",    "1",     "", 0.000 0.0, 0.333 0.2);
+         BUTTON("2",    "2",  "ABC", 0.333 0.0, 0.666 0.2);
+         BUTTON("3",    "3",  "DEF", 0.666 0.0, 1.000 0.2);
+
+         BUTTON("4",    "4",  "GHI", 0.000 0.2, 0.333 0.4);
+         BUTTON("5",    "5",  "JKL", 0.333 0.2, 0.666 0.4);
+         BUTTON("6",    "6",  "MNO", 0.666 0.2, 1.000 0.4);
+
+         BUTTON("7",    "7", "PQRS", 0.000 0.4, 0.333 0.6);
+         BUTTON("8",    "8",  "TUV", 0.333 0.4, 0.666 0.6);
+         BUTTON("9",    "9", "WXYZ", 0.666 0.4, 1.000 0.6);
+
+         BUTTON("star", "*",     "", 0.000 0.6, 0.333 0.8);
+         BUTTON("0",    "0",    "+", 0.333 0.6, 0.666 0.8);
+         BUTTON("hash", "#",     "", 0.666 0.6, 1.000 0.8);
+
+         /* TODO: better special buttons */
+         BUTTON("save", "Save", "", 0.000 0.8, 0.333 1.0);
+         BUTTON("call", "Call", "", 0.333 0.8, 0.666 1.0);
+         BUTTON("backspace", "<", "", 0.666 0.8, 1.000 1.0);
+#undef BUTTON
+      }
+   }
+
+   group {
+      name: "elm/layout/dialer/call";
+      parts {
+         part {
+            name: "bg";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 0 0 0 255;
+            }
+         }
+
+         part {
+            name: "elm.text.name";
+            type: TEXT;
+            mouse_events: 0;
+            scale: 1;
+            description {
+               state: "default" 0.0;
+               color: 220 220 220 255;
+               rel1.offset: 15 15;
+               rel2 {
+                  relative: 1.0 0.0;
+                  offset: -16 70;
+               }
+               text {
+                  text: "Gustavo Barbieri";
+                  font: "Verdana";
+                  size: 42;
+                  size_range: 16 42;
+                  fit: 1 1;
+                  align: 0.0 0.5;
+                  ellipsis: 0.0;
+               }
+            }
+         }
+
+         part {
+            name: "elm.text.status";
+            type: TEXT;
+            mouse_events: 0;
+            scale: 1;
+            description {
+               state: "default" 0.0;
+               color: 128 128 128 255;
+               rel1 {
+                  relative: 0.0 1.0;
+                  to: "elm.text.name";
+               }
+               rel2 {
+                  to: "elm.text.name";
+                  relative: 1.0 1.0;
+                  offset: -1.0 30;
+               }
+               text {
+                  text: "calling...";
+                  font: "Verdana";
+                  size: 18;
+                  min: 0 1;
+                  align: 0.0 1.0;
+                  ellipsis: 0.0;
+               }
+            }
+         }
+
+         part {
+            name: "bg.buttons";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 16 16 16 255;
+               rel1 {
+                  relative: 0.0 1.0;
+                  offset: 0 -100;
+               }
+            }
+         }
+         part {
+            name: "area.hangup";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 0 0 0 0;
+               rel1 {
+                  to: "bg.buttons";
+                  relative: 0.0 0.0;
+                  offset: 15 15;
+               }
+               rel2 {
+                  to: "bg.buttons";
+                  relative: 0.5 1.0;
+                  offset: -16 -16;
+               }
+            }
+            description {
+               state: "full" 0.0;
+               inherit: "default" 0.0;
+               rel2 {
+                  to: "bg.buttons";
+                  relative: 1.0 1.0;
+                  offset: -16 -16;
+               }
+            }
+         }
+         part {
+            name: "button.hangup";
+            type: RECT;
+            mouse_events: 1;
+            description {
+               state: "default" 0.0;
+               color: 160 32 32 255;
+               rel1.to: "area.hangup";
+               rel2.to: "area.hangup";
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color: 160 32 32 128;
+            }
+         }
+         part {
+            name: "label.hangup";
+            type: TEXT;
+            effect: SHADOW;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 220 220 220 255;
+               color3: 32 32 32 128;
+               rel1.to: "button.hangup";
+               rel2.to: "button.hangup";
+               text {
+                  text: "Hangup";
+                  font: "Verdana:style=Bold";
+                  size: 36;
+                  align: 0.5 0.5;
+               }
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color: 255 255 255 255;
+            }
+         }
+         programs {
+            program {
+               signal: "mouse,up,1";
+               source: "button.hangup";
+               action: SIGNAL_EMIT "released,hangup" "call";
+               after: "show_up_hangup";
+            }
+            program {
+               name: "show_up_hangup";
+               action: STATE_SET "default" 0.0;
+               transition: DECELERATE 0.1;
+               target: "button.hangup";
+               target: "label.hangup";
+            }
+            program {
+               signal: "mouse,down,1";
+               source: "button.hangup";
+               after: "show_down_hangup";
+               action: SIGNAL_EMIT "pressed,hangup" "call";
+            }
+            program {
+               name: "show_down_hangup";
+               action: STATE_SET "pressed" 0.0;
+               transition: ACCELERATE 0.3;
+               target: "button.hangup";
+               target: "label.hangup";
+            }
+            program {
+               signal: "mouse,clicked,1";
+               source: "button.hangup";
+               action: SIGNAL_EMIT "clicked,hangup" "call";
+            }
+         }
+
+
+         part {
+            name: "clipper.answer";
+            type: RECT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+            }
+            description {
+               state: "hidden" 0.0;
+               color: 255 255 255 0;
+               visible: 0;
+            }
+         }
+         part {
+            name: "button.answer";
+            type: RECT;
+            mouse_events: 1;
+            clip_to: "clipper.answer";
+            description {
+               state: "default" 0.0;
+               color: 32 160 32 255;
+               rel1 {
+                  to: "bg.buttons";
+                  relative: 0.5 0.0;
+                  offset: 15 15;
+               }
+               rel2 {
+                  to: "bg.buttons";
+                  relative: 1.0 1.0;
+                  offset: -16 -16;
+               }
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color: 160 32 32 128;
+            }
+         }
+         part {
+            name: "label.answer";
+            type: TEXT;
+            effect: SHADOW;
+            mouse_events: 0;
+            clip_to: "clipper.answer";
+            description {
+               state: "default" 0.0;
+               color: 220 220 220 255;
+               color3: 32 32 32 128;
+               rel1.to: "button.answer";
+               rel2.to: "button.answer";
+               text {
+                  text: "Answer";
+                  font: "Verdana:style=Bold";
+                  size: 36;
+                  align: 0.5 0.5;
+               }
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color: 255 255 255 255;
+            }
+         }
+         programs {
+            program {
+               signal: "mouse,up,1";
+               source: "button.answer";
+               action: SIGNAL_EMIT "released,answer" "call";
+               after: "show_up_answer";
+            }
+            program {
+               name: "show_up_answer";
+               action: STATE_SET "default" 0.0;
+               transition: DECELERATE 0.1;
+               target: "button.answer";
+               target: "label.answer";
+            }
+            program {
+               signal: "mouse,down,1";
+               source: "button.answer";
+               after: "show_down_answer";
+               action: SIGNAL_EMIT "pressed,answer" "call";
+            }
+            program {
+               name: "show_down_answer";
+               action: STATE_SET "pressed" 0.0;
+               transition: ACCELERATE 0.3;
+               target: "button.answer";
+               target: "label.answer";
+            }
+            program {
+               signal: "mouse,clicked,1";
+               source: "button.answer";
+               action: SIGNAL_EMIT "clicked,answer" "call";
+            }
+         }
+
+         programs {
+            program {
+               signal: "hide,answer";
+               source: "call";
+               action: STATE_SET "hidden" 0.0;
+               target: "clipper.answer";
+            }
+            program {
+               signal: "hide,answer";
+               source: "call";
+               action: STATE_SET "full" 0.0;
+               target: "area.hangup";
+            }
+
+            program {
+               signal: "show,answer";
+               source: "call";
+               action: STATE_SET "default" 0.0;
+               target: "clipper.answer";
+            }
+            program {
+               signal: "show,answer";
+               source: "call";
+               action: STATE_SET "default" 0.0;
+               target: "area.hangup";
+            }
+         }
+      }
+   }
+}
