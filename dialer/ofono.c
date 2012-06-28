@@ -44,6 +44,8 @@ static const void *call_changed_cb_data = NULL;
 static void (*call_disconnected_cb)(void *, OFono_Call *, const char *) = NULL;
 static const void *call_disconnected_cb_data = NULL;
 
+static void _ofono_call_volume_properties_get(OFono_Modem *m);
+
 #define OFONO_SERVICE			"org.ofono"
 
 #define OFONO_PREFIX			OFONO_SERVICE "."
@@ -348,10 +350,13 @@ struct _OFono_Modem
 	unsigned int interfaces;
 	unsigned char strength;
 	unsigned char data_strength;
+	unsigned char speaker_volume;
+	unsigned char microphone_volume;
 	Eina_Bool ignored : 1;
 	Eina_Bool powered : 1;
 	Eina_Bool online : 1;
 	Eina_Bool roaming : 1;
+	Eina_Bool muted : 1;
 };
 
 static OFono_Call *_call_new(const char *path)
@@ -806,6 +811,41 @@ static void _modem_free(OFono_Modem *m)
 	_bus_object_free(&m->base);
 }
 
+
+static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
+						DBusMessageIter *iter)
+{
+
+	if (strcmp(prop_name, "Muted") == 0) {
+		m->muted = _dbus_bool_get(iter);
+		DBG("%s Muted %d", m->base.path, m->muted);
+	} else if (strcmp(prop_name, "SpeakerVolume") == 0) {
+		dbus_message_iter_get_basic(iter, &m->speaker_volume);
+		DBG("%s Speaker Volume %c", m->base.path, m->speaker_volume);
+	} else if (strcmp(prop_name, "MicrophoneVolume") == 0) {
+		dbus_message_iter_get_basic(iter, &m->microphone_volume);
+		DBG("%s Microphone Volume %c", m->base.path, m->speaker_volume);
+	}
+}
+
+static void _call_volume_property_changed(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, variant_iter;
+	const char *prop_name;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	dbus_message_iter_get_basic(&iter, &prop_name);
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &variant_iter);
+	_call_volume_property_update(m, prop_name, &variant_iter);
+
+}
+
 static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
 {
 	DBusMessageIter entry;
@@ -841,6 +881,14 @@ static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
 	return interfaces;
 }
 
+static void _modem_update_interfaces(OFono_Modem *m, unsigned int ifaces)
+{
+
+	if (((m->interfaces & OFONO_API_CALL_VOL) == 0) &&
+		(ifaces & OFONO_API_CALL_VOL) == OFONO_API_CALL_VOL)
+		_ofono_call_volume_properties_get(m);
+}
+
 static void _modem_property_update(OFono_Modem *m, const char *key,
 					DBusMessageIter *value)
 {
@@ -854,6 +902,7 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		unsigned int ifaces = _modem_interfaces_extract(value);
 		DBG("%s Interfaces 0x%02x", m->base.path, ifaces);
 		if (m->interfaces != ifaces) {
+			_modem_update_interfaces(m, ifaces);
 			m->interfaces = ifaces;
 
 			if (modem_selected && modem_path_wanted &&
@@ -872,6 +921,49 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		m->ignored = strcmp(type, "hardware") != 0;
 	} else
 		DBG("%s %s (unused property)", m->base.path, key);
+}
+
+static void _ofono_call_volume_properties_get_reply(void *data,
+							DBusMessage *msg,
+							DBusError *err)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, prop;
+
+	if (dbus_error_is_set(err)) {
+		DBG("%s: %s", err->name, err->message);
+		return;
+	}
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &prop);
+
+	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
+	     dbus_message_iter_next(&prop)) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(&prop, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+		_call_volume_property_update(m, key, &value);
+	}
+}
+
+static void _ofono_call_volume_properties_get(OFono_Modem *m)
+{
+	DBusMessage *msg;
+	msg = dbus_message_new_method_call(bus_id, m->base.path,
+						OFONO_PREFIX
+						OFONO_CALL_VOL_IFACE,
+						"GetProperties");
+	if (!msg)
+		return;
+
+	_bus_object_message_send(&m->base, msg,
+					_ofono_call_volume_properties_get_reply, m);
 }
 
 static void _modem_add(const char *path, DBusMessageIter *prop)
@@ -894,6 +986,9 @@ static void _modem_add(const char *path, DBusMessageIter *prop)
 					"CallAdded", _call_added, m);
 	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_VOICE_IFACE,
 					"CallRemoved", _call_removed, m);
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_CALL_VOL_IFACE,
+					"PropertyChanged",
+					_call_volume_property_changed, m);
 
 	/* TODO: do we need to listen to BarringActive or Forwarded? */
 
@@ -1720,4 +1815,90 @@ void ofono_shutdown(void)
 
 	eina_hash_free(modems);
 	modems = NULL;
+}
+
+static OFono_Pending *_ofono_call_volume_property_set(char *property,
+							int type, void *value,
+							OFono_Simple_Cb cb,
+							const void *data)
+{
+	OFono_Pending *p;
+	OFono_Simple_Cb_Context *ctx = NULL;
+	DBusMessage *msg;
+	DBusMessageIter iter, variant;
+	OFono_Modem *m = _modem_selected_get();
+	char type_to_send[2] = { type , DBUS_TYPE_INVALID };
+
+	EINA_SAFETY_ON_NULL_GOTO(m, error_no_dbus_message);
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error_no_dbus_message);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(bus_id, m->base.path,
+					   OFONO_PREFIX OFONO_CALL_VOL_IFACE,
+					   "SetProperty");
+	if (!msg)
+		goto error_no_dbus_message;
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &property,
+				 DBUS_TYPE_INVALID))
+		goto error_message_args;
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+					 type_to_send, &variant))
+		goto error_message_args;
+
+	if (!dbus_message_iter_append_basic(&variant, type, value) ||
+			!dbus_message_iter_close_container(&iter, &variant)) {
+		dbus_message_iter_abandon_container(&iter, &variant);
+		goto error_message_args;
+	}
+
+	INF("Call-Volume - Property:%s called.", property);
+	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
+	dbus_message_unref(msg);
+
+	return p;
+
+error_message_args:
+	dbus_message_unref(msg);
+
+error_no_dbus_message:
+	if (cb)
+		cb((void *)data, OFONO_ERROR_FAILED);
+	free(ctx);
+	return NULL;
+}
+
+OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb,
+				const void *data)
+{
+	dbus_bool_t dbus_mute = !!mute;
+
+	return  _ofono_call_volume_property_set("Muted", DBUS_TYPE_BOOLEAN,
+						&dbus_mute, cb, data);
+}
+
+OFono_Pending *ofono_volume_speaker_set(unsigned char volume,
+					OFono_Simple_Cb cb,
+					const void *data)
+{
+
+	return _ofono_call_volume_property_set("SpeakerVolume", DBUS_TYPE_BYTE,
+						&volume, cb, data);
+}
+
+OFono_Pending *ofono_volume_microphone_set(unsigned char volume,
+						OFono_Simple_Cb cb,
+						const void *data)
+{
+	return _ofono_call_volume_property_set("MicrophoneVolume",
+						DBUS_TYPE_BYTE, &volume, cb,
+						data);
 }

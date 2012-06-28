@@ -105,6 +105,15 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 				OFono_Call_Cb cb, const void *data);
 
+/* Call Volume: */
+
+OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb, const void *data);
+
+OFono_Pending *ofono_volume_speaker_set(unsigned char volume, OFono_Simple_Cb cb, const void *data);
+
+
+OFono_Pending *ofono_volume_microphone_set(unsigned char volume, OFono_Simple_Cb cb, const void *data);
+
 /* Setup: */
 void ofono_modem_api_require(unsigned int api_mask);
 void ofono_modem_path_wanted_set(const char *path);
