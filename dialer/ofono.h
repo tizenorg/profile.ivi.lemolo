@@ -92,6 +92,9 @@ void ofono_call_changed_cb_set(void (*cb)(void *data, OFono_Call *call),
 void ofono_call_disconnected_cb_set(void (*cb)(void *data, OFono_Call *call, const char *reason),
 				const void *data);
 
+OFono_Pending *ofono_tones_send(const char *tones, OFono_Simple_Cb cb,
+				const void *data);
+
 /* Modem: */
 const char *ofono_modem_serial_get(void);
 
