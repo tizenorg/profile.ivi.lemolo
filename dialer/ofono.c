@@ -283,6 +283,7 @@ static OFono_Pending *_bus_object_message_send(OFono_Bus_Object *o,
 
 	o->dbus_pending = eina_inlist_append(o->dbus_pending,
 						EINA_INLIST_GET(p));
+	dbus_message_unref(msg);
 	return p;
 
 error_send:
@@ -294,6 +295,7 @@ error:
 		dbus_set_error(&err, "Failed", "call setup failed.");
 		cb(data, NULL, &err);
 	}
+	dbus_message_unref(msg);
 	return NULL;
 }
 
@@ -617,7 +619,6 @@ OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
 
 	INF("Hangup(%s)", c->base.path);
 	p = _bus_object_message_send(&c->base, msg, _ofono_simple_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error:
@@ -650,7 +651,6 @@ OFono_Pending *ofono_call_answer(OFono_Call *c, OFono_Simple_Cb cb,
 
 	INF("Answer(%s)", c->base.path);
 	p = _bus_object_message_send(&c->base, msg, _ofono_simple_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error:
@@ -773,7 +773,6 @@ static void _modem_calls_load(OFono_Modem *m)
 
 	DBG("Get calls of %s", m->base.path);
 	_bus_object_message_send(&m->base, msg, _ofono_calls_get_reply, m);
-	dbus_message_unref(msg);
 }
 
 static OFono_Modem *_modem_new(const char *path)
@@ -1294,7 +1293,6 @@ OFono_Pending *ofono_modem_change_pin(const char *what, const char *old,
 
 	INF("ChangePin(%s, %s, %s)", what, old, new);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error_message:
@@ -1344,7 +1342,6 @@ OFono_Pending *ofono_modem_reset_pin(const char *what, const char *puk,
 
 	INF("ResetPin(%s, %s, %s)", what, puk, new);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error_message:
@@ -1611,7 +1608,6 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 
 	INF("SupplementaryServices.Initiate(%s)", command);
 	p = _bus_object_message_send(&m->base, msg, _ofono_string_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error_message:
@@ -1704,7 +1700,6 @@ OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 
 	INF("Dial(%s, %s)", number, hide_callerid);
 	p = _bus_object_message_send(&m->base, msg, _ofono_dial_reply, ctx);
-	dbus_message_unref(msg);
 	return p;
 
 error_message:
@@ -1862,8 +1857,6 @@ static OFono_Pending *_ofono_call_volume_property_set(char *property,
 
 	INF("Call-Volume - Property:%s called.", property);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-	dbus_message_unref(msg);
-
 	return p;
 
 error_message_args:
@@ -1934,7 +1927,6 @@ OFono_Pending *ofono_tones_send(const char *tones,
 
 	INF("Voice-Call-Manager - SendTones:%s called.", tones);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-
 
 	return p;
 error_message_args:
