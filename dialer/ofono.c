@@ -596,12 +596,117 @@ static void _call_removed(void *data, DBusMessage *msg)
 	_call_remove(m, path);
 }
 
+static OFono_Modem *_modem_selected_get(void)
+{
+	OFono_Modem *found_path = NULL, *found_api = NULL, *m;
+	unsigned int online = 0, powered = 0;
+	Eina_Iterator *itr;
+
+	if (modem_selected)
+		return modem_selected;
+
+	itr = eina_hash_iterator_data_new(modems);
+	EINA_ITERATOR_FOREACH(itr, m) {
+		if (m->ignored)
+			continue;
+
+		if (m->online)
+			online++;
+		if (m->powered)
+			powered++;
+
+		if ((modem_path_wanted) && (!found_path)) {
+			DBG("m=%s, wanted=%s", m->base.path, modem_path_wanted);
+			if (m->base.path == modem_path_wanted) {
+				found_path = m;
+				break;
+			}
+		}
+
+		if (!found_api) {
+			DBG("m=%#x, mask=%#x", m->interfaces, modem_api_mask);
+			if ((m->interfaces & modem_api_mask) == modem_api_mask)
+				found_api = m;
+		}
+	}
+	eina_iterator_free(itr);
+
+	INF("found_path=%s, found_api=%s, wanted_path=%s, api_mask=%#x",
+		found_path ? found_path->base.path : "",
+		found_api ? found_api->base.path: "",
+		modem_path_wanted ? modem_path_wanted : "",
+		modem_api_mask);
+
+	if (!powered)
+		ERR("No modems powered! Run connman or test/enable-modem");
+	if (!online)
+		WRN("No modems online! Run connman or test/online-modem");
+
+	modem_selected = found_path ? found_path : found_api;
+	return modem_selected;
+}
+
+static OFono_Pending *_ofono_multiparty(const char *method,
+					E_DBus_Method_Return_Cb dbus_cb,
+					OFono_Simple_Cb cb, const void *data)
+{
+
+	OFono_Pending *p;
+	DBusMessage *msg;
+	OFono_Simple_Cb_Context *ctx = NULL;
+	OFono_Modem *m = _modem_selected_get();
+
+	EINA_SAFETY_ON_NULL_GOTO(m, error_no_message);
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error_no_message);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(
+				bus_id, m->base.path,
+				OFONO_PREFIX OFONO_VOICE_IFACE,
+				method);
+
+	if (!msg)
+		goto error_no_message;
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_INVALID))
+		goto error_message_append;
+
+	INF("Calling - %s - multiparty method.", method);
+	p = _bus_object_message_send(&m->base, msg, dbus_cb, ctx);
+
+	return p;
+
+error_message_append:
+	dbus_message_unref(msg);
+error_no_message:
+	if (cb)
+		cb((void *)data, OFONO_ERROR_FAILED);
+	free(ctx);
+	return NULL;
+}
+
+static OFono_Pending *_ofono_multiparty_hangup(OFono_Simple_Cb cb,
+						const void *data)
+{
+	return _ofono_multiparty("HangupMultiparty",_ofono_simple_reply, cb,
+					data);
+}
+
 OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
 					const void *data)
 {
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Pending *p;
 	DBusMessage *msg;
+
+	/* It looks like we are in a conference */
+	if (c->multiparty)
+		return _ofono_multiparty_hangup(cb, data);
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 
@@ -676,56 +781,6 @@ const char *ofono_call_line_id_get(const OFono_Call *c)
 {
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 	return c->line_id;
-}
-
-static OFono_Modem *_modem_selected_get(void)
-{
-	OFono_Modem *found_path = NULL, *found_api = NULL, *m;
-	unsigned int online = 0, powered = 0;
-	Eina_Iterator *itr;
-
-	if (modem_selected)
-		return modem_selected;
-
-	itr = eina_hash_iterator_data_new(modems);
-	EINA_ITERATOR_FOREACH(itr, m) {
-		if (m->ignored)
-			continue;
-
-		if (m->online)
-			online++;
-		if (m->powered)
-			powered++;
-
-		if ((modem_path_wanted) && (!found_path)) {
-			DBG("m=%s, wanted=%s", m->base.path, modem_path_wanted);
-			if (m->base.path == modem_path_wanted) {
-				found_path = m;
-				break;
-			}
-		}
-
-		if (!found_api) {
-			DBG("m=%#x, mask=%#x", m->interfaces, modem_api_mask);
-			if ((m->interfaces & modem_api_mask) == modem_api_mask)
-				found_api = m;
-		}
-	}
-	eina_iterator_free(itr);
-
-	INF("found_path=%s, found_api=%s, wanted_path=%s, api_mask=%#x",
-		found_path ? found_path->base.path : "",
-		found_api ? found_api->base.path: "",
-		modem_path_wanted ? modem_path_wanted : "",
-		modem_api_mask);
-
-	if (!powered)
-		ERR("No modems powered! Run connman or test/enable-modem");
-	if (!online)
-		WRN("No modems online! Run connman or test/online-modem");
-
-	modem_selected = found_path ? found_path : found_api;
-	return modem_selected;
 }
 
 static void _ofono_calls_get_reply(void *data, DBusMessage *msg,
@@ -1937,5 +1992,12 @@ error_no_dbus_message:
 		cb((void *)data, OFONO_ERROR_FAILED);
 	free(ctx);
 	return NULL;
+}
+
+OFono_Pending *ofono_multiparty_create(OFono_Simple_Cb cb,
+					const void *data)
+{
+	return _ofono_multiparty("CreateMultiparty",
+					_ofono_simple_reply, cb, data);
 }
 
