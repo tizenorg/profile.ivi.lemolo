@@ -150,7 +150,7 @@ Eina_Bool gui_init(void)
 	evas_object_show(obj);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
-	evas_object_resize(win, 480, 800);
+	evas_object_resize(win, 720, 1280);
 
 	/* do not show it yet, RC will check if it should be visible or not */
 	return EINA_TRUE;
