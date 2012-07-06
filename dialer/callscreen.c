@@ -204,7 +204,7 @@ static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
 	OFono_Call_State state;
-	const char *contact, *status, *signal = "hide,answer";
+	const char *contact, *status, *sig = "hide,answer";
 
 	DBG("ctx=%p, call=%p, changed=%p", ctx, ctx->in_use, c);
 
@@ -235,7 +235,7 @@ static void _call_changed(void *data, OFono_Call *c)
 		break;
 	case OFONO_CALL_STATE_INCOMING:
 		status = "Incoming...";
-		signal = "show,answer";
+		sig = "show,answer";
 		break;
 	case OFONO_CALL_STATE_WAITING:
 		status = "Waiting...";
@@ -246,7 +246,7 @@ static void _call_changed(void *data, OFono_Call *c)
 
 	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
 	elm_object_part_text_set(ctx->self, "elm.text.status", status);
-	elm_object_signal_emit(ctx->self, signal, "call");
+	elm_object_signal_emit(ctx->self, sig, "call");
 
 	if (state == OFONO_CALL_STATE_DISCONNECTED)
 		_call_disconnected_show(ctx, c, "local");
