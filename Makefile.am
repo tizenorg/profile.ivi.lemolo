@@ -47,13 +47,23 @@ EDJE_FLAGS = $(EDJE_FLAGS_VERBOSE_$(V)) -id $(top_srcdir)/data/themes/images -fd
 filesdir = $(pkgdatadir)/themes
 files_DATA = data/themes/default.edj
 
-EXTRA_DIST = data/themes/default.edc
-
 AM_V_EDJ = $(am__v_EDJ_$(V))
 am__v_EDJ_ = $(am__v_EDJ_$(AM_DEFAULT_VERBOSITY))
 am__v_EDJ_0 = @echo "  EDJ   " $@;
 
-data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc
+THEME_IMAGES = \
+data/themes/images/bg_keypad.png \
+data/themes/images/bt_add_contact_pressed.png \
+data/themes/images/bt_add_contact_released.png \
+data/themes/images/bt_backspace_pressed.png \
+data/themes/images/bt_backspace_released.png \
+data/themes/images/bt_call_pressed.png \
+data/themes/images/bt_call_released.png
+
+EXTRA_DIST = data/themes/default.edc $(THEME_IMAGES)
+
+
+data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(THEME_IMAGES)
 	$(MKDIR_P) $(top_builddir)/data/themes
 	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
 	$(top_srcdir)/data/themes/default.edc \
