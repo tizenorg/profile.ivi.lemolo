@@ -497,6 +497,7 @@ collections {
                color: 255 255 255 255;
                color_class: "light";
                fixed: 1 1;
+               align: 0.0 0.0;
                rel1 {
                   to: "elm.text.name";
                   relative: 0.0 1.0;
@@ -504,16 +505,46 @@ collections {
                }
                rel2 {
                   to: "elm.text.name";
-                  relative: 1.0 1.0;
+                  relative: 0.0 1.0;
                   offset: -1.0 -1;
                }
                text {
                   text: "calling...";
                   font: "Verdana";
                   size: 43;
-                  min: 0 1;
+                  min: 1 1;
                   align: 0.0 0.0;
-                  ellipsis: 0.0;
+               }
+            }
+         }
+
+         part {
+            name: "elm.text.elapsed";
+            type: TEXT;
+            mouse_events: 0;
+            scale: 1;
+            description {
+               state: "default" 0.0;
+               color: 255 255 255 255;
+               color_class: "light";
+               fixed: 1 1;
+               align: 0.0 0.0;
+               rel1 {
+                  to: "elm.text.status";
+                  relative: 1.0 0.0;
+                  offset: 32 0;
+               }
+               rel2 {
+                  to: "elm.text.status";
+                  relative: 1.0 1.0;
+                  offset: 32 -1;
+               }
+               text {
+                  text: "01:23";
+                  font: "Verdana";
+                  size: 43;
+                  min: 1 1;
+                  align: 0.0 0.0;
                }
             }
          }

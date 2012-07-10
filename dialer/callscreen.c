@@ -13,6 +13,7 @@ typedef struct _Callscreen
 	OFono_Call *in_use;
 	Eina_List *calls;
 	OFono_Call_State last_state;
+	Ecore_Timer *elapsed_updater;
 	struct {
 		Eina_Strbuf *todo;
 		OFono_Pending *pending;
@@ -304,6 +305,48 @@ static void _call_removed(void *data, OFono_Call *c)
 	_call_disconnected_show(ctx, c, "local");
 }
 
+static Eina_Bool _on_elapsed_updater(void *data)
+{
+	Callscreen *ctx = data;
+	double next, elapsed, start = ofono_call_start_time_get(ctx->in_use);
+	Edje_Message_Float msgf;
+	Evas_Object *ed;
+	char buf[128];
+
+	if (start < 0) {
+		ERR("Unknown start time for call");
+		ctx->elapsed_updater = NULL;
+		return EINA_FALSE;
+	}
+
+	elapsed = ecore_loop_time_get() - start;
+	if (elapsed < 0) {
+		ERR("Time rewinded? %f - %f = %f", ecore_loop_time_get(), start,
+			elapsed);
+		ctx->elapsed_updater = NULL;
+		return EINA_FALSE;
+	}
+
+	ed = elm_layout_edje_get(ctx->self);
+	msgf.val = elapsed;
+	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 3, &msgf);
+
+	if (elapsed > 3600)
+		snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+				(int)elapsed / 3600,
+				(int)elapsed % 3600 / 60,
+				(int)elapsed % 60);
+	else
+		snprintf(buf, sizeof(buf), "%02d:%02d",
+				(int)elapsed / 60,
+				(int)elapsed % 60);
+	elm_object_part_text_set(ctx->self, "elm.text.elapsed", buf);
+
+	next = 1.0 - (elapsed - (int)elapsed);
+	ctx->elapsed_updater = ecore_timer_add(next, _on_elapsed_updater, ctx);
+	return EINA_FALSE;
+}
+
 static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
@@ -353,18 +396,23 @@ static void _call_changed(void *data, OFono_Call *c)
 	elm_object_signal_emit(ctx->self, sig, "call");
 
 	if (ctx->last_state != state) {
+		Eina_Bool have_updater = !!ctx->elapsed_updater;
+		Eina_Bool want_updater = EINA_FALSE;
+
 		switch (state) {
 		case OFONO_CALL_STATE_DISCONNECTED:
 			sig = "state,disconnected";
 			break;
 		case OFONO_CALL_STATE_ACTIVE:
 			sig = "state,active";
+			want_updater = EINA_TRUE;
 			break;
 		case OFONO_CALL_STATE_HELD:
 			sig = "state,held";
 			break;
 		case OFONO_CALL_STATE_DIALING:
 			sig = "state,dialing";
+			want_updater = EINA_TRUE;
 			break;
 		case OFONO_CALL_STATE_ALERTING:
 			sig = "state,alerting";
@@ -381,6 +429,21 @@ static void _call_changed(void *data, OFono_Call *c)
 		if (sig)
 			elm_object_signal_emit(ctx->self, sig, "call");
 		ctx->last_state = state;
+
+		sig = NULL;
+		if (have_updater && !want_updater) {
+			ecore_timer_del(ctx->elapsed_updater);
+			ctx->elapsed_updater = NULL;
+			sig = "hide,elapsed";
+			elm_object_part_text_set(ctx->self, "elm.text.elapsed",
+							"");
+		} else if (!have_updater && want_updater) {
+			ctx->elapsed_updater = ecore_timer_add(0.01,
+				_on_elapsed_updater, ctx);
+			sig = "show,elapsed";
+		}
+		if (sig)
+			elm_object_signal_emit(ctx->self, sig, "call");
 	}
 
 	elm_object_signal_emit(ctx->self, "disable,merge", "call");
@@ -416,6 +479,9 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	eina_strbuf_free(ctx->tones.todo);
 	if (ctx->tones.pending)
 		ofono_pending_cancel(ctx->tones.pending);
+
+	if (ctx->elapsed_updater)
+		ecore_timer_del(ctx->elapsed_updater);
 
 	eina_stringshare_del(ctx->disconnected.number);
 
