@@ -74,6 +74,7 @@ void gui_call_enter(void)
 		return;
 	in_flip_anim = EINA_TRUE;
 	elm_flip_go(flip, ELM_FLIP_ROTATE_Y_CENTER_AXIS);
+	elm_object_focus_set(cs, EINA_TRUE);
 }
 
 void gui_call_exit(void)
@@ -85,6 +86,7 @@ void gui_call_exit(void)
 		return;
 	in_flip_anim = EINA_TRUE;
 	elm_flip_go(flip, ELM_FLIP_ROTATE_Y_CENTER_AXIS);
+	elm_object_focus_set(kp, EINA_TRUE);
 }
 
 static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
@@ -95,6 +97,10 @@ static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 	if (showing_call ^ in_call) {
 		DBG("Flip back to sync");
 		elm_flip_go(flip, ELM_FLIP_ROTATE_Y_CENTER_AXIS);
+		if (in_call)
+			elm_object_focus_set(cs, EINA_TRUE);
+		else
+			elm_object_focus_set(kp, EINA_TRUE);
 	}
 	in_flip_anim = EINA_FALSE;
 }

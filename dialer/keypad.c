@@ -454,6 +454,7 @@ Evas_Object *keypad_add(Evas_Object *parent) {
 					_on_clicked, ctx);
 
 	elm_object_part_text_set(obj, "elm.text.display", "");
+	elm_object_focus_allow_set(obj, EINA_TRUE);
 
 	return obj;
 }

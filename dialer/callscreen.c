@@ -218,8 +218,72 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	} else if (strcmp(emission, "answer") == 0) {
 		if (ctx->in_use)
 			ofono_call_answer(ctx->in_use, NULL, NULL);
+	} else if (strcmp(emission, "mute") == 0) {
+		Eina_Bool val = !ofono_mute_get();
+		ofono_mute_set(val, NULL, NULL);
+	} else if (strcmp(emission, "speaker") == 0) {
+		ERR("TODO - implement platform loudspeaker code");
+	} else if (strcmp(emission, "contacts") == 0) {
+		ERR("TODO - implement access to contacts");
 	}
 }
+
+static void _on_key_down(void *data, Evas *e __UNUSED__,
+				Evas_Object *o __UNUSED__,
+				void *event_info)
+{
+	Callscreen *ctx = data;
+	Evas_Event_Key_Down *ev = event_info;
+	DBG("ctx=%p, key=%s (%s, %s)", ctx, ev->keyname, ev->key, ev->string);
+
+	if ((strcmp(ev->key, "minus") == 0) ||
+		(strcmp(ev->key, "KP_Subtract") == 0) ||
+		(strcmp(ev->key, "XF86AudioLowerVolume") == 0)) {
+		unsigned char last, cur;
+
+		last = cur = ofono_volume_speaker_get();
+		if (cur < 10)
+			cur = 0;
+		else
+			cur -= 10;
+
+		if (last != cur)
+			ofono_volume_speaker_set(cur, NULL, NULL);
+	} else if ((strcmp(ev->key, "plus") == 0) ||
+			(strcmp(ev->key, "KP_Add") == 0) ||
+			(strcmp(ev->key, "XF86AudioRaiseVolume") == 0)) {
+		unsigned char last, cur;
+
+		last = cur = ofono_volume_speaker_get();
+		if (cur > 90)
+			cur = 100;
+		else
+			cur += 10;
+
+		if (last != cur)
+			ofono_volume_speaker_set(cur, NULL, NULL);
+	}
+}
+
+static void _ofono_changed(void *data)
+{
+	Callscreen *ctx = data;
+	Edje_Message_Float msgf;
+	Evas_Object *ed;
+	const char *sig;
+
+	sig = ofono_mute_get() ? "toggle,on,mute" : "toggle,off,mute";
+	elm_object_signal_emit(ctx->self, sig, "call");
+
+	ed = elm_layout_edje_get(ctx->self);
+
+	msgf.val = (ofono_volume_speaker_get() / 100.0);
+	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 1, &msgf);
+
+	msgf.val = (ofono_volume_microphone_get() / 100.0);
+	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 2, &msgf);
+}
+
 
 static void _call_added(void *data, OFono_Call *c)
 {
@@ -324,6 +388,8 @@ static void _call_changed(void *data, OFono_Call *c)
 
 	if (state == OFONO_CALL_STATE_DISCONNECTED)
 		_call_disconnected_show(ctx, c, "local");
+
+	_ofono_changed(ctx);
 }
 
 static void _call_disconnected(void *data, OFono_Call *c, const char *reason)
@@ -345,6 +411,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	ofono_call_removed_cb_set(NULL, NULL);
 	ofono_call_changed_cb_set(NULL, NULL);
 	ofono_call_disconnected_cb_set(NULL, NULL);
+	ofono_changed_cb_set(NULL, NULL);
 
 	eina_strbuf_free(ctx->tones.todo);
 	if (ctx->tones.pending)
@@ -376,6 +443,10 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 	elm_object_signal_callback_add(obj, "clicked,*", "call",
 					_on_clicked, ctx);
 
+	elm_object_focus_allow_set(obj, EINA_TRUE);
+	evas_object_event_callback_add(obj, EVAS_CALLBACK_KEY_DOWN,
+					_on_key_down, ctx);
+
 	elm_object_part_text_set(obj, "elm.text.name", "");
 	elm_object_part_text_set(obj, "elm.text.status", "");
 
@@ -383,6 +454,7 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 	ofono_call_removed_cb_set(_call_removed, ctx);
 	ofono_call_changed_cb_set(_call_changed, ctx);
 	ofono_call_disconnected_cb_set(_call_disconnected, ctx);
+	ofono_changed_cb_set(_ofono_changed, ctx);
 
 	return obj;
 }
