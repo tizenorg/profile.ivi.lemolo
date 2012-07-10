@@ -129,6 +129,7 @@ void ofono_modem_path_wanted_set(const char *path);
 /* TODO: unique listener or multiple? set x add */
 void ofono_connected_cb_set(void (*cb)(void *data), const void *data);
 void ofono_disconnected_cb_set(void (*cb)(void *data), const void *data);
+void ofono_changed_cb_set(void (*cb)(void *data), const void *data);
 
 void ofono_pending_cancel(OFono_Pending *pending);
 

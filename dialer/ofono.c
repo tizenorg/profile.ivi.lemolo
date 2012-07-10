@@ -32,6 +32,9 @@ static const void *connected_cb_data = NULL;
 static void (*disconnected_cb)(void *) = NULL;
 static const void *disconnected_cb_data = NULL;
 
+static void (*changed_cb)(void *) = NULL;
+static const void *changed_cb_data = NULL;
+
 static void (*call_added_cb)(void *, OFono_Call *) = NULL;
 static const void *call_added_cb_data = NULL;
 
@@ -898,6 +901,8 @@ static void _call_volume_property_changed(void *data, DBusMessage *msg)
 	dbus_message_iter_recurse(&iter, &variant_iter);
 	_call_volume_property_update(m, prop_name, &variant_iter);
 
+	if (changed_cb)
+		changed_cb((void *)changed_cb_data);
 }
 
 static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
@@ -975,6 +980,9 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		m->ignored = strcmp(type, "hardware") != 0;
 	} else
 		DBG("%s %s (unused property)", m->base.path, key);
+
+	if (changed_cb)
+		changed_cb((void *)changed_cb_data);
 }
 
 static void _ofono_call_volume_properties_get_reply(void *data,
@@ -1797,6 +1805,12 @@ void ofono_disconnected_cb_set(void (*cb)(void *data), const void *data)
 {
 	disconnected_cb = cb;
 	disconnected_cb_data = data;
+}
+
+void ofono_changed_cb_set(void (*cb)(void *data), const void *data)
+{
+	changed_cb = cb;
+	changed_cb_data = data;
 }
 
 void ofono_call_added_cb_set(void (*cb)(void *data, OFono_Call *call),
