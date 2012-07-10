@@ -14,6 +14,10 @@ typedef struct _Callscreen
 	Eina_List *calls;
 	OFono_Call_State last_state;
 	struct {
+		Eina_Strbuf *todo;
+		OFono_Pending *pending;
+	} tones;
+	struct {
 		const char *number;
 		Evas_Object *popup;
 	} disconnected;
@@ -141,6 +145,24 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	evas_object_show(p);
 }
 
+static void _tones_send_reply(void *data, OFono_Error err)
+{
+	Callscreen *ctx = data;
+
+	if (err)
+		ERR("Failed to send tones: %d", err);
+
+	ctx->tones.pending = NULL;
+	if (eina_strbuf_length_get(ctx->tones.todo) > 0) {
+		const char *tones = eina_strbuf_string_get(ctx->tones.todo);
+
+		DBG("Send pending tones: %s", tones);
+		ctx->tones.pending = ofono_tones_send(
+			tones, _tones_send_reply, ctx);
+		eina_strbuf_reset(ctx->tones.todo);
+	}
+}
+
 static void _on_pressed(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
@@ -168,10 +190,27 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
+	const char *dtmf = NULL;
 	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->in_use, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
 	emission += strlen("clicked,");
+
+	if ((emission[0] >= '0') && (emission[0] <= '9'))
+		dtmf = emission;
+	else if (strcmp(emission, "star") == 0)
+		dtmf = "*";
+	else if (strcmp(emission, "hash") == 0)
+		dtmf = "#";
+
+	if (dtmf) {
+		if (!ctx->tones.pending)
+			ctx->tones.pending = ofono_tones_send(
+				dtmf, _tones_send_reply, ctx);
+		else
+			eina_strbuf_append_char(ctx->tones.todo, dtmf[0]);
+		return;
+	}
 
 	if (strcmp(emission, "hangup") == 0) {
 		if (ctx->in_use)
@@ -307,6 +346,10 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	ofono_call_changed_cb_set(NULL, NULL);
 	ofono_call_disconnected_cb_set(NULL, NULL);
 
+	eina_strbuf_free(ctx->tones.todo);
+	if (ctx->tones.pending)
+		ofono_pending_cancel(ctx->tones.pending);
+
 	eina_stringshare_del(ctx->disconnected.number);
 
 	eina_list_free(ctx->calls);
@@ -320,6 +363,7 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 
 	ctx = calloc(1, sizeof(Callscreen));
 	ctx->self = obj;
+	ctx->tones.todo = eina_strbuf_new();
 
 	evas_object_data_set(obj, "callscreen.ctx", ctx);
 
