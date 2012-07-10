@@ -875,10 +875,10 @@ static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
 		DBG("%s Muted %d", m->base.path, m->muted);
 	} else if (strcmp(prop_name, "SpeakerVolume") == 0) {
 		dbus_message_iter_get_basic(iter, &m->speaker_volume);
-		DBG("%s Speaker Volume %c", m->base.path, m->speaker_volume);
+		DBG("%s Speaker Volume %hhu", m->base.path, m->speaker_volume);
 	} else if (strcmp(prop_name, "MicrophoneVolume") == 0) {
 		dbus_message_iter_get_basic(iter, &m->microphone_volume);
-		DBG("%s Microphone Volume %c", m->base.path, m->speaker_volume);
+		DBG("%s Microphone Volume %hhu", m->base.path, m->speaker_volume);
 	}
 }
 
