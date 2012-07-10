@@ -59,7 +59,19 @@ data/themes/images/bt_add_contact_released.png \
 data/themes/images/bt_backspace_pressed.png \
 data/themes/images/bt_backspace_released.png \
 data/themes/images/bt_call_pressed.png \
-data/themes/images/bt_call_released.png
+data/themes/images/bt_call_released.png \
+data/themes/images/bt_contacts_pressed.png \
+data/themes/images/bt_contacts_released.png \
+data/themes/images/bt_keypad_pressed.png \
+data/themes/images/bt_keypad_released.png \
+data/themes/images/bt_merge_pressed.png \
+data/themes/images/bt_merge_released.png \
+data/themes/images/bt_mute_pressed.png \
+data/themes/images/bt_mute_released.png \
+data/themes/images/bt_speaker_pressed.png \
+data/themes/images/bt_speaker_released.png \
+data/themes/images/bt_swap_pressed.png \
+data/themes/images/bt_swap_released.png
 
 EXTRA_DIST = data/themes/default.edc $(THEME_IMAGES)
 

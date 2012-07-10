@@ -12,6 +12,7 @@ typedef struct _Callscreen
 	Evas_Object *self;
 	OFono_Call *in_use;
 	Eina_List *calls;
+	OFono_Call_State last_state;
 	struct {
 		const char *number;
 		Evas_Object *popup;
@@ -247,6 +248,40 @@ static void _call_changed(void *data, OFono_Call *c)
 	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
 	elm_object_part_text_set(ctx->self, "elm.text.status", status);
 	elm_object_signal_emit(ctx->self, sig, "call");
+
+	if (ctx->last_state != state) {
+		switch (state) {
+		case OFONO_CALL_STATE_DISCONNECTED:
+			sig = "state,disconnected";
+			break;
+		case OFONO_CALL_STATE_ACTIVE:
+			sig = "state,active";
+			break;
+		case OFONO_CALL_STATE_HELD:
+			sig = "state,held";
+			break;
+		case OFONO_CALL_STATE_DIALING:
+			sig = "state,dialing";
+			break;
+		case OFONO_CALL_STATE_ALERTING:
+			sig = "state,alerting";
+			break;
+		case OFONO_CALL_STATE_INCOMING:
+			sig = "state,incoming";
+			break;
+		case OFONO_CALL_STATE_WAITING:
+			sig = "state,waiting";
+			break;
+		default:
+			sig = NULL;
+		}
+		if (sig)
+			elm_object_signal_emit(ctx->self, sig, "call");
+		ctx->last_state = state;
+	}
+
+	elm_object_signal_emit(ctx->self, "disable,merge", "call");
+	elm_object_signal_emit(ctx->self, "disable,swap", "call");
 
 	if (state == OFONO_CALL_STATE_DISCONNECTED)
 		_call_disconnected_show(ctx, c, "local");
