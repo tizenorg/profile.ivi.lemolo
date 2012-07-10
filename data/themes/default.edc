@@ -53,7 +53,7 @@ collections {
       min: 720 1110;
 
       images {
-         image: "bg_keypad.png" COMP;
+         image: "bg_keypad.jpg" COMP;
          image: "bt_call_pressed.png" COMP;
          image: "bt_call_released.png" COMP;
          image: "bt_backspace_pressed.png" COMP;
@@ -73,7 +73,7 @@ collections {
                color_class: "dark";
                min: 720 1110;
                image {
-                  normal: "bg_keypad.png";
+                  normal: "bg_keypad.jpg";
                   scale_hint: STATIC;
                }
                fill.smooth: 1;
