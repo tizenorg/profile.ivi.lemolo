@@ -6,6 +6,8 @@
 #include "ofono.h"
 #include "log.h"
 
+#include <time.h>
+
 typedef struct _OFono_Modem OFono_Modem;
 typedef struct _OFono_Bus_Object OFono_Bus_Object;
 
@@ -341,6 +343,7 @@ struct _OFono_Call
 	const char *line_id;
 	const char *incoming_line;
 	const char *name;
+	double start_time;
 	OFono_Call_State state;
 	Eina_Bool multiparty : 1;
 	Eina_Bool emergency : 1;
@@ -371,6 +374,8 @@ static OFono_Call *_call_new(const char *path)
 
 	c->base.path = eina_stringshare_add(path);
 	EINA_SAFETY_ON_NULL_GOTO(c->base.path, error_path);
+
+	c->start_time = -1.0;
 
 	return c;
 
@@ -434,6 +439,8 @@ static void _call_property_update(OFono_Call *c, const char *key,
 		state = _call_state_parse(str);
 		DBG("%s State %s (%d)", c->base.path, str, state);
 		c->state = state;
+		if ((state == OFONO_CALL_STATE_ACTIVE) && (c->start_time < 0.0))
+			c->start_time = ecore_loop_time_get();
 	} else if (strcmp(key, "Name") == 0) {
 		const char *str;
 		dbus_message_iter_get_basic(value, &str);
@@ -449,6 +456,22 @@ static void _call_property_update(OFono_Call *c, const char *key,
 		dbus_message_iter_get_basic(value, &v);
 		DBG("%s Emergency %d", c->base.path, v);
 		c->emergency = v;
+	} else if (strcmp(key, "StartTime") == 0) {
+		const char *end, *ts = NULL;
+		struct tm tm;
+		dbus_message_iter_get_basic(value, &ts);
+		memset(&tm, 0, sizeof(tm));
+		end = strptime(ts, "%Y-%m-%dT%H:%M:%S%z", &tm);
+		if ((end) && (*end != '\0'))
+			ERR("Failed to parse StartTime=%s", ts);
+		else {
+			time_t st = mktime(&tm);
+			time_t ut = time(NULL);
+			double lt = ecore_loop_time_get();
+			c->start_time = st - ut + lt;
+			DBG("%s StartTime %f (%s)", c->base.path, c->start_time,
+				ts);
+		}
 	} else
 		DBG("%s %s (unused property)", c->base.path, key);
 }
@@ -784,6 +807,12 @@ const char *ofono_call_line_id_get(const OFono_Call *c)
 {
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 	return c->line_id;
+}
+
+double ofono_call_start_time_get(const OFono_Call *c)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, -1.0);
+	return c->start_time;
 }
 
 static void _ofono_calls_get_reply(void *data, DBusMessage *msg,

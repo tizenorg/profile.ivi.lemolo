@@ -79,6 +79,7 @@ OFono_Pending *ofono_call_answer(OFono_Call *c, OFono_Simple_Cb cb,
 OFono_Call_State ofono_call_state_get(const OFono_Call *c);
 const char *ofono_call_name_get(const OFono_Call *c);
 const char *ofono_call_line_id_get(const OFono_Call *c);
+double ofono_call_start_time_get(const OFono_Call *c);
 
 #define ofono_call_state_valid_check(c) \
 	(ofono_call_state_get(c) != OFONO_CALL_STATE_DISCONNECTED)
