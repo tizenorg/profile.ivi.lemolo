@@ -20,6 +20,11 @@ collections {
          name: "action";
          color: 123 184 155 255;
       }
+
+      color_class {
+         name: "caution";
+         color: 193 39 44 255;
+      }
    }
 
    group {
@@ -414,14 +419,28 @@ collections {
 
    group {
       name: "elm/layout/dialer/call";
+
+      min: 720 1280;
+
+      images {
+         image: "bg_call.jpg" COMP;
+      }
+
       parts {
          part {
             name: "bg";
-            type: RECT;
+            type: IMAGE;
             mouse_events: 0;
             description {
                state: "default" 0.0;
-               color: 0 0 0 255;
+               color: 255 255 255 255;
+               color_class: "dark";
+               min: 720 1280;
+               image {
+                  normal: "bg_call.jpg";
+                  scale_hint: STATIC;
+               }
+               fill.smooth: 1;
             }
          }
 
@@ -432,17 +451,19 @@ collections {
             scale: 1;
             description {
                state: "default" 0.0;
-               color: 220 220 220 255;
-               rel1.offset: 15 15;
+               color: 255 255 255 255;
+               color_class: "action";
+               min: 628 170;
+               rel1.offset: 46 0;
                rel2 {
                   relative: 1.0 0.0;
-                  offset: -16 70;
+                  offset: -47.0 169;
                }
                text {
                   text: "Gustavo Barbieri";
                   font: "Verdana";
-                  size: 42;
-                  size_range: 16 42;
+                  size: 99;
+                  size_range: 16 99;
                   fit: 1 1;
                   align: 0.0 0.5;
                   ellipsis: 0.0;
@@ -457,204 +478,142 @@ collections {
             scale: 1;
             description {
                state: "default" 0.0;
-               color: 128 128 128 255;
+               color: 255 255 255 255;
+               color_class: "light";
+               fixed: 1 1;
                rel1 {
-                  relative: 0.0 1.0;
                   to: "elm.text.name";
+                  relative: 0.0 1.0;
+                  offset: -1.0 -20;
                }
                rel2 {
                   to: "elm.text.name";
                   relative: 1.0 1.0;
-                  offset: -1.0 30;
+                  offset: -1.0 -1;
                }
                text {
                   text: "calling...";
                   font: "Verdana";
-                  size: 18;
+                  size: 43;
                   min: 0 1;
-                  align: 0.0 1.0;
+                  align: 0.0 0.0;
                   ellipsis: 0.0;
                }
             }
          }
 
+#define SEPARATOR(id, rely, offy, relto)                                \
+         part {                                                         \
+            name: "separator.dark."##id;                                \
+            type: RECT;                                                 \
+            mouse_events: 0;                                            \
+            description {                                               \
+               state: "default" 0.0;                                    \
+               color: 255 255 255 255;                                  \
+               color_class: "dark";                                     \
+               rel1 {                                                   \
+                  relative: 0.0 rely;                                   \
+                  offset: 0 offy;                                       \
+                  to_y: relto;                                          \
+               }                                                        \
+               rel2 {                                                   \
+                  relative: 1.0 rely;                                   \
+                  offset: -1 (offy + 4);                                \
+                  to_y: relto;                                          \
+               }                                                        \
+            }                                                           \
+         }                                                              \
+         part {                                                         \
+            name: "separator.bg."##id;                                  \
+            type: RECT;                                                 \
+            mouse_events: 0;                                            \
+            description {                                               \
+               state: "default" 0.0;                                    \
+               color: 255 255 255 255;                                  \
+               color_class: "bg";                                       \
+               rel1 {                                                   \
+                  relative: 0.0 rely;                                   \
+                  offset: 0 (offy + 4);                                 \
+                  to_y: relto;                                          \
+               }                                                        \
+               rel2 {                                                   \
+                  relative: 1.0 rely;                                   \
+                  offset: -1 (offy + 8);                                \
+                  to_y: relto;                                          \
+               }                                                        \
+            }                                                           \
+         }
+
+         SEPARATOR("answer", 0.0, -8, "button.answer");
+         SEPARATOR("hangup", 0.0, -8, "button.hangup");
+#undef SEPARATOR
+
          part {
-            name: "bg.buttons";
+            name: "area.answer";
             type: RECT;
             mouse_events: 0;
             description {
                state: "default" 0.0;
-               color: 16 16 16 255;
-               rel1 {
-                  relative: 0.0 1.0;
-                  offset: 0 -100;
-               }
-            }
-         }
-         part {
-            name: "area.hangup";
-            type: RECT;
-            mouse_events: 0;
-            description {
-               state: "default" 0.0;
-               color: 0 0 0 0;
-               rel1 {
-                  to: "bg.buttons";
-                  relative: 0.0 0.0;
-                  offset: 15 15;
-               }
-               rel2 {
-                  to: "bg.buttons";
-                  relative: 0.5 1.0;
-                  offset: -16 -16;
-               }
+               color: 0 0 0 255;
+               visible: 0;
+               rel1.to_y: "button.hangup";
+               rel2.to_y: "button.hangup";
             }
             description {
-               state: "full" 0.0;
-               inherit: "default" 0.0;
-               rel2 {
-                  to: "bg.buttons";
-                  relative: 1.0 1.0;
-                  offset: -16 -16;
-               }
-            }
-         }
-         part {
-            name: "button.hangup";
-            type: RECT;
-            mouse_events: 1;
-            description {
-               state: "default" 0.0;
-               color: 160 32 32 255;
-               rel1.to: "area.hangup";
-               rel2.to: "area.hangup";
-            }
-            description {
-               state: "pressed" 0.0;
-               inherit: "default" 0.0;
-               color: 160 32 32 128;
-            }
-         }
-         part {
-            name: "label.hangup";
-            type: TEXT;
-            effect: SHADOW;
-            mouse_events: 0;
-            description {
-               state: "default" 0.0;
-               color: 220 220 220 255;
-               color3: 32 32 32 128;
-               rel1.to: "button.hangup";
-               rel2.to: "button.hangup";
-               text {
-                  text: "Hangup";
-                  font: "Verdana:style=Bold";
-                  size: 36;
-                  align: 0.5 0.5;
-               }
-            }
-            description {
-               state: "pressed" 0.0;
+               state: "visible" 0.0;
                inherit: "default" 0.0;
                color: 255 255 255 255;
-            }
-         }
-         programs {
-            program {
-               signal: "mouse,up,1";
-               source: "button.hangup";
-               action: SIGNAL_EMIT "released,hangup" "call";
-               after: "show_up_hangup";
-            }
-            program {
-               name: "show_up_hangup";
-               action: STATE_SET "default" 0.0;
-               transition: DECELERATE 0.1;
-               target: "button.hangup";
-               target: "label.hangup";
-            }
-            program {
-               signal: "mouse,down,1";
-               source: "button.hangup";
-               after: "show_down_hangup";
-               action: SIGNAL_EMIT "pressed,hangup" "call";
-            }
-            program {
-               name: "show_down_hangup";
-               action: STATE_SET "pressed" 0.0;
-               transition: ACCELERATE 0.3;
-               target: "button.hangup";
-               target: "label.hangup";
-            }
-            program {
-               signal: "mouse,clicked,1";
-               source: "button.hangup";
-               action: SIGNAL_EMIT "clicked,hangup" "call";
-            }
-         }
-
-
-         part {
-            name: "clipper.answer";
-            type: RECT;
-            mouse_events: 0;
-            description {
-               state: "default" 0.0;
-            }
-            description {
-               state: "hidden" 0.0;
-               color: 255 255 255 0;
-               visible: 0;
+               visible: 1;
+               rel1 {
+                  to_y: "button.hangup";
+                  relative: 0.0 -1.0;
+                  offset: 0 -8; /* separator */
+               }
+               rel2 {
+                  to_y: "button.hangup";
+                  relative: 0.0 0.0;
+                  offset: 0 -9; /* separator */
+               }
             }
          }
          part {
             name: "button.answer";
             type: RECT;
             mouse_events: 1;
-            clip_to: "clipper.answer";
             description {
                state: "default" 0.0;
-               color: 32 160 32 255;
-               rel1 {
-                  to: "bg.buttons";
-                  relative: 0.5 0.0;
-                  offset: 15 15;
-               }
-               rel2 {
-                  to: "bg.buttons";
-                  relative: 1.0 1.0;
-                  offset: -16 -16;
-               }
+               color: 255 255 255 255;
+               color_class: "bg";
+               rel1.to_y: "area.answer";
+               rel2.to_y: "area.answer";
             }
             description {
                state: "pressed" 0.0;
                inherit: "default" 0.0;
-               color: 160 32 32 128;
+               color_class: "action";
             }
          }
          part {
             name: "label.answer";
             type: TEXT;
-            effect: SHADOW;
             mouse_events: 0;
-            clip_to: "clipper.answer";
             description {
                state: "default" 0.0;
-               color: 220 220 220 255;
-               color3: 32 32 32 128;
+               color: 255 255 255 255;
+               color_class: "action";
                rel1.to: "button.answer";
                rel2.to: "button.answer";
                text {
                   text: "Answer";
-                  font: "Verdana:style=Bold";
-                  size: 36;
+                  font: "Verdana";
+                  size: 99;
                   align: 0.5 0.5;
                }
             }
             description {
                state: "pressed" 0.0;
                inherit: "default" 0.0;
-               color: 255 255 255 255;
+               color: 0 0 0 255;
             }
          }
          programs {
@@ -689,33 +648,98 @@ collections {
                source: "button.answer";
                action: SIGNAL_EMIT "clicked,answer" "call";
             }
+
+            program {
+               signal: "show,answer";
+               source: "call";
+               action: STATE_SET "visible" 0.0;
+               target: "area.answer";
+            }
+            program {
+               signal: "hide,answer";
+               source: "call";
+               action: STATE_SET "default" 0.0;
+               target: "area.answer";
+            }
          }
 
+         part {
+            name: "button.hangup";
+            type: RECT;
+            mouse_events: 1;
+            description {
+               state: "default" 0.0;
+               color: 255 255 255 255;
+               color_class: "bg";
+               rel1 {
+                  relative: 0.0 1.0;
+                  offset: 0 -170;
+               }
+               rel2 {
+                  relative: 1 1.0;
+                  offset: -1 -1;
+               }
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color_class: "caution";
+            }
+         }
+         part {
+            name: "label.hangup";
+            type: TEXT;
+            mouse_events: 0;
+            description {
+               state: "default" 0.0;
+               color: 255 255 255 255;
+               color_class: "caution";
+               rel1.to: "button.hangup";
+               rel2.to: "button.hangup";
+               text {
+                  text: "Hangup";
+                  font: "Verdana";
+                  size: 99;
+                  align: 0.5 0.5;
+               }
+            }
+            description {
+               state: "pressed" 0.0;
+               inherit: "default" 0.0;
+               color: 0 0 0 255;
+            }
+         }
          programs {
             program {
-               signal: "hide,answer";
-               source: "call";
-               action: STATE_SET "hidden" 0.0;
-               target: "clipper.answer";
+               signal: "mouse,up,1";
+               source: "button.hangup";
+               action: SIGNAL_EMIT "released,hangup" "call";
+               after: "show_up_hangup";
             }
             program {
-               signal: "hide,answer";
-               source: "call";
-               action: STATE_SET "full" 0.0;
-               target: "area.hangup";
-            }
-
-            program {
-               signal: "show,answer";
-               source: "call";
+               name: "show_up_hangup";
                action: STATE_SET "default" 0.0;
-               target: "clipper.answer";
+               transition: DECELERATE 0.1;
+               target: "button.hangup";
+               target: "label.hangup";
             }
             program {
-               signal: "show,answer";
-               source: "call";
-               action: STATE_SET "default" 0.0;
-               target: "area.hangup";
+               signal: "mouse,down,1";
+               source: "button.hangup";
+               after: "show_down_hangup";
+               action: SIGNAL_EMIT "pressed,hangup" "call";
+            }
+            program {
+               name: "show_down_hangup";
+               action: STATE_SET "pressed" 0.0;
+               transition: ACCELERATE 0.3;
+               target: "button.hangup";
+               target: "label.hangup";
+            }
+            program {
+               signal: "mouse,clicked,1";
+               source: "button.hangup";
+               action: SIGNAL_EMIT "clicked,hangup" "call";
             }
          }
       }
