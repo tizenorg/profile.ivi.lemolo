@@ -113,11 +113,14 @@ OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 /* Call Volume: */
 
 OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb, const void *data);
+Eina_Bool ofono_mute_get(void);
 
 OFono_Pending *ofono_volume_speaker_set(unsigned char volume, OFono_Simple_Cb cb, const void *data);
+unsigned char ofono_volume_speaker_get(void);
 
 
 OFono_Pending *ofono_volume_microphone_set(unsigned char volume, OFono_Simple_Cb cb, const void *data);
+unsigned char ofono_volume_microphone_get(void);
 
 /* Setup: */
 void ofono_modem_api_require(unsigned int api_mask);

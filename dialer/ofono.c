@@ -1933,6 +1933,13 @@ OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb,
 						&dbus_mute, cb, data);
 }
 
+Eina_Bool ofono_mute_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
+	return m->muted;
+}
+
 OFono_Pending *ofono_volume_speaker_set(unsigned char volume,
 					OFono_Simple_Cb cb,
 					const void *data)
@@ -1942,6 +1949,13 @@ OFono_Pending *ofono_volume_speaker_set(unsigned char volume,
 						&volume, cb, data);
 }
 
+unsigned char ofono_volume_speaker_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, 0);
+	return m->speaker_volume;
+}
+
 OFono_Pending *ofono_volume_microphone_set(unsigned char volume,
 						OFono_Simple_Cb cb,
 						const void *data)
@@ -1949,6 +1963,13 @@ OFono_Pending *ofono_volume_microphone_set(unsigned char volume,
 	return _ofono_call_volume_property_set("MicrophoneVolume",
 						DBUS_TYPE_BYTE, &volume, cb,
 						data);
+}
+
+unsigned char ofono_volume_microphone_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, 0);
+	return m->microphone_volume;
 }
 
 OFono_Pending *ofono_tones_send(const char *tones,
