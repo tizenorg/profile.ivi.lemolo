@@ -304,6 +304,9 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 		ERR("TODO - implement platform loudspeaker code");
 	} else if (strcmp(emission, "contacts") == 0) {
 		ERR("TODO - implement access to contacts");
+	} else if (strcmp(emission, "merge") == 0) {
+		if (ctx->calls.held)
+			ofono_multiparty_create(NULL, NULL);
 	} else if (strcmp(emission, "swap") == 0) {
 		if (ctx->calls.held)
 			ofono_swap_calls(NULL, NULL);
@@ -451,12 +454,53 @@ stop:
 	return EINA_FALSE;
 }
 
+static const char *_call_name_or_id(const OFono_Call *call)
+{
+	const char *s = ofono_call_name_get(call);
+	if ((s) && (s[0] != '\0'))
+		return s;
+	return ofono_call_line_id_get(call);
+}
+
+static char *_call_name_get(const Callscreen *ctx, const OFono_Call *call)
+{
+	Eina_Strbuf *buf;
+	const Eina_List *n;
+	Eina_Bool first = EINA_TRUE;
+	char *s;
+
+	if (!ofono_call_multiparty_get(call))
+		return strdup(_call_name_or_id(call));
+
+	buf = eina_strbuf_new();
+	eina_strbuf_append(buf, "Conf: ");
+	EINA_LIST_FOREACH(ctx->calls.list, n, call) {
+		const char *name;
+
+		if (!ofono_call_multiparty_get(call))
+			continue;
+
+		name = _call_name_or_id(call);
+		if (!first)
+			eina_strbuf_append_printf(buf, ", %s", name);
+		else {
+			eina_strbuf_append(buf, name);
+			first = EINA_FALSE;
+		}
+	}
+
+	s = eina_strbuf_string_steal(buf);
+	eina_strbuf_free(buf);
+	return s;
+}
+
 static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
 	OFono_Call_State state;
 	Eina_Bool was_waiting, was_held;
-	const char *contact, *status, *sig = "hide,answer";
+	const char *status, *sig = "hide,answer";
+	char *contact;
 
 	DBG("ctx=%p, active=%p, held=%p, waiting=%p, changed=%p",
 		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
@@ -468,12 +512,11 @@ static void _call_changed(void *data, OFono_Call *c)
 
 	if ((ctx->calls.waiting) && (!was_waiting)) {
 		char buf[256];
-		contact = ofono_call_name_get(ctx->calls.waiting);
-		if ((!contact) || (contact[0] == '\0'))
-			contact = ofono_call_line_id_get(ctx->calls.waiting);
+		contact = _call_name_get(ctx, ctx->calls.waiting);
 		snprintf(buf, sizeof(buf), "%s is waiting...", contact);
 		elm_object_part_text_set(ctx->self, "elm.text.waiting", buf);
 		elm_object_signal_emit(ctx->self, "show,waiting", "call");
+		free(contact);
 	} else if ((!ctx->calls.waiting) && (was_waiting)) {
 		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
 		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
@@ -487,10 +530,10 @@ static void _call_changed(void *data, OFono_Call *c)
 	}
 
 	c = ctx->calls.active;
+	if (!c)
+		return;
 
-	contact = ofono_call_name_get(c);
-	if ((!contact) || (contact[0] == '\0'))
-		contact = ofono_call_line_id_get(c);
+	contact = _call_name_get(ctx, c);
 
 	state = ofono_call_state_get(c);
 	switch (state) {
@@ -521,7 +564,13 @@ static void _call_changed(void *data, OFono_Call *c)
 	}
 
 	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
+	free(contact);
+
 	elm_object_part_text_set(ctx->self, "elm.text.status", status);
+	elm_object_signal_emit(ctx->self, sig, "call");
+
+	sig = ofono_call_multiparty_get(c) ? "show,multiparty" :
+		"hide,multiparty";
 	elm_object_signal_emit(ctx->self, sig, "call");
 
 	if (ctx->last_state != state) {
@@ -579,13 +628,19 @@ static void _call_changed(void *data, OFono_Call *c)
 	}
 
 	if (ctx->calls.held) {
-		contact = ofono_call_name_get(ctx->calls.held);
-		if ((!contact) || (contact[0] == '\0'))
-			contact = ofono_call_line_id_get(ctx->calls.held);
+		contact = _call_name_get(ctx, ctx->calls.held);
 		elm_object_part_text_set(ctx->self, "elm.text.held", contact);
+		free(contact);
+
+		if (ofono_call_multiparty_get(ctx->calls.held))
+			sig = "show,held,multiparty";
+		else
+			sig = "hide,held,multiparty";
+		elm_object_signal_emit(ctx->self, sig, "call");
 	}
 
-	elm_object_signal_emit(ctx->self, "disable,merge", "call");
+	sig = ctx->calls.held ? "enable,merge" : "disable,merge";
+	elm_object_signal_emit(ctx->self, sig, "call");
 
 	sig = ctx->calls.held ? "enable,swap" : "disable,swap";
 	elm_object_signal_emit(ctx->self, sig, "call");
