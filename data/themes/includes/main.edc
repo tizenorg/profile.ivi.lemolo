@@ -1,6 +1,27 @@
 group {
    name: "elm/layout/dialer/main";
 
+   /*
+    * Represents the dialer main layout with actions and swallows.
+    *
+    * Parts:
+    *   SWALLOW: elm.swallow.keypad
+    *   SWALLOW: elm.swallow.contacts
+    *   SWALLOW: elm.swallow.history
+    *
+    * Signals:
+    *   Emit (source is "gui"):
+    *     pressed,<ID>:  key <ID> was pressed
+    *     released,<ID>: key <ID> was released
+    *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *   Listens (source is "gui"):
+    *     show,<ID>:       have <ID> to be visible (swallow and action)
+    *     toggle,on,<ID>:  force <ID> to be marked as selected
+    *     toggle,off,<ID>: force <ID> to be marked as unselected
+    *
+    * Where <ID> is: keypad, contacts, history.
+    */
+
    images {
       image: "bt_keypad_pressed.png" COMP;
       image: "bt_keypad_released.png" COMP;
@@ -24,6 +45,7 @@ group {
       part {
          name: "elm.swallow.keypad";
          type: SWALLOW;
+         api: "keypad" "where to place the keypad";
          description {
             state: "default" 0.0;
             rel2.offset: -1 -171;
@@ -36,6 +58,7 @@ group {
       part {
          name: "elm.swallow.contacts";
          type: SWALLOW;
+         api: "contacts" "where to place the contacts";
          description {
             state: "default" 0.0;
             rel2.offset: -1 -171;
@@ -48,6 +71,7 @@ group {
       part {
          name: "elm.swallow.history";
          type: SWALLOW;
+         api: "history" "where to place the history";
          description {
             state: "default" 0.0;
             rel2.offset: -1 -171;
@@ -182,6 +206,7 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "gui";                  \
             after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
          }                                                              \
          program {                                                      \
             name: "show_up_"##id;                                       \
@@ -195,6 +220,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "gui";                   \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -207,11 +233,13 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
          program {                                                      \
             signal: "mouse,clicked,1";                                  \
             source: "button.toggle."##id;                               \
             action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
          program {                                                      \
             signal: "toggle,on,"##id;                                   \

@@ -1,6 +1,21 @@
 group {
    name: "elm/layout/dialer/keypad";
 
+   /*
+    * Represents the dialer keypad with the current number display and buttons.
+    *
+    * Parts:
+    *   TEXT: elm.text.display
+    *
+    * Signals:
+    *   Emit (source is "keypad"):
+    *     pressed,<ID>:  key <ID> was pressed
+    *     released,<ID>: key <ID> was released
+    *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *
+    * Where <ID> is: numbers 0 to 9, star, hash, save, call or backspace.
+    */
+
    min: 720 1110;
 
    images {
@@ -36,6 +51,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         api: "display" "displays the current number";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -224,6 +240,7 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "keypad";               \
             after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
          }                                                              \
          program {                                                      \
             name: "show_up_"##id;                                       \
@@ -238,6 +255,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -251,6 +269,7 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "keypad";                \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
       }
 
@@ -327,6 +346,7 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "keypad";               \
             after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
          }                                                              \
          program {                                                      \
             name: "show_up_"##id;                                       \
@@ -340,6 +360,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -352,6 +373,7 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "keypad";                \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
       }
 

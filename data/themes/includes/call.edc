@@ -1,6 +1,42 @@
 group {
    name: "elm/layout/dialer/call";
 
+   /*
+    * Represents the dialer ongoing voice call(s) screen.
+    *
+    * Parts:
+    *   TEXT: elm.text.name
+    *   TEXT: elm.text.status
+    *   TEXT: elm.text.elapsed
+    *
+    * Signals:
+    *   Emit (source is "call"):
+    *     pressed,<ID>:  key <ID> was pressed
+    *     released,<ID>: key <ID> was released
+    *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *   Listen (source is "call"):
+    *     show,answer:     show "answer" action
+    *     hide,answer:     hide "answer" action
+    *     show,elapsed:    have elapsed (elm.text.elapsed) and should be visible
+    *     hide,elapsed:    don't have elapsed and it should be hidden
+    *     state,<STATE>:   state changed to <STATE>
+    *     disable,<ID>:    disable action <ID>
+    *     enable,<ID>:     enable action <ID>
+    *     toggle,on,<ID>:  mark toggle action <ID> as selected
+    *     toggle,off,<ID>: mark toggle action <ID> as unselected
+    *
+    * Messages:
+    *     1 - FLOAT: speaker volume 0.0-1.0
+    *     2 - FLOAT: microphone volume 0.0-1.0
+    *     3 - FLOAT: elapsed time in seconds (> 0.0)
+    *
+    * Where <ID> is: numbers 0 to 9, star, hash, mute, keypad, speaker,
+    * merge, swap, contacts, answer, hangup.
+    *
+    * Where <STATE> is: disconnected, active, held, dialing, alerting,
+    * incoming, waiting.
+    */
+
    min: 720 1280;
 
    images {
@@ -42,6 +78,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         api: "name" "remote party call name";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -69,6 +106,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         api: "status" "call status";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -100,6 +138,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         api: "elapsed" "call elapsed time (formatted)";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -354,6 +393,7 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "call";                 \
             after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
          }                                                              \
          program {                                                      \
             name: "show_up_"##id;                                       \
@@ -367,6 +407,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -379,6 +420,7 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
          program {                                                      \
             signal: "disable,"##id;                                     \
@@ -528,6 +570,7 @@ group {
             signal: "mouse,up,1";                                       \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "call";                 \
+            api: id"_released" id" was released";                       \
             after: "show_up_"##id;                                      \
          }                                                              \
          program {                                                      \
@@ -542,6 +585,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -554,11 +598,13 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
          program {                                                      \
             signal: "mouse,clicked,1";                                  \
             source: "button.toggle."##id;                               \
             action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
          program {                                                      \
             signal: "disable,"##id;                                     \
@@ -748,6 +794,7 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "released,"##id "call";                 \
             after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
          }                                                              \
          program {                                                      \
             name: "show_up_"##id;                                       \
@@ -762,6 +809,7 @@ group {
             source: "button."##id;                                      \
             after: "show_down_"##id;                                    \
             action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
          }                                                              \
          program {                                                      \
             name: "show_down_"##id;                                     \
@@ -775,6 +823,7 @@ group {
             signal: "mouse,clicked,1";                                  \
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
          }                                                              \
       }
 
@@ -1033,6 +1082,7 @@ group {
             source: "button.answer";
             action: SIGNAL_EMIT "released,answer" "call";
             after: "show_up_answer";
+            api: "answer_released" "answer was released";
          }
          program {
             name: "show_up_answer";
@@ -1046,6 +1096,7 @@ group {
             source: "button.answer";
             after: "show_down_answer";
             action: SIGNAL_EMIT "pressed,answer" "call";
+            api: "answer_pressed" "answer was pressed";
          }
          program {
             name: "show_down_answer";
@@ -1058,6 +1109,7 @@ group {
             signal: "mouse,clicked,1";
             source: "button.answer";
             action: SIGNAL_EMIT "clicked,answer" "call";
+            api: "answer_clicked" "answer was clicked";
          }
 
          program {
@@ -1127,6 +1179,7 @@ group {
             signal: "mouse,up,1";
             source: "button.hangup";
             action: SIGNAL_EMIT "released,hangup" "call";
+            api: "hangup_released" "hangup was released";
             after: "show_up_hangup";
          }
          program {
@@ -1141,6 +1194,7 @@ group {
             source: "button.hangup";
             after: "show_down_hangup";
             action: SIGNAL_EMIT "pressed,hangup" "call";
+            api: "hangup_pressed" "hangup was pressed";
          }
          program {
             name: "show_down_hangup";
@@ -1153,6 +1207,7 @@ group {
             signal: "mouse,clicked,1";
             source: "button.hangup";
             action: SIGNAL_EMIT "clicked,hangup" "call";
+            api: "hangup_clicked" "hangup was clicked";
          }
       }
 #undef SEPARATOR
