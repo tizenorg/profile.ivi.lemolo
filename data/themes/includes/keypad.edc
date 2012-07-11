@@ -12,8 +12,12 @@ group {
     *     pressed,<ID>:  key <ID> was pressed
     *     released,<ID>: key <ID> was released
     *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *     enable,<ACTION>:  key <ID> is now clickable
+    *     disable,<ACTION>: key <ID> is now inactive
     *
     * Where <ID> is: numbers 0 to 9, star, hash, save, call or backspace.
+    *
+    * Where <ACTION> is: save, call or backspace.
     */
 
    min: 720 1110;
@@ -293,9 +297,23 @@ group {
 
 #define ACTION_BUTTON(id, img, x0, x1)                                  \
       part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            color_class: "disabled";                                    \
+         }                                                              \
+      }									\
+      part {                                                            \
          name: "button."##id;                                           \
          type: IMAGE;                                                   \
          mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
@@ -324,6 +342,7 @@ group {
       part {                                                            \
          name: "button.over."##id;                                      \
          type: IMAGE;                                                   \
+         clip_to: "clipper."##id;                                       \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
@@ -337,6 +356,24 @@ group {
             state: "pressed" 0.0;                                       \
             inherit: "default" 0.0;                                     \
             color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
             visible: 1;                                                 \
          }                                                              \
       }                                                                 \
@@ -374,6 +411,22 @@ group {
             source: "button."##id;                                      \
             action: SIGNAL_EMIT "clicked,"##id "keypad";                \
             api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "disable,"##id;                                     \
+            source: "keypad";                                           \
+            action: STATE_SET "disabled" 0.0;                           \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_disable" "disable "##id;                           \
+         }                                                              \
+         program {                                                      \
+            signal: "enable,"##id;                                      \
+            source: "keypad";                                           \
+            action: STATE_SET "default" 0.0;                            \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_enable" "enable "##id;                             \
          }                                                              \
       }
 

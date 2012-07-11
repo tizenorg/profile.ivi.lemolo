@@ -37,8 +37,15 @@ static void _number_display(Keypad *ctx)
 
 	if ((!src) || (slen < 1)) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
+		elm_object_signal_emit(ctx->self, "disable,save", "keypad");
+		elm_object_signal_emit(ctx->self, "disable,call", "keypad");
+		elm_object_signal_emit(ctx->self, "disable,backspace",
+					"keypad");
 		return;
 	}
+	elm_object_signal_emit(ctx->self, "enable,save", "keypad");
+	elm_object_signal_emit(ctx->self, "enable,call", "keypad");
+	elm_object_signal_emit(ctx->self, "enable,backspace", "keypad");
 
 	if ((slen <= 4) || (slen > 12))
 		goto show_verbatim;
@@ -454,6 +461,10 @@ Evas_Object *keypad_add(Evas_Object *parent) {
 					_on_clicked, ctx);
 
 	elm_object_part_text_set(obj, "elm.text.display", "");
+	elm_object_signal_emit(obj, "disable,save", "keypad");
+	elm_object_signal_emit(obj, "disable,call", "keypad");
+	elm_object_signal_emit(obj, "disable,backspace", "keypad");
+
 	elm_object_focus_allow_set(obj, EINA_TRUE);
 
 	return obj;
