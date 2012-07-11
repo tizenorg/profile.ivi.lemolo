@@ -34,6 +34,10 @@ dialer_dialer_SOURCES = \
 	dialer/gui.h \
 	dialer/keypad.c \
 	dialer/keypad.h \
+	dialer/contacts.c \
+	dialer/contacts.h \
+	dialer/history.c \
+	dialer/history.h \
 	dialer/callscreen.c \
 	dialer/callscreen.h
 
@@ -62,6 +66,8 @@ data/themes/images/bt_call_pressed.png \
 data/themes/images/bt_call_released.png \
 data/themes/images/bt_contacts_pressed.png \
 data/themes/images/bt_contacts_released.png \
+data/themes/images/bt_history_pressed.png \
+data/themes/images/bt_history_released.png \
 data/themes/images/bt_keypad_pressed.png \
 data/themes/images/bt_keypad_released.png \
 data/themes/images/bt_merge_pressed.png \

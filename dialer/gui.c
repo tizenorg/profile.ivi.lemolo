@@ -6,10 +6,15 @@
 #include "log.h"
 #include "gui.h"
 #include "keypad.h"
+#include "contacts.h"
+#include "history.h"
 #include "callscreen.h"
 
 static Evas_Object *win = NULL;
-static Evas_Object *kp = NULL;
+static Evas_Object *main_layout = NULL;
+static Evas_Object *keypad = NULL;
+static Evas_Object *contacts = NULL;
+static Evas_Object *history = NULL;
 static Evas_Object *cs = NULL;
 static Evas_Object *flip = NULL;
 static char def_theme[PATH_MAX] = "";
@@ -28,6 +33,17 @@ Evas_Object *gui_layout_add(Evas_Object *parent, const char *style)
 		return NULL;
 	}
 	return layout;
+}
+
+static void _gui_show(Evas_Object *o)
+{
+	if (o == keypad)
+		elm_object_signal_emit(main_layout, "show,keypad", "gui");
+	else if (o == contacts)
+		elm_object_signal_emit(main_layout, "show,contacts", "gui");
+	else if (o == history)
+		elm_object_signal_emit(main_layout, "show,history", "gui");
+	elm_object_focus_set(o, EINA_TRUE);
 }
 
 static void _popup_close(void *data, Evas_Object *bt __UNUSED__, void *event __UNUSED__)
@@ -61,8 +77,8 @@ void gui_activate(void)
 
 void gui_number_set(const char *number, Eina_Bool auto_dial)
 {
-	/* TODO: show keypad */
-	keypad_number_set(kp, number, auto_dial);
+	_gui_show(keypad);
+	keypad_number_set(keypad, number, auto_dial);
 }
 
 void gui_call_enter(void)
@@ -86,7 +102,7 @@ void gui_call_exit(void)
 		return;
 	in_flip_anim = EINA_TRUE;
 	elm_flip_go(flip, ELM_FLIP_ROTATE_Y_CENTER_AXIS);
-	elm_object_focus_set(kp, EINA_TRUE);
+	elm_object_focus_set(cs, EINA_FALSE);
 }
 
 static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
@@ -97,12 +113,25 @@ static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 	if (showing_call ^ in_call) {
 		DBG("Flip back to sync");
 		elm_flip_go(flip, ELM_FLIP_ROTATE_Y_CENTER_AXIS);
-		if (in_call)
-			elm_object_focus_set(cs, EINA_TRUE);
-		else
-			elm_object_focus_set(kp, EINA_TRUE);
+		elm_object_focus_set(cs, in_call);
 	}
 	in_flip_anim = EINA_FALSE;
+}
+
+static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
+			const char *emission, const char *source __UNUSED__)
+{
+	DBG("signal: %s", emission);
+
+	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
+	emission += strlen("clicked,");
+
+	if (strcmp(emission, "keypad") == 0)
+		_gui_show(keypad);
+	else if (strcmp(emission, "contacts") == 0)
+		_gui_show(contacts);
+	else if (strcmp(emission, "history") == 0)
+		_gui_show(history);
 }
 
 Eina_Bool gui_init(void)
@@ -135,7 +164,7 @@ Eina_Bool gui_init(void)
 					_gui_call_sync, NULL);
 	evas_object_show(flip);
 
-	lay = gui_layout_add(win, "main");
+	main_layout = lay = gui_layout_add(win, "main");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(lay, EINA_FALSE);
 	evas_object_size_hint_weight_set(lay,
 				EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
@@ -143,9 +172,22 @@ Eina_Bool gui_init(void)
 	elm_object_part_content_set(flip, "front", lay);
 	evas_object_show(lay);
 
-	kp = obj = keypad_add(win);
+	elm_object_signal_callback_add(lay, "clicked,*", "gui",
+					_on_clicked, NULL);
+
+	keypad = obj = keypad_add(win);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
 	elm_object_part_content_set(lay, "elm.swallow.keypad", obj);
+
+	contacts = obj = contacts_add(win);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
+	elm_object_part_content_set(lay, "elm.swallow.contacts", obj);
+
+	history = obj = history_add(win);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
+	elm_object_part_content_set(lay, "elm.swallow.history", obj);
+
+	_gui_show(keypad);
 
 	cs = obj = callscreen_add(win);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
