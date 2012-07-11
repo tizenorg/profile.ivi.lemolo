@@ -273,6 +273,9 @@ static void _ofono_changed(void *data)
 	Evas_Object *ed;
 	const char *sig;
 
+	if (!ctx->calls)
+		return;
+
 	sig = ofono_mute_get() ? "toggle,on,mute" : "toggle,off,mute";
 	elm_object_signal_emit(ctx->self, sig, "call");
 
