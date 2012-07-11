@@ -428,6 +428,7 @@ group {
             action: STATE_SET "disabled" 0.0;                           \
             target: "blocker."##id;                                     \
             target: "clipper."##id;                                     \
+            api: id"_disable" "disable "##id;                           \
          }                                                              \
          program {                                                      \
             signal: "enable,"##id;                                      \
@@ -435,6 +436,7 @@ group {
             action: STATE_SET "default" 0.0;                            \
             target: "blocker."##id;                                     \
             target: "clipper."##id;                                     \
+            api: id"_enable" "enable "##id;                             \
          }                                                              \
       }
 
@@ -612,6 +614,7 @@ group {
             action: STATE_SET "disabled" 0.0;                           \
             target: "blocker."##id;                                     \
             target: "clipper."##id;                                     \
+            api: id"_disable" "disable "##id;                           \
          }                                                              \
          program {                                                      \
             signal: "enable,"##id;                                      \
@@ -619,6 +622,7 @@ group {
             action: STATE_SET "default" 0.0;                            \
             target: "blocker."##id;                                     \
             target: "clipper."##id;                                     \
+            api: id"_enable" "enable "##id;                             \
          }                                                              \
          program {                                                      \
             signal: "toggle,on,"##id;                                   \
@@ -626,6 +630,7 @@ group {
             action: STATE_SET "on" 0.0;                                 \
             target: "clipper.toggle."##id;                              \
             target: "button.toggle."##id;                               \
+            api: id"_toggle_on" "toggle on "##id;                       \
          }                                                              \
          program {                                                      \
             signal: "toggle,off,"##id;                                  \
@@ -633,6 +638,7 @@ group {
             action: STATE_SET "default" 0.0;                            \
             target: "clipper.toggle."##id;                              \
             target: "button.toggle."##id;                               \
+            api: id"_toggle_off" "toggle off "##id;                     \
          }                                                              \
       }
 
