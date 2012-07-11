@@ -809,6 +809,12 @@ const char *ofono_call_line_id_get(const OFono_Call *c)
 	return c->line_id;
 }
 
+Eina_Bool ofono_call_multiparty_get(const OFono_Call *c)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	return c->multiparty;
+}
+
 double ofono_call_start_time_get(const OFono_Call *c)
 {
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, -1.0);
