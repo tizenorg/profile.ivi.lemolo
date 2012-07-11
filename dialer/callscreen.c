@@ -12,6 +12,8 @@ typedef struct _Callscreen
 	Evas_Object *self;
 	struct {
 		OFono_Call *active;
+		OFono_Call *waiting;
+		OFono_Call *held;
 		Eina_List *list;
 	} calls;
 	OFono_Call_State last_state;
@@ -21,15 +23,16 @@ typedef struct _Callscreen
 		OFono_Pending *pending;
 	} tones;
 	struct {
+		const void *call;
 		const char *number;
 		Evas_Object *popup;
 	} disconnected;
 } Callscreen;
 
-static void _call_active_update(Callscreen *ctx)
+static void _calls_update(Callscreen *ctx)
 {
 	const Eina_List *n;
-	OFono_Call *c, *found = NULL;
+	OFono_Call *c, *found = NULL, *waiting = NULL, *held = NULL;
 	OFono_Call_State found_state = OFONO_CALL_STATE_DISCONNECTED;
 	static const int state_priority[] = {
 		[OFONO_CALL_STATE_DISCONNECTED] = 0,
@@ -41,7 +44,25 @@ static void _call_active_update(Callscreen *ctx)
 		[OFONO_CALL_STATE_WAITING] = 2
 	};
 
-	if (ctx->calls.active)
+	if (ctx->calls.active) {
+		OFono_Call_State s = ofono_call_state_get(ctx->calls.active);
+		if (s != OFONO_CALL_STATE_ACTIVE) {
+			ctx->calls.active = NULL;
+			ctx->last_state = 0;
+		}
+	}
+	if (ctx->calls.waiting) {
+		OFono_Call_State s = ofono_call_state_get(ctx->calls.waiting);
+		if (s != OFONO_CALL_STATE_WAITING)
+			ctx->calls.waiting = NULL;
+	}
+	if (ctx->calls.held) {
+		OFono_Call_State s = ofono_call_state_get(ctx->calls.held);
+		if (s != OFONO_CALL_STATE_HELD)
+			ctx->calls.held = NULL;
+	}
+
+	if (ctx->calls.active && ctx->calls.waiting && ctx->calls.held)
 		return;
 
 	EINA_LIST_FOREACH(ctx->calls.list, n, c) {
@@ -53,24 +74,54 @@ static void _call_active_update(Callscreen *ctx)
 			found_state = state;
 			found = c;
 		}
+		if ((!waiting) && (state == OFONO_CALL_STATE_WAITING))
+			waiting = c;
+		if ((!held) && (state == OFONO_CALL_STATE_HELD))
+			held = c;
 	}
 
-	if (!found) {
-		DBG("No calls usable");
+	DBG("found=%p, state=%d, waiting=%p, held=%p",
+		found, found_state, waiting, held);
+	if (!found)
 		return;
-	}
 
-	DBG("found=%p, state=%d", found, found_state);
-	ctx->calls.active = found;
+	if (!ctx->calls.active) {
+		ctx->calls.active = found;
+		ctx->last_state = 0;
+	}
+	if (!ctx->calls.waiting)
+		ctx->calls.waiting = waiting;
+	if (!ctx->calls.held)
+		ctx->calls.held = held;
+
 	gui_call_enter();
 }
 
-static void _call_disconnected_done(Callscreen *ctx)
+static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 {
 	if (!ctx->calls.list)
 		gui_call_exit();
-	else
-		_call_active_update(ctx);
+	else {
+		_calls_update(ctx);
+		if (strcmp(reason, "local") == 0) {
+			/* If there is a held call and active is
+			 * hangup we're left with held but no active,
+			 * which is strange.
+			 *
+			 * Just make the held active by calling
+			 * SwapCalls.
+			 */
+			if (ctx->calls.active == ctx->disconnected.call &&
+				ctx->calls.held != ctx->disconnected.call) {
+				INF("User disconnected and left held call. "
+					"Automatically activate it.");
+
+				/* TODO: sound to notify user */
+				ofono_swap_calls(NULL, NULL);
+			}
+		}
+	}
+	ctx->disconnected.call = NULL;
 }
 
 static void _popup_close(void *data, Evas_Object *o __UNUSED__, void *event __UNUSED__)
@@ -82,7 +133,7 @@ static void _popup_close(void *data, Evas_Object *o __UNUSED__, void *event __UN
 
 	eina_stringshare_replace(&ctx->disconnected.number, NULL);
 
-	_call_disconnected_done(ctx);
+	_call_disconnected_done(ctx, "network");
 }
 
 static void _popup_redial(void *data, Evas_Object *o __UNUSED__, void *event __UNUSED__)
@@ -100,21 +151,38 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	const char *number, *title;
 	char msg[1024];
 
-	DBG("ctx=%p, call=%p, previous=%s, disconnected=%p (%s)",
-		ctx, ctx->calls.active, ctx->disconnected.number, c, reason);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, previous=%s, "
+		"disconnected=%p (%s)",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
+		ctx->disconnected.number, c, reason);
+
+	if (ctx->calls.waiting == c) {
+		ctx->calls.waiting = NULL;
+		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
+		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
+		return;
+	}
+	if (ctx->calls.held == c) {
+		ctx->calls.held = NULL;
+		elm_object_part_text_set(ctx->self, "elm.text.held", "");
+		elm_object_signal_emit(ctx->self, "hide,held", "call");
+		return;
+	}
 
 	if ((ctx->calls.active) && (ctx->calls.active != c))
 		return;
 	ctx->calls.active = NULL;
+	ctx->last_state = 0;
+	ctx->disconnected.call = c;
 
 	if ((strcmp(reason, "local") == 0) || (strcmp(reason, "remote") == 0)) {
-		_call_disconnected_done(ctx);
+		_call_disconnected_done(ctx, reason);
 		return;
 	}
 
 	number = ofono_call_line_id_get(c);
 	if ((!number) || (number[0] == '\0')) {
-		_call_disconnected_done(ctx);
+		_call_disconnected_done(ctx, reason);
 		return;
 	}
 
@@ -145,6 +213,8 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	elm_object_part_content_set(p, "button2", bt);
 	evas_object_smart_callback_add(bt, "clicked", _popup_redial, ctx);
 
+	/* TODO: sound to notify user */
+
 	evas_object_show(p);
 }
 
@@ -170,7 +240,9 @@ static void _on_pressed(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
+		emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "pressed,"));
 	emission += strlen("pressed,");
@@ -182,7 +254,9 @@ static void _on_released(void *data, Evas_Object *obj __UNUSED__,
 				const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
+		emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "released,"));
 	emission += strlen("released,");
@@ -194,7 +268,9 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 {
 	Callscreen *ctx = data;
 	const char *dtmf = NULL;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
+		emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
 	emission += strlen("clicked,");
@@ -228,6 +304,18 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 		ERR("TODO - implement platform loudspeaker code");
 	} else if (strcmp(emission, "contacts") == 0) {
 		ERR("TODO - implement access to contacts");
+	} else if (strcmp(emission, "swap") == 0) {
+		if (ctx->calls.held)
+			ofono_swap_calls(NULL, NULL);
+	} else if (strcmp(emission, "waiting-hangup") == 0) {
+		if (ctx->calls.waiting)
+			ofono_call_hangup(ctx->calls.waiting, NULL, NULL);
+	} else if (strcmp(emission, "hangup-answer") == 0) {
+		if (ctx->calls.waiting)
+			ofono_release_and_answer(NULL, NULL);
+	} else if (strcmp(emission, "hold-answer") == 0) {
+		if (ctx->calls.waiting)
+			ofono_hold_and_answer(NULL, NULL);
 	}
 }
 
@@ -294,14 +382,12 @@ static void _ofono_changed(void *data)
 static void _call_added(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, added=%p", ctx, ctx->calls.active, c);
-
-	if (!ofono_call_state_valid_check(c))
-		return;
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, added=%p",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
 
 	ctx->calls.list = eina_list_append(ctx->calls.list, c);
 	if (!ctx->calls.active) {
-		ctx->calls.active = c;
+		_calls_update(ctx);
 		gui_call_enter();
 	}
 }
@@ -309,7 +395,8 @@ static void _call_added(void *data, OFono_Call *c)
 static void _call_removed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, removed=%p", ctx, ctx->calls.active, c);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, removed=%p",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
 	ctx->calls.list = eina_list_remove(ctx->calls.list, c);
 	_call_disconnected_show(ctx, c, "local");
 }
@@ -322,19 +409,20 @@ static Eina_Bool _on_elapsed_updater(void *data)
 	Evas_Object *ed;
 	char buf[128];
 
+	if (!ctx->calls.active)
+		goto stop;
+
 	start = ofono_call_start_time_get(ctx->calls.active);
 	if (start < 0) {
 		ERR("Unknown start time for call");
-		ctx->elapsed_updater = NULL;
-		return EINA_FALSE;
+		goto stop;
 	}
 
 	elapsed = ecore_loop_time_get() - start;
 	if (elapsed < 0) {
 		ERR("Time rewinded? %f - %f = %f", ecore_loop_time_get(), start,
 			elapsed);
-		ctx->elapsed_updater = NULL;
-		return EINA_FALSE;
+		goto stop;
 	}
 
 	ed = elm_layout_edje_get(ctx->self);
@@ -355,19 +443,50 @@ static Eina_Bool _on_elapsed_updater(void *data)
 	next = 1.0 - (elapsed - (int)elapsed);
 	ctx->elapsed_updater = ecore_timer_add(next, _on_elapsed_updater, ctx);
 	return EINA_FALSE;
+
+stop:
+	elm_object_part_text_set(ctx->self, "elm.text.elapsed", "");
+	elm_object_signal_emit(ctx->self, "hide,elapsed", "call");
+	ctx->elapsed_updater = NULL;
+	return EINA_FALSE;
 }
 
 static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
 	OFono_Call_State state;
+	Eina_Bool was_waiting, was_held;
 	const char *contact, *status, *sig = "hide,answer";
 
-	DBG("ctx=%p, call=%p, changed=%p", ctx, ctx->calls.active, c);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, changed=%p",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
 
-	_call_active_update(ctx);
-	if (ctx->calls.active != c)
-		return;
+	was_waiting = !!ctx->calls.waiting;
+	was_held = !!ctx->calls.held;
+
+	_calls_update(ctx);
+
+	if ((ctx->calls.waiting) && (!was_waiting)) {
+		char buf[256];
+		contact = ofono_call_name_get(ctx->calls.waiting);
+		if ((!contact) || (contact[0] == '\0'))
+			contact = ofono_call_line_id_get(ctx->calls.waiting);
+		snprintf(buf, sizeof(buf), "%s is waiting...", contact);
+		elm_object_part_text_set(ctx->self, "elm.text.waiting", buf);
+		elm_object_signal_emit(ctx->self, "show,waiting", "call");
+	} else if ((!ctx->calls.waiting) && (was_waiting)) {
+		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
+		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
+	}
+
+	if ((ctx->calls.held) && (!was_held))
+		elm_object_signal_emit(ctx->self, "show,held", "call");
+	else if ((!ctx->calls.held) && (was_held)) {
+		elm_object_part_text_set(ctx->self, "elm.text.held", "");
+		elm_object_signal_emit(ctx->self, "hide,held", "call");
+	}
+
+	c = ctx->calls.active;
 
 	contact = ofono_call_name_get(c);
 	if ((!contact) || (contact[0] == '\0'))
@@ -446,17 +565,30 @@ static void _call_changed(void *data, OFono_Call *c)
 			sig = "hide,elapsed";
 			elm_object_part_text_set(ctx->self, "elm.text.elapsed",
 							"");
-		} else if (!have_updater && want_updater) {
-			ctx->elapsed_updater = ecore_timer_add(0.01,
-				_on_elapsed_updater, ctx);
-			sig = "show,elapsed";
+		} else if (want_updater) {
+			if (!have_updater)
+				sig = "show,elapsed";
+			else {
+				ecore_timer_del(ctx->elapsed_updater);
+				ctx->elapsed_updater = NULL;
+			}
+			_on_elapsed_updater(ctx);
 		}
 		if (sig)
 			elm_object_signal_emit(ctx->self, sig, "call");
 	}
 
+	if (ctx->calls.held) {
+		contact = ofono_call_name_get(ctx->calls.held);
+		if ((!contact) || (contact[0] == '\0'))
+			contact = ofono_call_line_id_get(ctx->calls.held);
+		elm_object_part_text_set(ctx->self, "elm.text.held", contact);
+	}
+
 	elm_object_signal_emit(ctx->self, "disable,merge", "call");
-	elm_object_signal_emit(ctx->self, "disable,swap", "call");
+
+	sig = ctx->calls.held ? "enable,swap" : "disable,swap";
+	elm_object_signal_emit(ctx->self, sig, "call");
 
 	if (state == OFONO_CALL_STATE_DISCONNECTED)
 		_call_disconnected_show(ctx, c, "local");
@@ -467,8 +599,9 @@ static void _call_changed(void *data, OFono_Call *c)
 static void _call_disconnected(void *data, OFono_Call *c, const char *reason)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, disconnected=%p (%s)",
-		ctx, ctx->calls.active, c, reason);
+	DBG("ctx=%p, active=%p, held=%p, waiting=%p, disconnected=%p (%s)",
+		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
+		c, reason);
 
 	EINA_SAFETY_ON_NULL_RETURN(reason);
 	_call_disconnected_show(ctx, c, reason);

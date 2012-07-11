@@ -8,6 +8,8 @@ group {
     *   TEXT: elm.text.name
     *   TEXT: elm.text.status
     *   TEXT: elm.text.elapsed
+    *   TEXT: elm.text.waiting
+    *   TEXT: elm.text.held
     *
     * Signals:
     *   Emit (source is "call"):
@@ -17,6 +19,10 @@ group {
     *   Listen (source is "call"):
     *     show,answer:     show "answer" action
     *     hide,answer:     hide "answer" action
+    *     show,waiting:    show call waiting popup (decline, hold+answer...)
+    *     hide,waiting:    hide call waiting popup
+    *     show,held:       show call held entry
+    *     hide,held:       hide call held entry
     *     show,elapsed:    have elapsed (elm.text.elapsed) and should be visible
     *     hide,elapsed:    don't have elapsed and it should be hidden
     *     state,<STATE>:   state changed to <STATE>
@@ -31,7 +37,8 @@ group {
     *     3 - FLOAT: elapsed time in seconds (> 0.0)
     *
     * Where <ID> is: numbers 0 to 9, star, hash, mute, keypad, speaker,
-    * merge, swap, contacts, answer, hangup.
+    * merge, swap, contacts, answer, hangup, waiting-hangup, hold-answer,
+    * hangup-answer.
     *
     * Where <STATE> is: disconnected, active, held, dialing, alerting,
     * incoming, waiting.
@@ -209,6 +216,112 @@ group {
          }                                                              \
       }
 
+      part {
+         name: "clipper.held";
+         type: RECT;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "disabled";
+            visible: 0;
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "elm.text.held";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         api: "held" "held party call name";
+         clip_to: "clipper.held";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: 628 170;
+            rel1 {
+               to_y: "elm.text.status";
+               to_x: "elm.text.name";
+               relative: 0.0 1.0;
+               offset: 0 30;
+            }
+            rel2 {
+               to_y: "elm.text.status";
+               to_x: "elm.text.name";
+               relative: 1.0 1.0;
+               offset: -1 199;
+            }
+            text {
+               text: "Someone on hold";
+               font: "Verdana";
+               size: 99;
+               size_range: 16 99;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+      part {
+         name: "label.held";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.held";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            fixed: 1 1;
+            align: 0.0 0.0;
+            rel1 {
+               to: "elm.text.held";
+               relative: 0.0 1.0;
+               offset: -1.0 -20;
+            }
+            rel2 {
+               to: "elm.text.held";
+               relative: 0.0 1.0;
+               offset: -1.0 -1;
+            }
+            text {
+               text: "on hold";
+               font: "Verdana";
+               size: 43;
+               min: 1 1;
+               align: 0.0 0.0;
+            }
+         }
+      }
+
+      SEPARATOR("held1", "clipper.held", 0.0, -8, "elm.text.held");
+
+      programs {
+         program {
+            signal: "show,held";
+            source: "call";
+            action: STATE_SET "visible" 0.0;
+            transition: DECELERATE 0.3;
+            target: "clipper.held";
+            api: "held_show" "make held entry visible";
+         }
+         program {
+            signal: "hide,held";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.held";
+            api: "held_hide" "make held entry hidden";
+         }
+      }
+
+
       SEPARATOR("actions", "clipper.actions", 0.0, -8, "bg.actions");
 
       part {
@@ -278,7 +391,7 @@ group {
          program {
             signal: "state,held";
             source: "call";
-            after: "hide,actions";
+            after: "show,actions";
          }
          program {
             signal: "state,dialing";
@@ -662,6 +775,7 @@ group {
       part {
          name: "clipper.keypad-hidden";
          type: RECT;
+         clip_to: "clipper.waiting-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -677,6 +791,7 @@ group {
       part {
          name: "clipper.keypad-visible";
          type: RECT;
+         clip_to: "clipper.waiting-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 0;
@@ -1128,6 +1243,7 @@ group {
             action: STATE_SET "visible" 0.0;
             target: "area.answer";
             target: "clipper.answer";
+            api: "answer_show" "make answer button visible";
          }
          program {
             signal: "hide,answer";
@@ -1135,6 +1251,7 @@ group {
             action: STATE_SET "default" 0.0;
             target: "area.answer";
             target: "clipper.answer";
+            api: "answer_hide" "make answer button hidden";
          }
       }
 
@@ -1142,6 +1259,7 @@ group {
          name: "button.hangup";
          type: RECT;
          mouse_events: 1;
+         clip_to: "clipper.waiting-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -1165,6 +1283,7 @@ group {
          name: "label.hangup";
          type: TEXT;
          mouse_events: 0;
+         clip_to: "clipper.waiting-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -1220,6 +1339,247 @@ group {
             api: "hangup_clicked" "hangup was clicked";
          }
       }
+
+      /* waiting popup */
+      part {
+         name: "clipper.waiting-hidden";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.waiting-visible";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "area.waiting";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "bg";
+            visible: 0;
+            fixed: 1 1;
+            min: 0 712;
+            max: 99999 712;
+            align: 0.5 1.0;
+            rel1 {
+               relative: 0.0 -1.0;
+               offset: 0 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -1 712;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               relative: 0.0 -1.0;
+               offset: 0 -712;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+      }
+
+#define BUTTON(id, label, colcls, y1, y2)                               \
+      SEPARATOR(id, "clipper.waiting-visible", 0.0, -8, "button."##id); \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.waiting-visible";                            \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: colcls;                                        \
+            rel1 {                                                      \
+               to: "area.waiting";                                      \
+               relative: 0.0 0.0;                                       \
+               offset: 0 y1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area.waiting";                                      \
+               relative: 1.0 0.0;                                       \
+               offset: -1 y2;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.waiting-visible";                            \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: colcls;                                        \
+            rel1 {                                                      \
+               to: "button."##id;                                       \
+               offset: 46 0;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+               offset: -47 -1;                                          \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: "Verdana";                                         \
+               size: 58;                                                \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            api: id"_released" id" was released";                       \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.3;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("waiting-hangup", "Decline", "action", 186, 355);
+      BUTTON("hold-answer", "Hold + Answer", "action", 364, 533);
+      BUTTON("hangup-answer", "Hangup + Answer", "caution", 542, 711);
+#undef BUTTON
+
+      SEPARATOR("waiting", "clipper.waiting-visible", 0.0, 0, "area.waiting");
+      part {
+         name: "elm.text.waiting";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.waiting-visible";
+         api: "waiting" "waiting call name";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "disabled";
+            rel1 {
+               to: "area.waiting";
+               offset: 46 8;
+            }
+            rel2 {
+               to: "area.waiting";
+               relative: 1.0 0.0;
+               offset: -47.0 177;
+            }
+            text {
+               text: "Someone";
+               font: "Verdana";
+               size: 99;
+               size_range: 16 99;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "hide-waiting-phase1";
+            signal: "hide,waiting";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-visible";
+            target: "area.waiting";
+            after: "hide-waiting-phase2";
+            api: "waiting_hide" "make waiting popup hidden";
+         }
+         program {
+            name: "hide-waiting-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-hidden";
+         }
+
+         program {
+            name: "show-waiting-phase1";
+            signal: "show,waiting";
+            source: "call";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-hidden";
+            after: "show-waiting-phase2";
+            api: "waiting_show" "make waiting popup visible";
+         }
+         program {
+            name: "show-waiting-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "area.waiting";
+            target: "clipper.waiting-visible";
+         }
+      }
+
 #undef SEPARATOR
    }
 
