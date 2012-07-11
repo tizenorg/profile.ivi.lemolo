@@ -10,8 +10,10 @@
 typedef struct _Callscreen
 {
 	Evas_Object *self;
-	OFono_Call *in_use;
-	Eina_List *calls;
+	struct {
+		OFono_Call *active;
+		Eina_List *list;
+	} calls;
 	OFono_Call_State last_state;
 	Ecore_Timer *elapsed_updater;
 	struct {
@@ -24,7 +26,7 @@ typedef struct _Callscreen
 	} disconnected;
 } Callscreen;
 
-static void _call_in_use_update(Callscreen *ctx)
+static void _call_active_update(Callscreen *ctx)
 {
 	const Eina_List *n;
 	OFono_Call *c, *found = NULL;
@@ -39,10 +41,10 @@ static void _call_in_use_update(Callscreen *ctx)
 		[OFONO_CALL_STATE_WAITING] = 2
 	};
 
-	if (ctx->in_use)
+	if (ctx->calls.active)
 		return;
 
-	EINA_LIST_FOREACH(ctx->calls, n, c) {
+	EINA_LIST_FOREACH(ctx->calls.list, n, c) {
 		OFono_Call_State state = ofono_call_state_get(c);
 
 		DBG("compare %p (%d) to %p (%d)", found, found_state,
@@ -59,16 +61,16 @@ static void _call_in_use_update(Callscreen *ctx)
 	}
 
 	DBG("found=%p, state=%d", found, found_state);
-	ctx->in_use = found;
+	ctx->calls.active = found;
 	gui_call_enter();
 }
 
 static void _call_disconnected_done(Callscreen *ctx)
 {
-	if (!ctx->calls)
+	if (!ctx->calls.list)
 		gui_call_exit();
 	else
-		_call_in_use_update(ctx);
+		_call_active_update(ctx);
 }
 
 static void _popup_close(void *data, Evas_Object *o __UNUSED__, void *event __UNUSED__)
@@ -99,11 +101,11 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	char msg[1024];
 
 	DBG("ctx=%p, call=%p, previous=%s, disconnected=%p (%s)",
-		ctx, ctx->in_use, ctx->disconnected.number, c, reason);
+		ctx, ctx->calls.active, ctx->disconnected.number, c, reason);
 
-	if ((ctx->in_use) && (ctx->in_use != c))
+	if ((ctx->calls.active) && (ctx->calls.active != c))
 		return;
-	ctx->in_use = NULL;
+	ctx->calls.active = NULL;
 
 	if ((strcmp(reason, "local") == 0) || (strcmp(reason, "remote") == 0)) {
 		_call_disconnected_done(ctx);
@@ -168,7 +170,7 @@ static void _on_pressed(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->in_use, emission);
+	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "pressed,"));
 	emission += strlen("pressed,");
@@ -180,7 +182,7 @@ static void _on_released(void *data, Evas_Object *obj __UNUSED__,
 				const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->in_use, emission);
+	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "released,"));
 	emission += strlen("released,");
@@ -192,7 +194,7 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 {
 	Callscreen *ctx = data;
 	const char *dtmf = NULL;
-	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->in_use, emission);
+	DBG("ctx=%p, call=%p, signal: %s", ctx, ctx->calls.active, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
 	emission += strlen("clicked,");
@@ -214,11 +216,11 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (strcmp(emission, "hangup") == 0) {
-		if (ctx->in_use)
-			ofono_call_hangup(ctx->in_use, NULL, NULL);
+		if (ctx->calls.active)
+			ofono_call_hangup(ctx->calls.active, NULL, NULL);
 	} else if (strcmp(emission, "answer") == 0) {
-		if (ctx->in_use)
-			ofono_call_answer(ctx->in_use, NULL, NULL);
+		if (ctx->calls.active)
+			ofono_call_answer(ctx->calls.active, NULL, NULL);
 	} else if (strcmp(emission, "mute") == 0) {
 		Eina_Bool val = !ofono_mute_get();
 		ofono_mute_set(val, NULL, NULL);
@@ -273,7 +275,7 @@ static void _ofono_changed(void *data)
 	Evas_Object *ed;
 	const char *sig;
 
-	if (!ctx->calls)
+	if (!ctx->calls.list)
 		return;
 
 	sig = ofono_mute_get() ? "toggle,on,mute" : "toggle,off,mute";
@@ -292,10 +294,14 @@ static void _ofono_changed(void *data)
 static void _call_added(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, added=%p", ctx, ctx->in_use, c);
-	ctx->calls = eina_list_append(ctx->calls, c);
-	if ((!ctx->in_use) && (ofono_call_state_valid_check(c))) {
-		ctx->in_use = c;
+	DBG("ctx=%p, call=%p, added=%p", ctx, ctx->calls.active, c);
+
+	if (!ofono_call_state_valid_check(c))
+		return;
+
+	ctx->calls.list = eina_list_append(ctx->calls.list, c);
+	if (!ctx->calls.active) {
+		ctx->calls.active = c;
 		gui_call_enter();
 	}
 }
@@ -303,19 +309,20 @@ static void _call_added(void *data, OFono_Call *c)
 static void _call_removed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, call=%p, removed=%p", ctx, ctx->in_use, c);
-	ctx->calls = eina_list_remove(ctx->calls, c);
+	DBG("ctx=%p, call=%p, removed=%p", ctx, ctx->calls.active, c);
+	ctx->calls.list = eina_list_remove(ctx->calls.list, c);
 	_call_disconnected_show(ctx, c, "local");
 }
 
 static Eina_Bool _on_elapsed_updater(void *data)
 {
 	Callscreen *ctx = data;
-	double next, elapsed, start = ofono_call_start_time_get(ctx->in_use);
+	double next, elapsed, start;
 	Edje_Message_Float msgf;
 	Evas_Object *ed;
 	char buf[128];
 
+	start = ofono_call_start_time_get(ctx->calls.active);
 	if (start < 0) {
 		ERR("Unknown start time for call");
 		ctx->elapsed_updater = NULL;
@@ -356,10 +363,10 @@ static void _call_changed(void *data, OFono_Call *c)
 	OFono_Call_State state;
 	const char *contact, *status, *sig = "hide,answer";
 
-	DBG("ctx=%p, call=%p, changed=%p", ctx, ctx->in_use, c);
+	DBG("ctx=%p, call=%p, changed=%p", ctx, ctx->calls.active, c);
 
-	_call_in_use_update(ctx);
-	if (ctx->in_use != c)
+	_call_active_update(ctx);
+	if (ctx->calls.active != c)
 		return;
 
 	contact = ofono_call_name_get(c);
@@ -461,7 +468,7 @@ static void _call_disconnected(void *data, OFono_Call *c, const char *reason)
 {
 	Callscreen *ctx = data;
 	DBG("ctx=%p, call=%p, disconnected=%p (%s)",
-		ctx, ctx->in_use, c, reason);
+		ctx, ctx->calls.active, c, reason);
 
 	EINA_SAFETY_ON_NULL_RETURN(reason);
 	_call_disconnected_show(ctx, c, reason);
@@ -487,7 +494,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 
 	eina_stringshare_del(ctx->disconnected.number);
 
-	eina_list_free(ctx->calls);
+	eina_list_free(ctx->calls.list);
 	free(ctx);
 }
 
