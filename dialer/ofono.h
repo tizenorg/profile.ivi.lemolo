@@ -111,6 +111,12 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 				OFono_Call_Cb cb, const void *data);
 
+OFono_Pending *ofono_transfer(OFono_Simple_Cb cb, const void *data);
+OFono_Pending *ofono_swap_calls(OFono_Simple_Cb cb, const void *data);
+OFono_Pending *ofono_release_and_answer(OFono_Simple_Cb cb, const void *data);
+OFono_Pending *ofono_hold_and_answer(OFono_Simple_Cb cb, const void *data);
+OFono_Pending *ofono_hangup_all(OFono_Simple_Cb cb, const void *data);
+
 /* Call Volume: */
 
 OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb, const void *data);

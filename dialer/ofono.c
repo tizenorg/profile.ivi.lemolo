@@ -1803,6 +1803,82 @@ error:
 	return NULL;
 }
 
+static OFono_Pending *_ofono_simple_do(OFono_API api, const char *method,
+					OFono_Simple_Cb cb, const void *data)
+{
+	OFono_Simple_Cb_Context *ctx = NULL;
+	OFono_Error err = OFONO_ERROR_OFFLINE;
+	OFono_Pending *p;
+	DBusMessage *msg;
+	char iface[128] = "";
+	const struct API_Interface_Map *itr;
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_GOTO(m, error);
+	EINA_SAFETY_ON_NULL_GOTO(method, error);
+
+	if ((m->interfaces & api) == 0)
+		goto error;
+	err = OFONO_ERROR_FAILED;
+
+	for (itr = api_iface_map; itr->name != NULL; itr++) {
+		if (itr->bit == api) {
+			snprintf(iface, sizeof(iface), "%s%s",
+					OFONO_PREFIX, itr->name);
+			break;
+		}
+	}
+	if (iface[0] == '\0') {
+		ERR("Could not map api %d to interface name!", api);
+		goto error;
+	}
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(bus_id, m->base.path, iface, method);
+	if (!msg)
+		goto error;
+
+	INF("%s.%s()", iface, method);
+	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
+	return p;
+
+error:
+	if (cb)
+		cb((void *)data, err);
+	free(ctx);
+	return NULL;
+}
+
+OFono_Pending *ofono_transfer(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "Transfer", cb, data);
+}
+
+OFono_Pending *ofono_swap_calls(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "SwapCalls", cb, data);
+}
+
+OFono_Pending *ofono_release_and_answer(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "ReleaseAndAnswer", cb, data);
+}
+
+OFono_Pending *ofono_hold_and_answer(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "HoldAndAnswer", cb, data);
+}
+
+OFono_Pending *ofono_hangup_all(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "HangupAll", cb, data);
+}
+
 const char *ofono_modem_serial_get(void)
 {
 	OFono_Modem *m = _modem_selected_get();
