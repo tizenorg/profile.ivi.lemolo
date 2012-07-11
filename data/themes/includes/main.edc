@@ -1,0 +1,332 @@
+group {
+   name: "elm/layout/dialer/main";
+
+   images {
+      image: "bt_keypad_pressed.png" COMP;
+      image: "bt_keypad_released.png" COMP;
+      image: "bt_contacts_pressed.png" COMP;
+      image: "bt_contacts_released.png" COMP;
+      image: "bt_history_pressed.png" COMP;
+      image: "bt_history_released.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+         }
+      }
+
+      part {
+         name: "elm.swallow.keypad";
+         type: SWALLOW;
+         description {
+            state: "default" 0.0;
+            rel2.offset: -1 -171;
+         }
+         description {
+            state: "hidden" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "elm.swallow.contacts";
+         type: SWALLOW;
+         description {
+            state: "default" 0.0;
+            rel2.offset: -1 -171;
+         }
+         description {
+            state: "hidden" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "elm.swallow.history";
+         type: SWALLOW;
+         description {
+            state: "default" 0.0;
+            rel2.offset: -1 -171;
+         }
+         description {
+            state: "hidden" 0.0;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "bg.actions";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 720 170;
+            max: 720 99999; /* keep it tight centered */
+            fixed: 1 1;
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -170;
+            }
+         }
+      }
+
+#define ACTION_TOGGLE(id, x1, x2)                                       \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.toggle."##id;                                \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: 240 170;                                               \
+            max: 240 170;                                               \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: x1 0.0;					\
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: x2 1.0;                                        \
+               offset: -1 -1;                                           \
+            }                                                           \
+            image.normal: "bt_"##id"_released.png";                     \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.over."##id;                                      \
+         type: IMAGE;                                                   \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##id"_pressed.png";                      \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "clipper.toggle."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.toggle."##id;                                    \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##id"_pressed.png";                      \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "gui";                  \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "gui";                   \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button.toggle."##id;                               \
+            action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,on,"##id;                                   \
+            source: "gui";                                              \
+            action: STATE_SET "on" 0.0;                                 \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,off,"##id;                                  \
+            source: "gui";                                              \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+         }                                                              \
+      }
+
+      ACTION_TOGGLE("keypad",   0.000000000, 0.333333333);
+      ACTION_TOGGLE("contacts", 0.333333333, 0.666666666);
+      ACTION_TOGGLE("history",  0.666666666, 1.000000000);
+#undef ACTION_TOGGLE
+
+      programs {
+         program {
+            name: "show-keypad-swallow-phase1";
+            signal: "show,keypad";
+            source: "gui";
+            action: STATE_SET "hidden" 0.0;
+            target: "elm.swallow.contacts";
+            target: "elm.swallow.history";
+            after: "show-keypad-swallow-phase2";
+         }
+         program {
+            name: "show-keypad-swallow-phase2";
+            action: STATE_SET "default" 0.0;
+            target: "elm.swallow.keypad";
+         }
+
+         program {
+            signal: "show,keypad";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,on,keypad" "gui";
+         }
+         program {
+            signal: "show,keypad";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,contacts" "gui";
+         }
+         program {
+            signal: "show,keypad";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,history" "gui";
+         }
+
+         program {
+            name: "show-contacts-swallow-phase1";
+            signal: "show,contacts";
+            source: "gui";
+            action: STATE_SET "hidden" 0.0;
+            target: "elm.swallow.keypad";
+            target: "elm.swallow.history";
+            after: "show-contacts-swallow-phase2";
+         }
+         program {
+            name: "show-contacts-swallow-phase2";
+            action: STATE_SET "default" 0.0;
+            target: "elm.swallow.contacts";
+         }
+
+         program {
+            signal: "show,contacts";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,on,contacts" "gui";
+         }
+         program {
+            signal: "show,contacts";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,keypad" "gui";
+         }
+         program {
+            signal: "show,contacts";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,history" "gui";
+         }
+
+         program {
+            name: "show-history-swallow-phase1";
+            signal: "show,history";
+            source: "gui";
+            action: STATE_SET "hidden" 0.0;
+            target: "elm.swallow.contacts";
+            target: "elm.swallow.keypad";
+            after: "show-history-swallow-phase2";
+         }
+         program {
+            name: "show-history-swallow-phase2";
+            action: STATE_SET "default" 0.0;
+            target: "elm.swallow.history";
+         }
+
+         program {
+            signal: "show,history";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,on,history" "gui";
+         }
+         program {
+            signal: "show,history";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,contacts" "gui";
+         }
+         program {
+            signal: "show,history";
+            source: "gui";
+            action: SIGNAL_EMIT "toggle,off,keypad" "gui";
+         }
+      }
+   }
+}

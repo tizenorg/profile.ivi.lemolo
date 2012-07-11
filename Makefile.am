@@ -79,10 +79,17 @@ data/themes/images/bt_speaker_released.png \
 data/themes/images/bt_swap_pressed.png \
 data/themes/images/bt_swap_released.png
 
-EXTRA_DIST = data/themes/default.edc $(THEME_IMAGES)
+THEME_INCLUDES = \
+data/themes/includes/call.edc \
+data/themes/includes/colors.edc \
+data/themes/includes/keypad.edc \
+data/themes/includes/main.edc
 
 
-data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(THEME_IMAGES)
+EXTRA_DIST = data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+
+
+data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)
 	$(MKDIR_P) $(top_builddir)/data/themes
 	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
 	$(top_srcdir)/data/themes/default.edc \

@@ -1,0 +1,1161 @@
+group {
+   name: "elm/layout/dialer/call";
+
+   min: 720 1280;
+
+   images {
+      image: "bg_call.jpg" COMP;
+      image: "bt_mute_pressed.png" COMP;
+      image: "bt_mute_released.png" COMP;
+      image: "bt_keypad_pressed.png" COMP;
+      image: "bt_keypad_released.png" COMP;
+      image: "bt_speaker_pressed.png" COMP;
+      image: "bt_speaker_released.png" COMP;
+      image: "bt_merge_pressed.png" COMP;
+      image: "bt_merge_released.png" COMP;
+      image: "bt_swap_pressed.png" COMP;
+      image: "bt_swap_released.png" COMP;
+      image: "bt_contacts_pressed.png" COMP;
+      image: "bt_contacts_released.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            min: 720 1280;
+            image {
+               normal: "bg_call.jpg";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+      part {
+         name: "elm.text.name";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: 628 170;
+            rel1.offset: 46 0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -47.0 169;
+            }
+            text {
+               text: "Gustavo Barbieri";
+               font: "Verdana";
+               size: 99;
+               size_range: 16 99;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.status";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            fixed: 1 1;
+            align: 0.0 0.0;
+            rel1 {
+               to: "elm.text.name";
+               relative: 0.0 1.0;
+               offset: -1.0 -20;
+            }
+            rel2 {
+               to: "elm.text.name";
+               relative: 0.0 1.0;
+               offset: -1.0 -1;
+            }
+            text {
+               text: "calling...";
+               font: "Verdana";
+               size: 43;
+               min: 1 1;
+               align: 0.0 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.elapsed";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            fixed: 1 1;
+            align: 0.0 0.0;
+            rel1 {
+               to: "elm.text.status";
+               relative: 1.0 0.0;
+               offset: 32 0;
+            }
+            rel2 {
+               to: "elm.text.status";
+               relative: 1.0 1.0;
+               offset: 32 -1;
+            }
+            text {
+               text: "01:23";
+               font: "Verdana";
+               size: 43;
+               min: 1 1;
+               align: 0.0 0.0;
+            }
+         }
+      }
+
+#define SEPARATOR(id, clip, rely, offy, relto)                          \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + 4);                                   \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + 4);                                    \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + 8);                                   \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("actions", "clipper.actions", 0.0, -8, "bg.actions");
+
+      part {
+         name: "bg.actions";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 720 340;
+            max: 720 99999; /* keep it tight centered */
+            fixed: 1 1;
+            rel1 {
+               to: "bg.buttons";
+               relative: 0.0 0.0;
+               offset: 0 -348;
+            }
+            rel2 {
+               to: "bg.buttons";
+               relative: 1.0 0.0;
+               offset: -1 -8;
+            }
+         }
+      }
+      part {
+         name: "clipper.actions";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      programs {
+         program {
+            name: "show,actions";
+            action: STATE_SET "visible" 0.0;
+            transition: DECELERATE 0.3;
+            target: "clipper.actions";
+         }
+         program {
+            name: "hide,actions";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.actions";
+         }
+
+         program {
+            signal: "state,disconnected";
+            source: "call";
+            after: "hide,actions";
+         }
+         program {
+            signal: "state,active";
+            source: "call";
+            after: "show,actions";
+         }
+         program {
+            signal: "state,held";
+            source: "call";
+            after: "hide,actions";
+         }
+         program {
+            signal: "state,dialing";
+            source: "call";
+            after: "hide,actions";
+         }
+         program {
+            signal: "state,alerting";
+            source: "call";
+            after: "hide,actions";
+         }
+         program {
+            signal: "state,incoming";
+            source: "call";
+            after: "hide,actions";
+         }
+      }
+
+#define ACTION_BUTTON(id, img, r1, r2)                                  \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.actions";                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            color_class: "disabled";                                    \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: 240 170;                                               \
+            max: 240 170;                                               \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+            image.normal: "bt_"##img"_released.png";                    \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.over."##id;                                      \
+         type: IMAGE;                                                   \
+         clip_to: "clipper."##id;                                       \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##img"_pressed.png";                     \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "disable,"##id;                                     \
+            source: "call";                                             \
+            action: STATE_SET "disabled" 0.0;                           \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+         }                                                              \
+         program {                                                      \
+            signal: "enable,"##id;                                      \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+         }                                                              \
+      }
+
+#define ACTION_TOGGLE(id, img, r1, r2)                                  \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.actions";                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            color_class: "disabled";                                    \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.toggle."##id;                                \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: 240 170;                                               \
+            max: 240 170;                                               \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+            image.normal: "bt_"##img"_released.png";                    \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.over."##id;                                      \
+         type: IMAGE;                                                   \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##img"_pressed.png";                     \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "clipper.toggle."##id;                                   \
+         type: RECT;                                                    \
+         clip_to: "clipper."##id;                                       \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.toggle."##id;                                    \
+         type: IMAGE;                                                   \
+         clip_to: "clipper."##id;                                       \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##img"_pressed.png";                     \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button.toggle."##id;                               \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "disable,"##id;                                     \
+            source: "call";                                             \
+            action: STATE_SET "disabled" 0.0;                           \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+         }                                                              \
+         program {                                                      \
+            signal: "enable,"##id;                                      \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,on,"##id;                                   \
+            source: "call";                                             \
+            action: STATE_SET "on" 0.0;                                 \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,off,"##id;                                  \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+         }                                                              \
+      }
+
+      ACTION_TOGGLE("mute",    "mute",    0.000000000 0.0, 0.333333333 0.5);
+      ACTION_BUTTON("keypad",  "keypad",  0.333333333 0.0, 0.666666666 0.5);
+      ACTION_TOGGLE("speaker", "speaker", 0.666666666 0.0, 1.000000000 0.5);
+
+      ACTION_BUTTON("merge",    "merge",  0.000000000 0.5, 0.333333333 1.0);
+      ACTION_BUTTON("swap",     "swap",   0.333333333 0.5, 0.666666666 1.0);
+      ACTION_BUTTON("contacts", "contacts",0.666666666 0.5, 1.000000000 1.0);
+#undef ACTION_BUTTON
+#undef ACTION_TOGGLE
+
+      SEPARATOR("answer", "clipper.answer", 0.0, -8, "button.answer");
+      SEPARATOR("hangup", "", 0.0, -8, "button.hangup");
+
+      part {
+         name: "clipper.keypad-hidden";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.keypad-visible";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+
+
+      /* keypad */
+      SEPARATOR("hide-keypad", "clipper.keypad-visible", 0.0, -8, "button.hide-keypad");
+      SEPARATOR("keypad", "clipper.keypad-visible", 0.0, -8, "bg.keypad");
+
+      part {
+         name: "bg.keypad";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 720 680;
+            max: 720 680; /* keep it tight centered */
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 0 -688; /* separator */
+               to_y: "button.hide-keypad";
+            }
+            rel2 {
+               relative: 1.0 0.0;
+               offset: 0 -9; /* separator */
+               to_y: "button.hide-keypad";
+            }
+         }
+      }
+#define BUTTON(id, label, sub, ccls, r1, r2)                            \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "bg.keypad";                                         \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.keypad";                                         \
+               relative: r2;                                            \
+               offset: -2 -2;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+               relative: 1.0 0.8;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: "Verdana";                                         \
+               size: 99;                                                \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "sub."##id;                                              \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "light";                                       \
+            rel1 {                                                      \
+               to: "button."##id;                                       \
+               relative: 0.0 0.5;                                       \
+               offset: 0 2;                                             \
+            }                                                           \
+            rel2.to: "button."##id;                                     \
+            text {                                                      \
+               text: sub;                                               \
+               font: "Verdana:style=Bold";                              \
+               size: 16;                                                \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.3;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+         }                                                              \
+      }
+
+      BUTTON("1",    "1",     "", "action", 0.000 0.0, 0.333 0.25);
+      BUTTON("2",    "2",  "ABC", "action", 0.333 0.0, 0.666 0.25);
+      BUTTON("3",    "3",  "DEF", "action", 0.666 0.0, 1.000 0.25);
+
+      BUTTON("4",    "4",  "GHI", "action", 0.000 0.25, 0.333 0.50);
+      BUTTON("5",    "5",  "JKL", "action", 0.333 0.25, 0.666 0.50);
+      BUTTON("6",    "6",  "MNO", "action", 0.666 0.25, 1.000 0.50);
+
+      BUTTON("7",    "7", "PQRS", "action", 0.000 0.50, 0.333 0.75);
+      BUTTON("8",    "8",  "TUV", "action", 0.333 0.50, 0.666 0.75);
+      BUTTON("9",    "9", "WXYZ", "action", 0.666 0.50, 1.000 0.75);
+
+      BUTTON("star", "*",     "", "light",  0.000 0.75, 0.333 1.00);
+      BUTTON("0",    "0",    "+", "action", 0.333 0.75, 0.666 1.00);
+      BUTTON("hash", "#",     "", "light",  0.666 0.75, 1.000 1.00);
+#undef BUTTON
+
+      part {
+         name: "area.hide-keypad";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 688;
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 687;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 -8; /* separator */
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 -9; /* separator */
+            }
+         }
+      }
+      part {
+         name: "button.hide-keypad";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            rel1.to_y: "area.hide-keypad";
+            rel2.to_y: "area.hide-keypad";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "label.hide-keypad";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.hide-keypad";
+            rel2.to: "button.hide-keypad";
+            text {
+               text: "Hide Keypad";
+               font: "Verdana";
+               size: 99;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.hide-keypad";
+            target: "label.hide-keypad";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.hide-keypad";
+            target: "label.hide-keypad";
+         }
+
+         program {
+            name: "hide-keypad-phase1";
+            signal: "mouse,clicked,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-visible";
+            target: "area.hide-keypad";
+            after: "hide-keypad-phase2";
+         }
+         program {
+            name: "hide-keypad-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-hidden";
+         }
+
+         program {
+            name: "show-keypad-phase1";
+            signal: "mouse,clicked,1";
+            source: "button.keypad";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-hidden";
+            after: "show-keypad-phase2";
+         }
+         program {
+            name: "show-keypad-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "area.hide-keypad";
+            target: "clipper.keypad-visible";
+         }
+      }
+
+      /* buttons */
+      part {
+         name: "bg.buttons";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            rel1.to: "area.answer";
+            rel2.to: "button.hangup";
+         }
+      }
+
+      part {
+         name: "clipper.answer";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "area.answer";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1.to_y: "button.hangup";
+            rel2.to_y: "button.hangup";
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 -8; /* separator */
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 -9; /* separator */
+            }
+         }
+      }
+      part {
+         name: "button.answer";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            rel1.to_y: "area.answer";
+            rel2.to_y: "area.answer";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "label.answer";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.answer";
+            rel2.to: "button.answer";
+            text {
+               text: "Answer";
+               font: "Verdana";
+               size: 99;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.answer";
+            action: SIGNAL_EMIT "released,answer" "call";
+            after: "show_up_answer";
+         }
+         program {
+            name: "show_up_answer";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.answer";
+            target: "label.answer";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.answer";
+            after: "show_down_answer";
+            action: SIGNAL_EMIT "pressed,answer" "call";
+         }
+         program {
+            name: "show_down_answer";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.answer";
+            target: "label.answer";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.answer";
+            action: SIGNAL_EMIT "clicked,answer" "call";
+         }
+
+         program {
+            signal: "show,answer";
+            source: "call";
+            action: STATE_SET "visible" 0.0;
+            target: "area.answer";
+            target: "clipper.answer";
+         }
+         program {
+            signal: "hide,answer";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "area.answer";
+            target: "clipper.answer";
+         }
+      }
+
+      part {
+         name: "button.hangup";
+         type: RECT;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "bg";
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -170;
+            }
+            rel2 {
+               relative: 1 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+      }
+      part {
+         name: "label.hangup";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "caution";
+            rel1.to: "button.hangup";
+            rel2.to: "button.hangup";
+            text {
+               text: "Hangup";
+               font: "Verdana";
+               size: 99;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.hangup";
+            action: SIGNAL_EMIT "released,hangup" "call";
+            after: "show_up_hangup";
+         }
+         program {
+            name: "show_up_hangup";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.hangup";
+            target: "label.hangup";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.hangup";
+            after: "show_down_hangup";
+            action: SIGNAL_EMIT "pressed,hangup" "call";
+         }
+         program {
+            name: "show_down_hangup";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.hangup";
+            target: "label.hangup";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.hangup";
+            action: SIGNAL_EMIT "clicked,hangup" "call";
+         }
+      }
+#undef SEPARATOR
+   }
+
+}

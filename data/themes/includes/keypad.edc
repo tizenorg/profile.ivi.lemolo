@@ -1,0 +1,363 @@
+group {
+   name: "elm/layout/dialer/keypad";
+
+   min: 720 1110;
+
+   images {
+      image: "bg_keypad.jpg" COMP;
+      image: "bt_call_pressed.png" COMP;
+      image: "bt_call_released.png" COMP;
+      image: "bt_backspace_pressed.png" COMP;
+      image: "bt_backspace_released.png" COMP;
+      image: "bt_add_contact_released.png" COMP;
+      image: "bt_add_contact_pressed.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            min: 720 1110;
+            image {
+               normal: "bg_keypad.jpg";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+      part {
+         name: "elm.text.display";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: 720 170;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -1.0 169;
+            }
+            text {
+               text: "+1 (12) 3456-7890";
+               font: "Verdana";
+               size: 99;
+               size_range: 16 99;
+               fit: 1 1;
+               align: 0.5 0.5;
+               ellipsis: 1.0;
+            }
+         }
+      }
+
+      part {
+         name: "bg.buttons";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 720 0;
+            max: 720 720; /* keep it tight centered */
+            rel1 {
+               relative: 0.0 1.0;
+               to_y: "elm.text.display";
+            }
+            rel2 {
+               relative: 1.0 0.0;
+               to_y: "bg.actions";
+            }
+         }
+      }
+
+      part {
+         name: "bg.actions";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 720 170;
+            max: 720 99999; /* keep it tight centered */
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -170;
+            }
+         }
+      }
+
+#define SEPARATOR(id, rely, offy, relto)                                \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + 4);                                   \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + 4);                                    \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + 8);                                   \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("number", 1.0, 0, "elm.text.display");
+      SEPARATOR("actions", 0.0, -8, "bg.actions");
+#undef SEPARATOR
+
+
+#define BUTTON(id, label, sub, ccls, r1, r2)                            \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r2;                                            \
+               offset: -2 -2;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+               relative: 1.0 0.8;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: "Verdana";                                         \
+               size: 99;                                                \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "sub."##id;                                              \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "light";                                       \
+            rel1 {                                                      \
+               to: "button."##id;                                       \
+               relative: 0.0 0.5;                                       \
+               offset: 0 2;                                             \
+            }                                                           \
+            rel2.to: "button."##id;                                     \
+            text {                                                      \
+               text: sub;                                               \
+               font: "Verdana:style=Bold";                              \
+               size: 16;                                                \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "keypad";               \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.3;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "keypad";                \
+         }                                                              \
+      }
+
+      BUTTON("1",    "1",     "", "action", 0.000 0.0, 0.333 0.25);
+      BUTTON("2",    "2",  "ABC", "action", 0.333 0.0, 0.666 0.25);
+      BUTTON("3",    "3",  "DEF", "action", 0.666 0.0, 1.000 0.25);
+
+      BUTTON("4",    "4",  "GHI", "action", 0.000 0.25, 0.333 0.50);
+      BUTTON("5",    "5",  "JKL", "action", 0.333 0.25, 0.666 0.50);
+      BUTTON("6",    "6",  "MNO", "action", 0.666 0.25, 1.000 0.50);
+
+      BUTTON("7",    "7", "PQRS", "action", 0.000 0.50, 0.333 0.75);
+      BUTTON("8",    "8",  "TUV", "action", 0.333 0.50, 0.666 0.75);
+      BUTTON("9",    "9", "WXYZ", "action", 0.666 0.50, 1.000 0.75);
+
+      BUTTON("star", "*",     "", "light",  0.000 0.75, 0.333 1.00);
+      BUTTON("0",    "0",    "+", "action", 0.333 0.75, 0.666 1.00);
+      BUTTON("hash", "#",     "", "light",  0.666 0.75, 1.000 1.00);
+#undef BUTTON
+
+
+#define ACTION_BUTTON(id, img, x0, x1)                                  \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: 240 170;                                               \
+            max: 240 170;                                               \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: x0 0.0;                                        \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: x1 1.0;                                        \
+               offset: -1 -1;                                           \
+            }                                                           \
+            image.normal: "bt_"##img"_released.png";                    \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.over."##id;                                      \
+         type: IMAGE;                                                   \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+            color_class: "action";                                      \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "bt_"##img"_pressed.png";                     \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "keypad";               \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.over."##id;                                 \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "keypad";                \
+         }                                                              \
+      }
+
+      ACTION_BUTTON("save",      "add_contact", 0.000000000, 0.333333333);
+      ACTION_BUTTON("call",      "call",        0.333333333, 0.666666666);
+      ACTION_BUTTON("backspace", "backspace",   0.666666666, 1.000000000);
+#undef ACTION_BUTTON
+   }
+}

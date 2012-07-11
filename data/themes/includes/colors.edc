@@ -1,0 +1,31 @@
+color_classes {
+   color_class {
+      name: "bg";
+      color: 0 0 0 255;
+   }
+
+   color_class {
+      name: "dark";
+      color: 25 45 51 255;
+   }
+
+   color_class {
+      name: "light";
+      color: 55 88 84 255;
+   }
+
+   color_class {
+      name: "action";
+      color: 123 184 155 255;
+   }
+
+   color_class {
+      name: "caution";
+      color: 193 39 44 255;
+   }
+
+   color_class {
+      name: "disabled";
+      color: 255 255 255 64;
+   }
+}
