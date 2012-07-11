@@ -415,7 +415,6 @@ static void _call_changed(void *data, OFono_Call *c)
 			break;
 		case OFONO_CALL_STATE_DIALING:
 			sig = "state,dialing";
-			want_updater = EINA_TRUE;
 			break;
 		case OFONO_CALL_STATE_ALERTING:
 			sig = "state,alerting";
@@ -518,6 +517,7 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 
 	elm_object_part_text_set(obj, "elm.text.name", "");
 	elm_object_part_text_set(obj, "elm.text.status", "");
+	elm_object_part_text_set(obj, "elm.text.elapsed", "");
 
 	ofono_call_added_cb_set(_call_added, ctx);
 	ofono_call_removed_cb_set(_call_removed, ctx);
