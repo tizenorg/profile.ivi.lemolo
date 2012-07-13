@@ -2141,3 +2141,47 @@ OFono_Pending *ofono_multiparty_hangup(OFono_Simple_Cb cb, const void *data)
 	return _ofono_multiparty("HangupMultiparty",_ofono_simple_reply, cb,
 					data);
 }
+
+OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
+					const void *data)
+{
+	OFono_Pending *p;
+	DBusMessage *msg;
+	OFono_Simple_Cb_Context *ctx = NULL;
+	OFono_Modem *m = _modem_selected_get();
+
+	EINA_SAFETY_ON_NULL_GOTO(m, error_no_message);
+	EINA_SAFETY_ON_NULL_GOTO(c, error_no_message);
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error_no_message);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(
+				bus_id, m->base.path,
+				OFONO_PREFIX OFONO_VOICE_IFACE,
+				"PrivateChat");
+
+	if (!msg)
+		goto error_no_message;
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_OBJECT_PATH,
+					&(c->base.path), DBUS_TYPE_INVALID))
+		goto error_message_append;
+
+	INF("PrivateChat(%s)", c->base.path);
+	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
+
+	return p;
+
+error_message_append:
+	dbus_message_unref(msg);
+error_no_message:
+	if (cb)
+		cb((void *)data, OFONO_ERROR_FAILED);
+	free(ctx);
+	return NULL;
+}

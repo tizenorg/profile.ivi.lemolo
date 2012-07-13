@@ -99,6 +99,8 @@ OFono_Pending *ofono_tones_send(const char *tones, OFono_Simple_Cb cb,
 
 OFono_Pending *ofono_multiparty_create(OFono_Simple_Cb cb, const void *data);
 OFono_Pending *ofono_multiparty_hangup(OFono_Simple_Cb cb, const void *data);
+OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
+					const void *data);
 
 /* Modem: */
 const char *ofono_modem_serial_get(void);
