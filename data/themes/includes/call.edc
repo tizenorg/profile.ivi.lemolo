@@ -10,6 +10,7 @@ group {
     *   TEXT: elm.text.elapsed
     *   TEXT: elm.text.waiting
     *   TEXT: elm.text.held
+    *   SWALLOW: elm.swallow.multiparty-details
     *
     * Signals:
     *   Emit (source is "call"):
@@ -34,6 +35,8 @@ group {
     *     enable,<ID>:     enable action <ID>
     *     toggle,on,<ID>:  mark toggle action <ID> as selected
     *     toggle,off,<ID>: mark toggle action <ID> as unselected
+    *     show,multiparty-details: ask the multiparty details to be visible
+    *     hide,multiparty-details: ask the multiparty details to be hidden
     *
     * Messages:
     *     1 - FLOAT: speaker volume 0.0-1.0
@@ -42,7 +45,7 @@ group {
     *
     * Where <ID> is: numbers 0 to 9, star, hash, mute, keypad, speaker,
     * merge, swap, contacts, answer, hangup, waiting-hangup, hold-answer,
-    * hangup-answer, multiparty, held-multiparty
+    * hangup-answer, multiparty, held-multiparty, multiparty-details
     *
     * Where <STATE> is: disconnected, active, held, dialing, alerting,
     * incoming, waiting.
@@ -89,6 +92,7 @@ group {
       part {
          name: "clipper.multiparty";
          type: RECT;
+         clip_to: "clipper.multiparty-details-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 0;
@@ -209,6 +213,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         clip_to: "clipper.multiparty-details-hidden";
          api: "name" "remote party call name";
          description {
             state: "default" 0.0;
@@ -242,6 +247,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         clip_to: "clipper.multiparty-details-hidden";
          api: "status" "call status";
          description {
             state: "default" 0.0;
@@ -274,6 +280,7 @@ group {
          type: TEXT;
          mouse_events: 0;
          scale: 1;
+         clip_to: "clipper.multiparty-details-hidden";
          api: "elapsed" "call elapsed time (formatted)";
          description {
             state: "default" 0.0;
@@ -1024,12 +1031,12 @@ group {
 #undef ACTION_TOGGLE
 
       SEPARATOR("answer", "clipper.answer", 0.0, -8, "button.answer");
-      SEPARATOR("hangup", "", 0.0, -8, "button.hangup");
+      SEPARATOR("hangup", "clipper.multiparty-details-hidden", 0.0, -8, "button.hangup");
 
       part {
          name: "clipper.keypad-hidden";
          type: RECT;
-         clip_to: "clipper.waiting-hidden";
+         clip_to: "clipper.multiparty-details-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -1045,7 +1052,7 @@ group {
       part {
          name: "clipper.keypad-visible";
          type: RECT;
-         clip_to: "clipper.waiting-hidden";
+         clip_to: "clipper.multiparty-details-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 0;
@@ -1513,7 +1520,7 @@ group {
          name: "button.hangup";
          type: RECT;
          mouse_events: 1;
-         clip_to: "clipper.waiting-hidden";
+         clip_to: "clipper.multiparty-details-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -1537,7 +1544,7 @@ group {
          name: "label.hangup";
          type: TEXT;
          mouse_events: 0;
-         clip_to: "clipper.waiting-hidden";
+         clip_to: "clipper.multiparty-details-hidden";
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
@@ -1591,6 +1598,211 @@ group {
             source: "button.hangup";
             action: SIGNAL_EMIT "clicked,hangup" "call";
             api: "hangup_clicked" "hangup was clicked";
+         }
+      }
+
+      /* multiparty options */
+      part {
+         name: "clipper.multiparty-details-hidden";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.multiparty-details-visible";
+         type: RECT;
+         clip_to: "clipper.waiting-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "label.multiparty";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            align: 0.0 0.5;
+            rel1.offset: 46 0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -47 210;
+            }
+            text {
+               text: "Conference";
+               font: "Verdana";
+               size: 99;
+               size_range: 16 99;
+               fit: 1 1;
+               align: 0.5 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+      SEPARATOR("multiparty-details", "clipper.multiparty-details-visible", 0.0, -8, "elm.swallow.multiparty-details");
+
+      part {
+         name: "elm.swallow.multiparty-details";
+         type: SWALLOW;
+         mouse_events: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         api: "multiparty_details" "swallow to hold the multiparty details";
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 218;
+            }
+            rel2 {
+               relative: 1.0 2.0;
+               offset: -1 -178;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 0 218;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -1 -178;
+            }
+         }
+      }
+
+      SEPARATOR("multiparty-details-back", "clipper.multiparty-details-visible", 0.0, -8, "button.multiparty-details-back");
+      part {
+         name: "button.multiparty-details-back";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "bg";
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -170;
+            }
+            rel2 {
+               relative: 1 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "action";
+         }
+      }
+      part {
+         name: "label.multiparty-details-back";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.multiparty-details-back";
+            rel2.to: "button.multiparty-details-back";
+            text {
+               text: "Back";
+               font: "Verdana";
+               size: 99;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.multiparty-details-back";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.multiparty-details-back";
+            target: "label.multiparty-details-back";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.multiparty-details-back";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.multiparty-details-back";
+            target: "label.multiparty-details-back";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.multiparty-details-back";
+            action: SIGNAL_EMIT "hide,multiparty-details" "call";
+         }
+      }
+
+      programs {
+         program {
+            name: "hide-multiparty-details-phase1";
+            signal: "hide,multiparty-details";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-visible";
+            target: "elm.swallow.multiparty-details";
+            after: "hide-multiparty-details-phase2";
+            api: "multiparty_details_hide" "make multiparty-details popup hidden";
+         }
+         program {
+            name: "hide-multiparty-details-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-hidden";
+         }
+
+         program {
+            name: "show-multiparty-details-phase1";
+            signal: "clicked,multiparty"; /* just show on user request */
+            source: "call";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-hidden";
+            after: "show-multiparty-details-phase2";
+            api: "multiparty_details_show" "make multiparty-details popup visible";
+         }
+         program {
+            name: "show-multiparty-details-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "elm.swallow.multiparty-details";
+            target: "clipper.multiparty-details-visible";
          }
       }
 

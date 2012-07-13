@@ -10,6 +10,7 @@
 typedef struct _Callscreen
 {
 	Evas_Object *self;
+	Evas_Object *multiparty;
 	struct {
 		OFono_Call *active;
 		OFono_Call *waiting;
@@ -28,6 +29,83 @@ typedef struct _Callscreen
 		Evas_Object *popup;
 	} disconnected;
 } Callscreen;
+
+static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	OFono_Call *call = data;
+	DBG("User ask hangup of multiparty call=%p", call);
+	ofono_call_hangup(call, NULL, NULL);
+}
+
+static void _on_mp_pvt(void *data, Evas_Object *o __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	OFono_Call *call = data;
+	DBG("User ask private chat of multiparty call=%p", call);
+	ofono_private_chat(call, NULL, NULL);
+}
+
+static const char *_call_name_or_id(const OFono_Call *call);
+
+static void _multiparty_update(Callscreen *ctx)
+{
+	const Elm_Object_Item *item;
+	Eina_List *new = NULL, *old = NULL;
+	const Eina_List *n1, *n2;
+	OFono_Call *c;
+
+	EINA_LIST_FOREACH(ctx->calls.list, n1, c) {
+		if (ofono_call_multiparty_get(c))
+			new = eina_list_append(new, c);
+	}
+
+	item = elm_list_first_item_get(ctx->multiparty);
+	for (; item != NULL; item = elm_list_item_next(item))
+		old = eina_list_append(old, elm_object_item_data_get(item));
+
+	if (eina_list_count(new) != eina_list_count(old)) {
+		eina_list_free(old);
+		goto repopulate;
+	}
+
+	for (n1 = new, n2 = old; n1 && n2; n1 = n1->next, n2 = n2->next) {
+		if (n1->data != n2->data)
+			break;
+	}
+
+	eina_list_free(old);
+	if (n1)
+		goto repopulate;
+	eina_list_free(new);
+	return;
+
+repopulate:
+	elm_list_clear(ctx->multiparty);
+	if (!new) {
+		elm_object_signal_emit(ctx->self, "hide,multiparty-details",
+					"call");
+		return;
+	}
+
+	EINA_LIST_FREE(new, c) {
+		const char *t = _call_name_or_id(c);
+		Evas_Object *h = elm_button_add(ctx->multiparty);
+		Evas_Object *p = elm_button_add(ctx->multiparty);
+		Elm_Object_Item *it;
+
+		elm_object_text_set(h, "Hangup");
+		evas_object_smart_callback_add(h, "clicked", _on_mp_hangup, c);
+
+		elm_object_text_set(p, "Private");
+		evas_object_smart_callback_add(p, "clicked", _on_mp_pvt, c);
+
+		it = elm_list_item_append(ctx->multiparty, t, h, p, NULL, NULL);
+		elm_object_item_data_set(it, c);
+	}
+	elm_list_go(ctx->multiparty);
+	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
+}
 
 static void _calls_update(Callscreen *ctx)
 {
@@ -61,6 +139,8 @@ static void _calls_update(Callscreen *ctx)
 		if (s != OFONO_CALL_STATE_HELD)
 			ctx->calls.held = NULL;
 	}
+
+	_multiparty_update(ctx);
 
 	if (ctx->calls.active && ctx->calls.waiting && ctx->calls.held)
 		return;
@@ -99,10 +179,11 @@ static void _calls_update(Callscreen *ctx)
 
 static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 {
+	_calls_update(ctx);
+
 	if (!ctx->calls.list)
 		gui_call_exit();
 	else {
-		_calls_update(ctx);
 		if (strcmp(reason, "local") == 0) {
 			/* If there is a held call and active is
 			 * hangup we're left with held but no active,
@@ -160,34 +241,30 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 		ctx->calls.waiting = NULL;
 		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
 		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
-		return;
+		goto done;
 	}
 	if (ctx->calls.held == c) {
 		ctx->calls.held = NULL;
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
-		return;
+		goto done;
 	}
 
 	if ((ctx->calls.active) && (ctx->calls.active != c))
-		return;
+		goto done;
 	ctx->calls.active = NULL;
 	ctx->last_state = 0;
 	ctx->disconnected.call = c;
 
-	if ((strcmp(reason, "local") == 0) || (strcmp(reason, "remote") == 0)) {
-		_call_disconnected_done(ctx, reason);
-		return;
-	}
+	if ((strcmp(reason, "local") == 0) || (strcmp(reason, "remote") == 0))
+		goto done;
 
 	number = ofono_call_line_id_get(c);
-	if ((!number) || (number[0] == '\0')) {
-		_call_disconnected_done(ctx, reason);
-		return;
-	}
+	if ((!number) || (number[0] == '\0'))
+		goto done;
 
 	if (ctx->disconnected.number)
-		return;
+		goto done;
 
 	if (strcmp(reason, "network") == 0)
 		title = "Network Disconnected!";
@@ -216,6 +293,10 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	/* TODO: sound to notify user */
 
 	evas_object_show(p);
+
+	return;
+done:
+	_call_disconnected_done(ctx, reason);
 }
 
 static void _tones_send_reply(void *data, OFono_Error err)
@@ -292,8 +373,13 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (strcmp(emission, "hangup") == 0) {
-		if (ctx->calls.active)
-			ofono_call_hangup(ctx->calls.active, NULL, NULL);
+		if (ctx->calls.active) {
+			OFono_Call *c = ctx->calls.active;
+			if (ofono_call_multiparty_get(c))
+				ofono_multiparty_hangup(NULL, NULL);
+			else
+				ofono_call_hangup(c, NULL, NULL);
+		}
 	} else if (strcmp(emission, "answer") == 0) {
 		if (ctx->calls.active)
 			ofono_call_answer(ctx->calls.active, NULL, NULL);
@@ -713,6 +799,11 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 	elm_object_part_text_set(obj, "elm.text.name", "");
 	elm_object_part_text_set(obj, "elm.text.status", "");
 	elm_object_part_text_set(obj, "elm.text.elapsed", "");
+
+	ctx->multiparty = elm_list_add(obj);
+	elm_list_select_mode_set(ctx->multiparty, ELM_OBJECT_SELECT_MODE_NONE);
+	elm_object_part_content_set(obj, "elm.swallow.multiparty-details",
+					ctx->multiparty);
 
 	ofono_call_added_cb_set(_call_added, ctx);
 	ofono_call_removed_cb_set(_call_removed, ctx);
