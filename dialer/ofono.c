@@ -716,23 +716,12 @@ error_no_message:
 	return NULL;
 }
 
-static OFono_Pending *_ofono_multiparty_hangup(OFono_Simple_Cb cb,
-						const void *data)
-{
-	return _ofono_multiparty("HangupMultiparty",_ofono_simple_reply, cb,
-					data);
-}
-
 OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
 					const void *data)
 {
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Pending *p;
 	DBusMessage *msg;
-
-	/* It looks like we are in a conference */
-	if (c->multiparty)
-		return _ofono_multiparty_hangup(cb, data);
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 
@@ -2147,3 +2136,8 @@ OFono_Pending *ofono_multiparty_create(OFono_Simple_Cb cb,
 					_ofono_simple_reply, cb, data);
 }
 
+OFono_Pending *ofono_multiparty_hangup(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_multiparty("HangupMultiparty",_ofono_simple_reply, cb,
+					data);
+}
