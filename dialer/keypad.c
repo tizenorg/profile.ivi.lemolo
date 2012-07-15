@@ -352,7 +352,8 @@ static void _on_pressed(void *data, Evas_Object *obj __UNUSED__,
 		eina_strbuf_append_char(ctx->number, emission[0]);
 		_number_display(ctx);
 
-		if (emission[0] == '0') {
+		if ((emission[0] == '0') &&
+			(eina_strbuf_length_get(ctx->number) == 1)) {
 			if (ctx->mod_timeout)
 				ecore_timer_del(ctx->mod_timeout);
 			ctx->mod_timeout = ecore_timer_add(MOD_TIMEOUT,
