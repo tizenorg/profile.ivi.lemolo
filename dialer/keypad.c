@@ -6,6 +6,7 @@
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
+#include "util.h"
 
 /* timeout to change keys into modified, like 0 -> + */
 #define MOD_TIMEOUT (1.0)
@@ -23,61 +24,25 @@ typedef struct _Keypad
 	Ecore_Timer *rep_timeout;
 } Keypad;
 
-/* TODO: find a configurable way to format the number.
- * Right now it's: 1-234-567-8901 as per
- * http://en.wikipedia.org/wiki/Local_conventions_for_writing_telephone_numbers#North_America
- *
- * TODO: when contacts are integrated, look up the contact for that number
+/* TODO: when contacts are integrated, look up the contact for that number
  * and display it as elm.text.contact. Also send "contact,show/hide".
  */
 static void _number_display(Keypad *ctx)
 {
-	size_t i, slen = eina_strbuf_length_get(ctx->number);
-	const char *src = eina_strbuf_string_get(ctx->number);
-	Eina_Strbuf *d;
-
-	if ((!src) || (slen < 1)) {
+	char *s = phone_format(eina_strbuf_string_get(ctx->number));
+	if (!s) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
 		elm_object_signal_emit(ctx->self, "disable,save", "keypad");
 		elm_object_signal_emit(ctx->self, "disable,backspace",
 					"keypad");
 		return;
 	}
+
+	elm_object_part_text_set(ctx->self, "elm.text.display", s);
+	free(s);
+
 	elm_object_signal_emit(ctx->self, "enable,save", "keypad");
-	elm_object_signal_emit(ctx->self, "enable,call", "keypad");
 	elm_object_signal_emit(ctx->self, "enable,backspace", "keypad");
-
-	if ((slen <= 4) || (slen > 12))
-		goto show_verbatim;
-
-	if ((slen == 12) && (src[0] != '+'))
-		goto show_verbatim;
-
-	for (i = 0; i < slen; i++) {
-		if ((src[i] < '0') || (src[i] > '9')) {
-			if ((src[i] == '+') && (i == 0))
-				continue;
-			goto show_verbatim;
-		}
-	}
-
-	d = eina_strbuf_new();
-	eina_strbuf_append_length(d, src, slen);
-	eina_strbuf_insert_char(d, '-', slen - 4);
-	if (slen > 7) {
-		eina_strbuf_insert_char(d, '-', slen - 7);
-		if ((slen > 10) && (src[slen - 11] != '+'))
-			eina_strbuf_insert_char(d, '-', slen - 10);
-	}
-
-
-	elm_object_part_text_set(ctx->self, "elm.text.display",
-					eina_strbuf_string_get(d));
-	eina_strbuf_free(d);
-	return;
-
-show_verbatim:
-	elm_object_part_text_set(ctx->self, "elm.text.display", src);
 }
 
 

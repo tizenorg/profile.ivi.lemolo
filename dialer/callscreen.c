@@ -6,6 +6,7 @@
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
+#include "util.h"
 
 typedef struct _Callscreen
 {
@@ -109,10 +110,11 @@ repopulate:
 	}
 
 	EINA_LIST_FOREACH(new, n1, c) {
-		const char *name, *number;
+		const char *name;
+		char *number;
 
 		name = ofono_call_name_get(c);
-		number = ofono_call_line_id_get(c);
+		number = phone_format(ofono_call_line_id_get(c));
 
 		it = gui_layout_add(ctx->multiparty.bx, "multiparty-details");
 		evas_object_size_hint_align_set(it,
@@ -137,6 +139,7 @@ repopulate:
 		evas_object_data_set(it, "callscreen.ctx", ctx);
 		elm_box_pack_end(ctx->multiparty.bx, it);
 
+		free(number);
 	}
 	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
 }
@@ -574,12 +577,12 @@ stop:
 	return EINA_FALSE;
 }
 
-static const char *_call_name_or_id(const OFono_Call *call)
+static char *_call_name_or_id(const OFono_Call *call)
 {
 	const char *s = ofono_call_name_get(call);
 	if ((s) && (s[0] != '\0'))
-		return s;
-	return ofono_call_line_id_get(call);
+		return strdup(s);
+	return phone_format(ofono_call_line_id_get(call));
 }
 
 static char *_call_name_get(const Callscreen *ctx, const OFono_Call *call)
@@ -590,12 +593,12 @@ static char *_call_name_get(const Callscreen *ctx, const OFono_Call *call)
 	char *s;
 
 	if (!ofono_call_multiparty_get(call))
-		return strdup(_call_name_or_id(call));
+		return _call_name_or_id(call);
 
 	buf = eina_strbuf_new();
 	eina_strbuf_append(buf, "Conf: ");
 	EINA_LIST_FOREACH(ctx->calls.list, n, call) {
-		const char *name;
+		char *name;
 
 		if (!ofono_call_multiparty_get(call))
 			continue;
@@ -607,6 +610,7 @@ static char *_call_name_get(const Callscreen *ctx, const OFono_Call *call)
 			eina_strbuf_append(buf, name);
 			first = EINA_FALSE;
 		}
+		free(name);
 	}
 
 	s = eina_strbuf_string_steal(buf);

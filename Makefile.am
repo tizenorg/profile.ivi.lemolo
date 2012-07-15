@@ -39,7 +39,9 @@ dialer_dialer_SOURCES = \
 	dialer/history.c \
 	dialer/history.h \
 	dialer/callscreen.c \
-	dialer/callscreen.h
+	dialer/callscreen.h \
+	dialer/util.c \
+	dialer/util.h
 
 # Themes are compiled with edje_cc given by user (cross-compile)
 EDJE_CC = @edje_cc@
