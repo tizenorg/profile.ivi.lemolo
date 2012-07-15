@@ -183,8 +183,10 @@ static void _ofono_simple_reply(void *data, DBusMessage *msg __UNUSED__,
 		e = _ofono_error_parse(err->name);
 	}
 
-	if (ctx)
+	if (ctx) {
 		ctx->cb((void *)ctx->data, e);
+		free(ctx);
+	}
 }
 
 typedef struct _OFono_String_Cb_Context
@@ -216,6 +218,7 @@ static void _ofono_string_reply(void *data, DBusMessage *msg, DBusError *err)
 		DBG("%s %s", ctx->name, str);
 
 	free(str);
+	free(ctx);
 }
 
 struct _OFono_Pending
@@ -1748,6 +1751,8 @@ static void _ofono_dial_reply(void *data, DBusMessage *msg, DBusError *err)
 
 	if (ctx->cb)
 		ctx->cb((void *)ctx->data, oe, c);
+
+	free(ctx);
 }
 
 OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
