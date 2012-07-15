@@ -18,6 +18,7 @@ typedef struct _Keypad
 {
 	Evas_Object *self;
 	Eina_Strbuf *number;
+	const char *last;
 	Ecore_Timer *mod_timeout;
 	Ecore_Timer *rep_timeout;
 } Keypad;
@@ -38,7 +39,6 @@ static void _number_display(Keypad *ctx)
 	if ((!src) || (slen < 1)) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
 		elm_object_signal_emit(ctx->self, "disable,save", "keypad");
-		elm_object_signal_emit(ctx->self, "disable,call", "keypad");
 		elm_object_signal_emit(ctx->self, "disable,backspace",
 					"keypad");
 		return;
@@ -264,6 +264,7 @@ static void _dial(Keypad *ctx)
 
 	INF("call %s", number);
 	ofono_dial(number, NULL, _dial_reply, ctx);
+	eina_stringshare_replace(&(ctx->last), number);
 }
 
 static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
@@ -420,7 +421,12 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	emission += strlen("clicked,");
 
 	if (strcmp(emission, "call") == 0) {
-		_call(ctx);
+		if (eina_strbuf_length_get(ctx->number) > 0)
+			_call(ctx);
+		else if (ctx->last) {
+			eina_strbuf_append(ctx->number, ctx->last);
+			_number_display(ctx);
+		}
 	} else if (strcmp(emission, "save") == 0) {
 		ERR("TODO save contact %s!",
 			eina_strbuf_string_get(ctx->number));
@@ -438,6 +444,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 		ecore_timer_del(ctx->rep_timeout);
 
 	eina_strbuf_free(ctx->number);
+	eina_stringshare_del(ctx->last);
 	free(ctx);
 }
 
@@ -463,7 +470,6 @@ Evas_Object *keypad_add(Evas_Object *parent) {
 
 	elm_object_part_text_set(obj, "elm.text.display", "");
 	elm_object_signal_emit(obj, "disable,save", "keypad");
-	elm_object_signal_emit(obj, "disable,call", "keypad");
 	elm_object_signal_emit(obj, "disable,backspace", "keypad");
 
 	elm_object_focus_allow_set(obj, EINA_TRUE);
