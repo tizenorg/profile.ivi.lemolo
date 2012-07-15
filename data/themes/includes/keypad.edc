@@ -275,6 +275,20 @@ group {
             action: SIGNAL_EMIT "clicked,"##id "keypad";                \
             api: id"_clicked" id" was clicked";                         \
          }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1,double";                              \
+            source: "button."##id;                                      \
+            script {                                                    \
+               emit("pressed,"##id, "keypad");                          \
+            }                                                           \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1,triple";                              \
+            source: "button."##id;                                      \
+            script {                                                    \
+               emit("pressed,"##id, "keypad");                          \
+            }                                                           \
+         }                                                              \
       }
 
       BUTTON("1",    "1",     "", "action", 0.000 0.0, 0.333 0.25);
