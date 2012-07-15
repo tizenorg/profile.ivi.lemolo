@@ -10,7 +10,11 @@
 typedef struct _Callscreen
 {
 	Evas_Object *self;
-	Evas_Object *multiparty;
+	struct {
+		Evas_Object *sc;
+		Evas_Object *bx;
+		Eina_List *calls;
+	} multiparty;
 	struct {
 		OFono_Call *active;
 		OFono_Call *waiting;
@@ -31,79 +35,109 @@ typedef struct _Callscreen
 } Callscreen;
 
 static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
-				void *event_info __UNUSED__)
+				const char *emission __UNUSED__,
+				const char *source __UNUSED__)
 {
 	OFono_Call *call = data;
 	DBG("User ask hangup of multiparty call=%p", call);
 	ofono_call_hangup(call, NULL, NULL);
 }
 
-static void _on_mp_pvt(void *data, Evas_Object *o __UNUSED__,
-				void *event_info __UNUSED__)
+static void _on_mp_pvt_reply(void *data, OFono_Error err)
 {
-	OFono_Call *call = data;
-	DBG("User ask private chat of multiparty call=%p", call);
-	ofono_private_chat(call, NULL, NULL);
+	Callscreen *ctx = data;
+
+	DBG("PrivateChat: err=%d", err);
+
+	if (err == OFONO_ERROR_NONE)
+		elm_object_signal_emit(ctx->self, "multiparty,private", "call");
 }
 
-static const char *_call_name_or_id(const OFono_Call *call);
+static void _on_mp_pvt(void *data, Evas_Object *o,
+				const char *emission __UNUSED__,
+				const char *source __UNUSED__)
+{
+	Callscreen *ctx = evas_object_data_get(o, "callscreen.ctx");
+	OFono_Call *call = data;
+	DBG("User ask private chat of multiparty call=%p", call);
+	ofono_private_chat(call, _on_mp_pvt_reply, ctx);
+}
+
+static void _on_raise(void *data __UNUSED__, Evas_Object *o,
+				const char *emission __UNUSED__,
+				const char *source __UNUSED__)
+{
+	evas_object_raise(o);
+}
 
 static void _multiparty_update(Callscreen *ctx)
 {
-	const Elm_Object_Item *item;
 	Eina_List *new = NULL, *old = NULL;
 	const Eina_List *n1, *n2;
 	OFono_Call *c;
+	Evas_Object *it;
 
 	EINA_LIST_FOREACH(ctx->calls.list, n1, c) {
 		if (ofono_call_multiparty_get(c))
 			new = eina_list_append(new, c);
 	}
 
-	item = elm_list_first_item_get(ctx->multiparty);
-	for (; item != NULL; item = elm_list_item_next(item))
-		old = eina_list_append(old, elm_object_item_data_get(item));
-
-	if (eina_list_count(new) != eina_list_count(old)) {
-		eina_list_free(old);
+	old = ctx->multiparty.calls;
+	if (eina_list_count(new) != eina_list_count(old))
 		goto repopulate;
-	}
 
 	for (n1 = new, n2 = old; n1 && n2; n1 = n1->next, n2 = n2->next) {
 		if (n1->data != n2->data)
 			break;
 	}
 
-	eina_list_free(old);
 	if (n1)
 		goto repopulate;
 	eina_list_free(new);
 	return;
 
 repopulate:
-	elm_list_clear(ctx->multiparty);
+	eina_list_free(ctx->multiparty.calls);
+	ctx->multiparty.calls = new;
+
+	elm_box_clear(ctx->multiparty.bx);
+
 	if (!new) {
 		elm_object_signal_emit(ctx->self, "hide,multiparty-details",
 					"call");
 		return;
 	}
 
-	EINA_LIST_FREE(new, c) {
-		const char *t = _call_name_or_id(c);
-		Evas_Object *h = elm_button_add(ctx->multiparty);
-		Evas_Object *p = elm_button_add(ctx->multiparty);
-		Elm_Object_Item *it;
+	EINA_LIST_FOREACH(new, n1, c) {
+		const char *name, *number;
 
-		elm_object_text_set(h, "Hangup");
-		evas_object_smart_callback_add(h, "clicked", _on_mp_hangup, c);
+		name = ofono_call_name_get(c);
+		number = ofono_call_line_id_get(c);
 
-		elm_object_text_set(p, "Private");
-		evas_object_smart_callback_add(p, "clicked", _on_mp_pvt, c);
+		it = gui_layout_add(ctx->multiparty.bx, "multiparty-details");
+		evas_object_size_hint_align_set(it,
+						EVAS_HINT_FILL, EVAS_HINT_FILL);
+		evas_object_show(it);
 
-		it = elm_list_item_append(ctx->multiparty, t, h, p, NULL, NULL);
-		elm_object_item_data_set(it, c);
+		elm_object_part_text_set(it, "elm.text.name", name);
+		elm_object_part_text_set(it, "elm.text.number", number);
+
+		if ((!name) || (*name == '\0'))
+			elm_object_signal_emit(it, "hide,name", "call");
+		else
+			elm_object_signal_emit(it, "show,name", "call");
+
+		elm_object_signal_callback_add(it, "clicked,hangup", "call",
+						_on_mp_hangup, c);
+		elm_object_signal_callback_add(it, "clicked,private", "call",
+						_on_mp_pvt, c);
+		elm_object_signal_callback_add(it, "raise", "call",
+						_on_raise, NULL);
+
+		evas_object_data_set(it, "callscreen.ctx", ctx);
+		elm_box_pack_end(ctx->multiparty.bx, it);
+
 	}
-	elm_list_go(ctx->multiparty);
 	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
 }
 
@@ -768,6 +802,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 
 	eina_stringshare_del(ctx->disconnected.number);
 
+	eina_list_free(ctx->multiparty.calls);
+
 	eina_list_free(ctx->calls.list);
 	free(ctx);
 }
@@ -800,10 +836,22 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 	elm_object_part_text_set(obj, "elm.text.status", "");
 	elm_object_part_text_set(obj, "elm.text.elapsed", "");
 
-	ctx->multiparty = elm_list_add(obj);
-	elm_list_select_mode_set(ctx->multiparty, ELM_OBJECT_SELECT_MODE_NONE);
+	ctx->multiparty.sc = elm_scroller_add(obj);
+	elm_scroller_policy_set(ctx->multiparty.sc, ELM_SCROLLER_POLICY_AUTO,
+				ELM_SCROLLER_POLICY_OFF);
+	elm_scroller_bounce_set(ctx->multiparty.sc, EINA_FALSE, EINA_TRUE);
+	elm_object_style_set(ctx->multiparty.sc, "multiparty-details");
+
+	ctx->multiparty.bx = elm_box_add(obj);
+	evas_object_size_hint_weight_set(ctx->multiparty.bx,
+						EVAS_HINT_EXPAND, 0.0);
+	evas_object_size_hint_align_set(ctx->multiparty.bx,
+					EVAS_HINT_FILL,	0.0);
+	evas_object_show(ctx->multiparty.bx);
+	elm_object_content_set(ctx->multiparty.sc, ctx->multiparty.bx);
+
 	elm_object_part_content_set(obj, "elm.swallow.multiparty-details",
-					ctx->multiparty);
+					ctx->multiparty.sc);
 
 	ofono_call_added_cb_set(_call_added, ctx);
 	ofono_call_removed_cb_set(_call_removed, ctx);

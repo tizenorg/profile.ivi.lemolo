@@ -4,5 +4,6 @@ collections {
 #include "includes/main.edc"
 #include "includes/keypad.edc"
 #include "includes/call.edc"
+#include "includes/multiparty-list.edc"
 
 }

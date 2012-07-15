@@ -1766,6 +1766,11 @@ group {
             source: "button.multiparty-details-back";
             action: SIGNAL_EMIT "hide,multiparty-details" "call";
          }
+	 program {
+            signal: "multiparty,private";
+            source: "call";
+            action: SIGNAL_EMIT "hide,multiparty-details" "call";
+	 }
       }
 
       programs {
