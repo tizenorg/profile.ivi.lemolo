@@ -676,7 +676,6 @@ static OFono_Modem *_modem_selected_get(void)
 }
 
 static OFono_Pending *_ofono_multiparty(const char *method,
-					E_DBus_Method_Return_Cb dbus_cb,
 					OFono_Simple_Cb cb, const void *data)
 {
 
@@ -705,8 +704,8 @@ static OFono_Pending *_ofono_multiparty(const char *method,
 	if (!dbus_message_append_args(msg, DBUS_TYPE_INVALID))
 		goto error_message_append;
 
-	INF("Calling - %s - multiparty method.", method);
-	p = _bus_object_message_send(&m->base, msg, dbus_cb, ctx);
+	INF("%s()", method);
+	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
 
 	return p;
 
@@ -1052,7 +1051,7 @@ static void _ofono_call_volume_properties_get(OFono_Modem *m)
 		return;
 
 	_bus_object_message_send(&m->base, msg,
-					_ofono_call_volume_properties_get_reply, m);
+				_ofono_call_volume_properties_get_reply, m);
 }
 
 static void _modem_add(const char *path, DBusMessageIter *prop)
@@ -2029,7 +2028,7 @@ static OFono_Pending *_ofono_call_volume_property_set(char *property,
 		goto error_message_args;
 	}
 
-	INF("Call-Volume - Property:%s called.", property);
+	INF("%s.SetProperty(%s)", OFONO_CALL_VOL_IFACE, property);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
 	return p;
 
@@ -2120,10 +2119,10 @@ OFono_Pending *ofono_tones_send(const char *tones,
 				      DBUS_TYPE_INVALID))
 		goto error_message_args;
 
-	INF("Voice-Call-Manager - SendTones:%s called.", tones);
+	INF("SendTones(%s)", tones);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-
 	return p;
+
 error_message_args:
 	dbus_message_unref(msg);
 
@@ -2137,14 +2136,12 @@ error_no_dbus_message:
 OFono_Pending *ofono_multiparty_create(OFono_Simple_Cb cb,
 					const void *data)
 {
-	return _ofono_multiparty("CreateMultiparty",
-					_ofono_simple_reply, cb, data);
+	return _ofono_multiparty("CreateMultiparty", cb, data);
 }
 
 OFono_Pending *ofono_multiparty_hangup(OFono_Simple_Cb cb, const void *data)
 {
-	return _ofono_multiparty("HangupMultiparty",_ofono_simple_reply, cb,
-					data);
+	return _ofono_multiparty("HangupMultiparty", cb, data);
 }
 
 OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
@@ -2179,7 +2176,6 @@ OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
 
 	INF("PrivateChat(%s)", c->base.path);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
-
 	return p;
 
 error_message_append:
