@@ -83,6 +83,7 @@ void gui_number_set(const char *number, Eina_Bool auto_dial)
 
 void gui_call_enter(void)
 {
+	gui_activate();
 	if (in_call)
 		return;
 	in_call = EINA_TRUE;
