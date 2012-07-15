@@ -39,6 +39,7 @@ _rc_dial(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
 
 	INF("dial '%s' auto=%d!", number, do_auto);
 	gui_activate();
+	gui_call_exit();
 	gui_number_set(number, do_auto);
 	return dbus_message_new_method_return(msg);
 }
