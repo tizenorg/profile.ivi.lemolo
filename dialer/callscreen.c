@@ -149,11 +149,11 @@ static void _calls_update(Callscreen *ctx)
 	static const int state_priority[] = {
 		[OFONO_CALL_STATE_DISCONNECTED] = 0,
 		[OFONO_CALL_STATE_ACTIVE] = 6,
-		[OFONO_CALL_STATE_HELD] = 1,
+		[OFONO_CALL_STATE_HELD] = 3,
 		[OFONO_CALL_STATE_DIALING] = 5,
 		[OFONO_CALL_STATE_ALERTING] = 4,
-		[OFONO_CALL_STATE_INCOMING] = 3,
-		[OFONO_CALL_STATE_WAITING] = 2
+		[OFONO_CALL_STATE_INCOMING] = 2,
+		[OFONO_CALL_STATE_WAITING] = 1
 	};
 
 	if (ctx->calls.active) {
@@ -618,7 +618,7 @@ static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
 	OFono_Call_State state;
-	Eina_Bool was_waiting, was_held;
+	Eina_Bool was_waiting, was_held, is_held;
 	const char *status, *sig = "hide,answer";
 	char *contact;
 
@@ -626,7 +626,8 @@ static void _call_changed(void *data, OFono_Call *c)
 		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
 
 	was_waiting = !!ctx->calls.waiting;
-	was_held = !!ctx->calls.held;
+
+	was_held = (ctx->calls.held) && (ctx->calls.held != ctx->calls.active);
 
 	_calls_update(ctx);
 
@@ -642,9 +643,11 @@ static void _call_changed(void *data, OFono_Call *c)
 		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
 	}
 
-	if ((ctx->calls.held) && (!was_held))
+	is_held = (ctx->calls.held) && (ctx->calls.held != ctx->calls.active);
+
+	if ((is_held) && (!was_held))
 		elm_object_signal_emit(ctx->self, "show,held", "call");
-	else if ((!ctx->calls.held) && (was_held)) {
+	else if ((!is_held) && (was_held)) {
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
 	}
@@ -747,7 +750,7 @@ static void _call_changed(void *data, OFono_Call *c)
 			elm_object_signal_emit(ctx->self, sig, "call");
 	}
 
-	if (ctx->calls.held) {
+	if (is_held) {
 		contact = _call_name_get(ctx, ctx->calls.held);
 		elm_object_part_text_set(ctx->self, "elm.text.held", contact);
 		free(contact);
@@ -759,7 +762,7 @@ static void _call_changed(void *data, OFono_Call *c)
 		elm_object_signal_emit(ctx->self, sig, "call");
 	}
 
-	sig = ctx->calls.held ? "enable,merge" : "disable,merge";
+	sig = is_held ? "enable,merge" : "disable,merge";
 	elm_object_signal_emit(ctx->self, sig, "call");
 
 	sig = ctx->calls.held ? "enable,swap" : "disable,swap";
