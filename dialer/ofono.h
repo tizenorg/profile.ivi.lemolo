@@ -65,6 +65,10 @@ typedef enum
 typedef struct _OFono_Call OFono_Call;
 typedef struct _OFono_Pending OFono_Pending;
 
+typedef struct _OFono_Callback_List_Modem_Node OFono_Callback_List_Modem_Node;
+typedef struct _OFono_Callback_List_Call_Node OFono_Callback_List_Call_Node;
+typedef struct _OFono_Callback_List_Call_Disconnected_Node OFono_Callback_List_Call_Disconnected_Node;
+
 typedef void (*OFono_Simple_Cb)(void *data, OFono_Error error);
 typedef void (*OFono_String_Cb)(void *data, OFono_Error error, const char *str);
 typedef void (*OFono_Call_Cb)(void *data, OFono_Error error, OFono_Call *call);
@@ -85,17 +89,26 @@ double ofono_call_start_time_get(const OFono_Call *c);
 #define ofono_call_state_valid_check(c) \
 	(ofono_call_state_get(c) != OFONO_CALL_STATE_DISCONNECTED)
 
-void ofono_call_added_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data);
-void ofono_call_removed_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data);
-void ofono_call_changed_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data);
-void ofono_call_disconnected_cb_set(void (*cb)(void *data, OFono_Call *call, const char *reason),
-				const void *data);
+OFono_Callback_List_Call_Node *ofono_call_added_cb_add(
+	void (*cb)(void *data,OFono_Call *call), const void *data);
+
+OFono_Callback_List_Call_Node *ofono_call_removed_cb_add(
+	void (*cb)(void *data, OFono_Call *call), const void *data);
+
+OFono_Callback_List_Call_Node *ofono_call_changed_cb_add(
+	void (*cb)(void *data, OFono_Call *call), const void *data);
+
+OFono_Callback_List_Call_Disconnected_Node *ofono_call_disconnected_cb_add(
+	void (*cb)(void *data, OFono_Call *call, const char *reason),
+	const void *data);
 
 OFono_Pending *ofono_tones_send(const char *tones, OFono_Simple_Cb cb,
 				const void *data);
+
+void ofono_call_changed_cb_del(OFono_Callback_List_Call_Node *callback_node);
+void ofono_call_disconnected_cb_del(OFono_Callback_List_Call_Disconnected_Node *callback_node);
+void ofono_call_added_cb_del(OFono_Callback_List_Call_Node *callback_node);
+void ofono_call_removed_cb_del(OFono_Callback_List_Call_Node *callback_node);
 
 OFono_Pending *ofono_multiparty_create(OFono_Simple_Cb cb, const void *data);
 OFono_Pending *ofono_multiparty_hangup(OFono_Simple_Cb cb, const void *data);
@@ -137,10 +150,18 @@ unsigned char ofono_volume_microphone_get(void);
 void ofono_modem_api_require(unsigned int api_mask);
 void ofono_modem_path_wanted_set(const char *path);
 
-/* TODO: unique listener or multiple? set x add */
-void ofono_connected_cb_set(void (*cb)(void *data), const void *data);
-void ofono_disconnected_cb_set(void (*cb)(void *data), const void *data);
-void ofono_changed_cb_set(void (*cb)(void *data), const void *data);
+OFono_Callback_List_Modem_Node *ofono_modem_conected_cb_add(void (*cb)(void *data),
+							const void *data);
+
+OFono_Callback_List_Modem_Node *ofono_modem_disconnected_cb_add(
+	void (*cb)(void *data), const void *data);
+
+OFono_Callback_List_Modem_Node *ofono_modem_changed_cb_add(void (*cb)(void *data),
+							const void *data);
+
+void ofono_modem_changed_cb_del(OFono_Callback_List_Modem_Node *callback_node);
+void ofono_modem_disconnected_cb_del(OFono_Callback_List_Modem_Node *callback_node);
+void ofono_modem_connected_cb_del(OFono_Callback_List_Modem_Node *callback_node);
 
 void ofono_pending_cancel(OFono_Pending *pending);
 

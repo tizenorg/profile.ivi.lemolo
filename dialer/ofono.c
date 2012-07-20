@@ -28,28 +28,37 @@ static E_DBus_Signal_Handler *sig_modem_removed = NULL;
 static E_DBus_Signal_Handler *sig_modem_prop_changed = NULL;
 static DBusPendingCall *pc_get_modems = NULL;
 
-static void (*connected_cb)(void *) = NULL;
-static const void *connected_cb_data = NULL;
-
-static void (*disconnected_cb)(void *) = NULL;
-static const void *disconnected_cb_data = NULL;
-
-static void (*changed_cb)(void *) = NULL;
-static const void *changed_cb_data = NULL;
-
-static void (*call_added_cb)(void *, OFono_Call *) = NULL;
-static const void *call_added_cb_data = NULL;
-
-static void (*call_removed_cb)(void *, OFono_Call *) = NULL;
-static const void *call_removed_cb_data = NULL;
-
-static void (*call_changed_cb)(void *, OFono_Call *) = NULL;
-static const void *call_changed_cb_data = NULL;
-
-static void (*call_disconnected_cb)(void *, OFono_Call *, const char *) = NULL;
-static const void *call_disconnected_cb_data = NULL;
-
 static void _ofono_call_volume_properties_get(OFono_Modem *m);
+
+struct _OFono_Callback_List_Modem_Node
+{
+	EINA_INLIST;
+	void (*cb)(void *data);
+	const void *cb_data;
+};
+
+struct _OFono_Callback_List_Call_Node
+{
+	EINA_INLIST;
+	void (*cb)(void *data, OFono_Call *call);
+	const void *cb_data;
+};
+
+struct _OFono_Callback_List_Call_Disconnected_Node
+{
+	EINA_INLIST;
+	void (*cb)(void *data, OFono_Call *call, const char *reason);
+	const void *cb_data;
+};
+
+static Eina_Inlist *ofono_callback_modem_changed_list = NULL;
+static Eina_Inlist *ofono_callback_modem_connected_list = NULL;
+static Eina_Inlist *ofono_callback_modem_disconnected_list = NULL;
+
+static Eina_Inlist *ofono_callback_call_changed_list = NULL;
+static Eina_Inlist *ofono_callback_call_added_list = NULL;
+static Eina_Inlist *ofono_callback_call_disconnected_list = NULL;
+static Eina_Inlist *ofono_callback_call_removed_list = NULL;
 
 #define OFONO_SERVICE			"org.ofono"
 
@@ -237,6 +246,25 @@ struct _OFono_Bus_Object
 	Eina_List *dbus_signals; /* of E_DBus_Signal_Handler */
 };
 
+static void _notify_ofono_callbacks_call_list(Eina_Inlist *list,
+						OFono_Call *call)
+{
+	OFono_Callback_List_Call_Node *node;
+
+	EINA_INLIST_FOREACH(list, node)
+		node->cb((void *) node->cb_data, call);
+}
+
+static void _notify_ofono_callbacks_call_disconnected_list(Eina_Inlist *list,
+								OFono_Call *call,
+								const char *reason)
+{
+	OFono_Callback_List_Call_Disconnected_Node *node;
+
+	EINA_INLIST_FOREACH(list, node)
+		node->cb((void *) node->cb_data, call, reason);
+}
+
 static void _bus_object_free(OFono_Bus_Object *o)
 {
 	E_DBus_Signal_Handler *sh;
@@ -391,8 +419,7 @@ static void _call_free(OFono_Call *c)
 {
 	DBG("c=%p %s", c, c->base.path);
 
-	if (call_removed_cb)
-		call_removed_cb((void *)call_removed_cb_data, c);
+	_notify_ofono_callbacks_call_list(ofono_callback_call_removed_list, c);
 
 	eina_stringshare_del(c->line_id);
 	eina_stringshare_del(c->incoming_line);
@@ -497,8 +524,7 @@ static void _call_property_changed(void *data, DBusMessage *msg)
 	dbus_message_iter_recurse(&iter, &value);
 	_call_property_update(c, key, &value);
 
-	if (call_changed_cb)
-		call_changed_cb((void *)call_changed_cb_data, c);
+	_notify_ofono_callbacks_call_list(ofono_callback_call_changed_list, c);
 }
 
 static void _call_disconnect_reason(void *data, DBusMessage *msg)
@@ -523,9 +549,8 @@ static void _call_disconnect_reason(void *data, DBusMessage *msg)
 		return;
 	}
 
-	if (call_disconnected_cb)
-		call_disconnected_cb((void *)call_disconnected_cb_data, c,
-			reason);
+	_notify_ofono_callbacks_call_disconnected_list(
+		ofono_callback_call_disconnected_list, c, reason);
 }
 
 static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
@@ -553,8 +578,7 @@ static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 					"PropertyChanged",
 					_call_property_changed, c);
 
-	if (call_added_cb)
-		call_added_cb((void *)call_added_cb_data, c);
+	_notify_ofono_callbacks_call_list(ofono_callback_call_added_list, c);
 
 update_properties:
 	if (!prop)
@@ -573,8 +597,7 @@ update_properties:
 		_call_property_update(c, key, &value);
 	}
 
-	if (call_changed_cb)
-		call_changed_cb((void *)call_changed_cb_data, c);
+	_notify_ofono_callbacks_call_list(ofono_callback_call_changed_list, c);
 }
 
 static void _call_remove(OFono_Modem *m, const char *path)
@@ -911,6 +934,14 @@ static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
 	}
 }
 
+static void _notify_ofono_callbacks_modem_list(Eina_Inlist *list)
+{
+	OFono_Callback_List_Modem_Node *node;
+
+	EINA_INLIST_FOREACH(list, node)
+		node->cb((void *) node->cb_data);
+}
+
 static void _call_volume_property_changed(void *data, DBusMessage *msg)
 {
 	OFono_Modem *m = data;
@@ -927,8 +958,7 @@ static void _call_volume_property_changed(void *data, DBusMessage *msg)
 	dbus_message_iter_recurse(&iter, &variant_iter);
 	_call_volume_property_update(m, prop_name, &variant_iter);
 
-	if (changed_cb)
-		changed_cb((void *)changed_cb_data);
+	_notify_ofono_callbacks_modem_list(ofono_callback_call_changed_list);
 }
 
 static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
@@ -1007,8 +1037,7 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 	} else
 		DBG("%s %s (unused property)", m->base.path, key);
 
-	if (changed_cb)
-		changed_cb((void *)changed_cb_data);
+	_notify_ofono_callbacks_modem_list(ofono_callback_modem_changed_list);
 }
 
 static void _ofono_call_volume_properties_get_reply(void *data,
@@ -1256,8 +1285,7 @@ static void _ofono_connected(const char *id)
 
 	_modems_load();
 
-	if (connected_cb)
-		connected_cb((void *)connected_cb_data);
+	_notify_ofono_callbacks_modem_list(ofono_callback_modem_connected_list);
 }
 
 static void _ofono_disconnected(void)
@@ -1280,8 +1308,8 @@ static void _ofono_disconnected(void)
 	}
 
 	if (bus_id) {
-		if (disconnected_cb)
-			disconnected_cb((void *)disconnected_cb_data);
+		_notify_ofono_callbacks_modem_list(
+			ofono_callback_modem_disconnected_list);
 
 		free(bus_id);
 		bus_id = NULL;
@@ -1899,52 +1927,6 @@ void ofono_modem_path_wanted_set(const char *path)
 		modem_selected = NULL;
 }
 
-void ofono_connected_cb_set(void (*cb)(void *data), const void *data)
-{
-	connected_cb = cb;
-	connected_cb_data = data;
-}
-
-void ofono_disconnected_cb_set(void (*cb)(void *data), const void *data)
-{
-	disconnected_cb = cb;
-	disconnected_cb_data = data;
-}
-
-void ofono_changed_cb_set(void (*cb)(void *data), const void *data)
-{
-	changed_cb = cb;
-	changed_cb_data = data;
-}
-
-void ofono_call_added_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data)
-{
-	call_added_cb = cb;
-	call_added_cb_data = data;
-}
-
-void ofono_call_removed_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data)
-{
-	call_removed_cb = cb;
-	call_removed_cb_data = data;
-}
-
-void ofono_call_changed_cb_set(void (*cb)(void *data, OFono_Call *call),
-				const void *data)
-{
-	call_changed_cb = cb;
-	call_changed_cb_data = data;
-}
-
-void ofono_call_disconnected_cb_set(void (*cb)(void *data, OFono_Call *call, const char *reason),
-				const void *data)
-{
-	call_disconnected_cb = cb;
-	call_disconnected_cb_data = data;
-}
-
 Eina_Bool ofono_init(void)
 {
 	if (!elm_need_e_dbus()) {
@@ -1971,6 +1953,39 @@ Eina_Bool ofono_init(void)
 	return EINA_TRUE;
 }
 
+static void _ofono_callback_modem_list_free(Eina_Inlist **list)
+{
+	OFono_Callback_List_Modem_Node *node;
+
+	while (*list) {
+		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Modem_Node);
+		*list = eina_inlist_remove(*list, *list);
+		free(node);
+	}
+}
+
+static void _ofono_callback_call_list_free(Eina_Inlist **list)
+{
+	OFono_Callback_List_Call_Node *node;
+
+	while (*list) {
+		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Call_Node);
+		*list = eina_inlist_remove(*list, *list);
+		free(node);
+	}
+}
+
+static void _ofono_callback_call_disconnected_list_free(Eina_Inlist **list)
+{
+	OFono_Callback_List_Call_Disconnected_Node *node;
+
+	while (*list) {
+		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Call_Disconnected_Node);
+		*list = eina_inlist_remove(*list, *list);
+		free(node);
+	}
+}
+
 void ofono_shutdown(void)
 {
 	if (pc_get_modems) {
@@ -1983,6 +1998,17 @@ void ofono_shutdown(void)
 
 	eina_hash_free(modems);
 	modems = NULL;
+
+	_ofono_callback_modem_list_free(&ofono_callback_modem_changed_list);
+	_ofono_callback_modem_list_free(&ofono_callback_modem_connected_list);
+	_ofono_callback_modem_list_free(
+		&ofono_callback_modem_disconnected_list);
+
+	_ofono_callback_call_list_free(&ofono_callback_call_changed_list);
+	_ofono_callback_call_list_free(&ofono_callback_call_added_list);
+	_ofono_callback_call_list_free(&ofono_callback_call_removed_list);
+	_ofono_callback_call_disconnected_list_free(
+		&ofono_callback_call_disconnected_list);
 }
 
 static OFono_Pending *_ofono_call_volume_property_set(char *property,
@@ -2185,4 +2211,236 @@ error_no_message:
 		cb((void *)data, OFONO_ERROR_FAILED);
 	free(ctx);
 	return NULL;
+}
+
+static OFono_Callback_List_Modem_Node * _ofono_callback_modem_node_create(
+	void (*cb)(void *data),const void *data)
+{
+	OFono_Callback_List_Modem_Node *node_new;
+
+	node_new = calloc(1, sizeof(OFono_Callback_List_Modem_Node));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	node_new->cb_data = data;
+	node_new->cb = cb;
+
+	return node_new;
+}
+
+OFono_Callback_List_Modem_Node *
+ofono_modem_conected_cb_add(void (*cb)(void *data), const void *data)
+{
+	OFono_Callback_List_Modem_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_modem_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_modem_connected_list =
+		eina_inlist_append(ofono_callback_modem_connected_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+OFono_Callback_List_Modem_Node *
+ofono_modem_disconnected_cb_add(void (*cb)(void *data), const void *data)
+{
+	OFono_Callback_List_Modem_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_modem_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_modem_disconnected_list =
+		eina_inlist_append(ofono_callback_modem_disconnected_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+OFono_Callback_List_Modem_Node *
+ofono_modem_changed_cb_add(void (*cb)(void *data), const void *data)
+{
+	OFono_Callback_List_Modem_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_modem_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_modem_changed_list =
+		eina_inlist_append(ofono_callback_modem_changed_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+static void _ofono_callback_modem_list_delete(Eina_Inlist **list,
+					OFono_Callback_List_Modem_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(*list);
+	*list = eina_inlist_remove(*list, EINA_INLIST_GET(callback_node));
+	free(callback_node);
+}
+
+void ofono_modem_changed_cb_del(OFono_Callback_List_Modem_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_modem_list_delete(&ofono_callback_modem_changed_list,
+					callback_node);
+}
+
+void ofono_modem_disconnected_cb_del(
+	OFono_Callback_List_Modem_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_modem_list_delete(
+		&ofono_callback_modem_disconnected_list, callback_node);
+}
+
+void ofono_modem_connected_cb_del(OFono_Callback_List_Modem_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_modem_list_delete(&ofono_callback_modem_connected_list,
+					callback_node);
+}
+
+static OFono_Callback_List_Call_Node * _ofono_callback_call_node_create(
+	void (*cb)(void *data, OFono_Call *call),const void *data)
+{
+	OFono_Callback_List_Call_Node *node_new;
+
+	node_new = calloc(1, sizeof(OFono_Callback_List_Call_Node));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	node_new->cb_data = data;
+	node_new->cb = cb;
+
+	return node_new;
+}
+
+static OFono_Callback_List_Call_Disconnected_Node *
+_ofono_callback_call_disconnected_node_create(
+	void (*cb)(void *data, OFono_Call *call, const char *reason),
+	const void *data)
+{
+	OFono_Callback_List_Call_Disconnected_Node *node_new;
+
+	node_new = calloc(1, sizeof(OFono_Callback_List_Call_Disconnected_Node));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	node_new->cb_data = data;
+	node_new->cb = cb;
+
+	return node_new;
+}
+
+OFono_Callback_List_Call_Node *ofono_call_added_cb_add(
+	void (*cb)(void *data,OFono_Call *call), const void *data)
+{
+	OFono_Callback_List_Call_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_call_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_call_added_list =
+		eina_inlist_append(ofono_callback_call_added_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+OFono_Callback_List_Call_Node *ofono_call_removed_cb_add(
+	void (*cb)(void *data, OFono_Call *call), const void *data)
+{
+	OFono_Callback_List_Call_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_call_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_call_removed_list =
+		eina_inlist_append(ofono_callback_call_removed_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+OFono_Callback_List_Call_Node *ofono_call_changed_cb_add(
+	void (*cb)(void *data, OFono_Call *call), const void *data)
+{
+	OFono_Callback_List_Call_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_call_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_call_changed_list =
+		eina_inlist_append(ofono_callback_call_changed_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+OFono_Callback_List_Call_Disconnected_Node *ofono_call_disconnected_cb_add(
+	void (*cb)(void *data, OFono_Call *call, const char *reason),
+	const void *data)
+{
+	OFono_Callback_List_Call_Disconnected_Node *node_new;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node_new = _ofono_callback_call_disconnected_node_create(cb, data);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node_new, NULL);
+
+	ofono_callback_call_disconnected_list =
+		eina_inlist_append(ofono_callback_call_disconnected_list,
+					EINA_INLIST_GET(node_new));
+
+	return node_new;
+}
+
+static void _ofono_callback_call_list_delete(Eina_Inlist **list,
+					OFono_Callback_List_Call_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(*list);
+	*list = eina_inlist_remove(*list, EINA_INLIST_GET(callback_node));
+	free(callback_node);
+}
+
+static void _ofono_callback_call_disconnected_list_delete(Eina_Inlist **list,
+					OFono_Callback_List_Call_Disconnected_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(*list);
+	*list = eina_inlist_remove(*list, EINA_INLIST_GET(callback_node));
+	free(callback_node);
+}
+
+void ofono_call_changed_cb_del(OFono_Callback_List_Call_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_call_list_delete(&ofono_callback_call_changed_list,
+						callback_node);
+}
+
+void ofono_call_disconnected_cb_del(
+	OFono_Callback_List_Call_Disconnected_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_call_disconnected_list_delete(
+		&ofono_callback_call_disconnected_list, callback_node);
+}
+
+void ofono_call_added_cb_del(OFono_Callback_List_Call_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_call_list_delete(&ofono_callback_call_added_list,
+						callback_node);
+}
+
+void ofono_call_removed_cb_del(OFono_Callback_List_Call_Node *callback_node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(callback_node);
+	_ofono_callback_call_list_delete(&ofono_callback_call_removed_list,
+						callback_node);
 }

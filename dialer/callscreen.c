@@ -44,6 +44,15 @@ static void _on_active_call_clicked(void *data __UNUSED__,
 	gui_call_enter();
 }
 
+static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
+
+static OFono_Callback_List_Call_Node *callback_node_call_added = NULL;
+static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
+static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
+
+static OFono_Callback_List_Call_Disconnected_Node
+*callback_node_call_disconnected = NULL;
+
 static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
 				const char *emission __UNUSED__,
 				const char *source __UNUSED__)
@@ -836,11 +845,11 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 {
 	Callscreen *ctx = data;
 
-	ofono_call_added_cb_set(NULL, NULL);
-	ofono_call_removed_cb_set(NULL, NULL);
-	ofono_call_changed_cb_set(NULL, NULL);
-	ofono_call_disconnected_cb_set(NULL, NULL);
-	ofono_changed_cb_set(NULL, NULL);
+	ofono_call_added_cb_del(callback_node_call_added);
+	ofono_call_removed_cb_del(callback_node_call_removed);
+	ofono_call_changed_cb_del(callback_node_call_changed);
+	ofono_call_disconnected_cb_del(callback_node_call_disconnected);
+	ofono_modem_changed_cb_del(callback_node_modem_changed);
 
 	eina_strbuf_free(ctx->tones.todo);
 	if (ctx->tones.pending)
@@ -902,11 +911,19 @@ Evas_Object *callscreen_add(Evas_Object *parent) {
 	elm_object_part_content_set(obj, "elm.swallow.multiparty-details",
 					ctx->multiparty.sc);
 
-	ofono_call_added_cb_set(_call_added, ctx);
-	ofono_call_removed_cb_set(_call_removed, ctx);
-	ofono_call_changed_cb_set(_call_changed, ctx);
-	ofono_call_disconnected_cb_set(_call_disconnected, ctx);
-	ofono_changed_cb_set(_ofono_changed, ctx);
+	callback_node_call_added = ofono_call_added_cb_add(_call_added, ctx);
+
+	callback_node_call_removed =
+		ofono_call_removed_cb_add(_call_removed, ctx);
+
+	callback_node_call_changed =
+		ofono_call_changed_cb_add(_call_changed, ctx);
+
+	callback_node_call_disconnected =
+		ofono_call_disconnected_cb_add(_call_disconnected, ctx);
+
+	callback_node_modem_changed =
+		ofono_modem_changed_cb_add(_ofono_changed, ctx);
 
 	return obj;
 }
