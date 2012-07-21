@@ -81,6 +81,20 @@ void gui_number_set(const char *number, Eina_Bool auto_dial)
 	keypad_number_set(keypad, number, auto_dial);
 }
 
+void gui_activecall_set(Evas_Object *o)
+{
+	if (o) {
+		elm_object_part_content_set(main_layout,
+						"elm.swallow.activecall", o);
+		elm_object_signal_emit(main_layout, "show,activecall", "gui");
+	} else {
+		o = elm_object_part_content_unset(
+			main_layout, "elm.swallow.activecall");
+		elm_object_signal_emit(main_layout, "hide,activecall", "gui");
+		evas_object_hide(o);
+	}
+}
+
 void gui_call_enter(void)
 {
 	gui_activate();

@@ -11,6 +11,7 @@
 typedef struct _Callscreen
 {
 	Evas_Object *self;
+	Evas_Object *gui_activecall; /* for gui.h */
 	struct {
 		Evas_Object *sc;
 		Evas_Object *bx;
@@ -34,6 +35,14 @@ typedef struct _Callscreen
 		Evas_Object *popup;
 	} disconnected;
 } Callscreen;
+
+static void _on_active_call_clicked(void *data __UNUSED__,
+					Evas_Object *o __UNUSED__,
+					const char *emission __UNUSED__,
+					const char *source __UNUSED__)
+{
+	gui_call_enter();
+}
 
 static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
 				const char *emission __UNUSED__,
@@ -218,9 +227,14 @@ static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 {
 	_calls_update(ctx);
 
-	if (!ctx->calls.list)
+	if (!ctx->calls.list) {
+		if (ctx->gui_activecall) {
+			gui_activecall_set(NULL);
+			evas_object_del(ctx->gui_activecall);
+			ctx->gui_activecall = NULL;
+		}
 		gui_call_exit();
-	else {
+	} else {
 		if (strcmp(reason, "local") == 0) {
 			/* If there is a held call and active is
 			 * hangup we're left with held but no active,
@@ -534,7 +548,7 @@ static Eina_Bool _on_elapsed_updater(void *data)
 	Callscreen *ctx = data;
 	double next, elapsed, start;
 	Edje_Message_Float msgf;
-	Evas_Object *ed;
+	Evas_Object *ed, *activecall = ctx->gui_activecall;
 	char buf[128];
 
 	if (!ctx->calls.active)
@@ -567,12 +581,19 @@ static Eina_Bool _on_elapsed_updater(void *data)
 				(int)elapsed / 60,
 				(int)elapsed % 60);
 	elm_object_part_text_set(ctx->self, "elm.text.elapsed", buf);
+	if (activecall)
+		elm_object_part_text_set(activecall, "elm.text.elapsed", buf);
 
 	next = 1.0 - (elapsed - (int)elapsed);
 	ctx->elapsed_updater = ecore_timer_add(next, _on_elapsed_updater, ctx);
 	return EINA_FALSE;
 
 stop:
+	if (activecall) {
+		elm_object_part_text_set(activecall, "elm.text.elapsed", "");
+		elm_object_signal_emit(activecall, "hide,elapsed", "call");
+	}
+
 	elm_object_part_text_set(ctx->self, "elm.text.elapsed", "");
 	elm_object_signal_emit(ctx->self, "hide,elapsed", "call");
 	ctx->elapsed_updater = NULL;
@@ -692,6 +713,18 @@ static void _call_changed(void *data, OFono_Call *c)
 		status = "?";
 	}
 
+	if (!ctx->gui_activecall) {
+		ctx->gui_activecall = gui_layout_add(ctx->self, "activecall");
+		elm_object_signal_callback_add(ctx->gui_activecall,
+						"clicked", "call",
+						_on_active_call_clicked, ctx);
+		gui_activecall_set(ctx->gui_activecall);
+	}
+	elm_object_part_text_set(ctx->gui_activecall, "elm.text.name", contact);
+	elm_object_part_text_set(ctx->gui_activecall, "elm.text.status",
+					status);
+
+
 	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
 	free(contact);
 
@@ -701,6 +734,7 @@ static void _call_changed(void *data, OFono_Call *c)
 	sig = ofono_call_multiparty_get(c) ? "show,multiparty" :
 		"hide,multiparty";
 	elm_object_signal_emit(ctx->self, sig, "call");
+	elm_object_signal_emit(ctx->gui_activecall, sig, "call");
 
 	if (ctx->last_state != state) {
 		Eina_Bool have_updater = !!ctx->elapsed_updater;
@@ -732,8 +766,11 @@ static void _call_changed(void *data, OFono_Call *c)
 		default:
 			sig = NULL;
 		}
-		if (sig)
+		if (sig) {
 			elm_object_signal_emit(ctx->self, sig, "call");
+			elm_object_signal_emit(ctx->gui_activecall,
+						sig, "call");
+		}
 		ctx->last_state = state;
 
 		sig = NULL;
@@ -752,8 +789,11 @@ static void _call_changed(void *data, OFono_Call *c)
 			}
 			_on_elapsed_updater(ctx);
 		}
-		if (sig)
+		if (sig) {
 			elm_object_signal_emit(ctx->self, sig, "call");
+			elm_object_signal_emit(ctx->gui_activecall,
+						sig, "call");
+		}
 	}
 
 	if (is_held) {

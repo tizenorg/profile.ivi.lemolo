@@ -20,8 +20,6 @@ group {
     * Where <ACTION> is: save, call or backspace.
     */
 
-   min: 720 1110;
-
    images {
       image: "bg_keypad.jpg" COMP;
       image: "bt_call_pressed.png" COMP;
@@ -41,7 +39,6 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "dark";
-            min: 720 1110;
             image {
                normal: "bg_keypad.jpg";
                scale_hint: STATIC;

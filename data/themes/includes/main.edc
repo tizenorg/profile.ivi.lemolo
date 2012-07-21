@@ -8,6 +8,7 @@ group {
     *   SWALLOW: elm.swallow.keypad
     *   SWALLOW: elm.swallow.contacts
     *   SWALLOW: elm.swallow.history
+    *   SWALLOW: elm.swallow.activecall
     *
     * Signals:
     *   Emit (source is "gui"):
@@ -19,7 +20,7 @@ group {
     *     toggle,on,<ID>:  force <ID> to be marked as selected
     *     toggle,off,<ID>: force <ID> to be marked as unselected
     *
-    * Where <ID> is: keypad, contacts, history.
+    * Where <ID> is: keypad, contacts, history, activecall.
     */
 
    images {
@@ -43,15 +44,59 @@ group {
       }
 
       part {
+         name: "elm.swallow.activecall";
+         type: SWALLOW;
+         api: "activecall" "where to place the active call, if any";
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            align: 0.5 0.0;
+            fixed: 1 1;
+            visible: 1;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+      programs {
+         program {
+            signal: "show,activecall";
+            source: "gui";
+            action: STATE_SET "visible" 0.0;
+            target: "elm.swallow.activecall";
+            api: "activecall_show" "make the activecall swallow visible";
+         }
+         program {
+            signal: "hide,activecall";
+            source: "gui";
+            action: STATE_SET "default" 0.0;
+            target: "elm.swallow.activecall";
+            api: "activecall_hide" "make the activecall swallow hidden";
+         }
+      }
+
+      part {
          name: "elm.swallow.keypad";
          type: SWALLOW;
          api: "keypad" "where to place the keypad";
          description {
             state: "default" 0.0;
+            rel1 {
+               to_y: "elm.swallow.activecall";
+               relative: 0.0 1.0;
+               offset: 0 0;
+            }
             rel2.offset: -1 -171;
          }
          description {
             state: "hidden" 0.0;
+            inherit: "default" 0.0;
             visible: 0;
          }
       }
@@ -61,10 +106,16 @@ group {
          api: "contacts" "where to place the contacts";
          description {
             state: "default" 0.0;
+            rel1 {
+               to_y: "elm.swallow.activecall";
+               relative: 0.0 1.0;
+               offset: 0 0;
+            }
             rel2.offset: -1 -171;
          }
          description {
             state: "hidden" 0.0;
+            inherit: "default" 0.0;
             visible: 0;
          }
       }
@@ -74,10 +125,16 @@ group {
          api: "history" "where to place the history";
          description {
             state: "default" 0.0;
+            rel1 {
+               to_y: "elm.swallow.activecall";
+               relative: 0.0 1.0;
+               offset: 0 0;
+            }
             rel2.offset: -1 -171;
          }
          description {
             state: "hidden" 0.0;
+            inherit: "default" 0.0;
             visible: 0;
          }
       }

@@ -8,6 +8,8 @@ void gui_simple_popup(const char *title, const char *message);
 void gui_activate(void);
 void gui_number_set(const char *number, Eina_Bool auto_dial);
 
+void gui_activecall_set(Evas_Object *o);
+
 void gui_call_enter(void);
 void gui_call_exit(void);
 
