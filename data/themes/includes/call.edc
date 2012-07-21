@@ -1853,12 +1853,11 @@ group {
             color_class: "bg";
             visible: 0;
             fixed: 1 1;
-            min: 0 712;
-            max: 99999 712;
             align: 0.5 1.0;
             rel1 {
-               relative: 0.0 -1.0;
-               offset: 0 0;
+               to: "separator.dark.waiting-hangup";
+               relative: 0.0 0.0;
+               offset: 0 -177;
             }
             rel2 {
                relative: 1.0 1.0;
@@ -1869,10 +1868,6 @@ group {
             state: "alternate" 0.0;
             inherit: "default" 0.0;
             visible: 1;
-            rel1 {
-               relative: 0.0 -1.0;
-               offset: 0 -712;
-            }
             rel2 {
                relative: 1.0 1.0;
                offset: -1 -1;
@@ -1880,26 +1875,41 @@ group {
          }
       }
 
-#define BUTTON(id, label, colcls, y1, y2)                               \
-      SEPARATOR(id, "clipper.waiting-visible", 0.0, -8, "button."##id); \
+#define BUTTON(id, label, colcls, prev)                                 \
+      SEPARATOR(id, "clipper."##id, 0.0, -8, "button."##id);            \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.waiting-visible";                            \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
       part {                                                            \
          name: "button."##id;                                           \
          type: RECT;                                                    \
          mouse_events: 1;                                               \
-         clip_to: "clipper.waiting-visible";                            \
+         clip_to: "clipper."##id;                                       \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: colcls;                                        \
             rel1 {                                                      \
-               to: "area.waiting";                                      \
+               to: prev;                                                \
                relative: 0.0 0.0;                                       \
-               offset: 0 y1;                                            \
+               offset: 0 -170;                                          \
             }                                                           \
             rel2 {                                                      \
-               to: "area.waiting";                                      \
+               to: prev;                                                \
                relative: 1.0 0.0;                                       \
-               offset: -1 y2;                                           \
+               offset: -1 -1;                                           \
             }                                                           \
          }                                                              \
          description {                                                  \
@@ -1907,12 +1917,26 @@ group {
             inherit: "default" 0.0;                                     \
             color: 255 255 255 255;                                     \
          }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            rel1 {                                                      \
+               to: prev;                                                \
+               relative: 0.0 0.0;                                       \
+               offset: 0 8;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               to: prev;                                                \
+               relative: 1.0 0.0;                                       \
+               offset: -1 177;                                          \
+            }                                                           \
+         }                                                              \
       }                                                                 \
       part {                                                            \
          name: "label."##id;                                            \
          type: TEXT;                                                    \
          mouse_events: 0;                                               \
-         clip_to: "clipper.waiting-visible";                            \
+         clip_to: "clipper."##id;                                       \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
@@ -1975,11 +1999,12 @@ group {
          }                                                              \
       }
 
-      BUTTON("waiting-hangup", "Decline", "action", 186, 355);
-      BUTTON("hold-answer", "Hold + Answer", "action", 364, 533);
-      BUTTON("hangup-answer", "Hangup + Answer", "caution", 542, 711);
+      BUTTON("waiting-hangup", "Decline", "action", "separator.dark.hold-answer");
+      BUTTON("hold-answer", "Hold + Answer", "action", "separator.dark.hangup-answer");
+      BUTTON("hangup-answer", "Hangup + Answer", "caution", "separator.dark.waiting-last");
 #undef BUTTON
 
+      SEPARATOR("waiting-last", "clipper.waiting-visible", 1.0, 0, "");
       SEPARATOR("waiting", "clipper.waiting-visible", 0.0, 0, "area.waiting");
       part {
          name: "elm.text.waiting";
@@ -2048,6 +2073,21 @@ group {
             transition: ACCELERATE 0.3;
             target: "area.waiting";
             target: "clipper.waiting-visible";
+         }
+
+         program {
+            signal: "enable,merge";
+            source: "call";
+            action: STATE_SET "hidden" 0.0;
+            target: "button.hold-answer";
+            target: "clipper.hold-answer";
+         }
+         program {
+            signal: "disable,merge";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "button.hold-answer";
+            target: "clipper.hold-answer";
          }
       }
 
