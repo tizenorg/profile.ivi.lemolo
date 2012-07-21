@@ -60,6 +60,8 @@ am__v_EDJ_0 = @echo "  EDJ   " $@;
 THEME_IMAGES = \
 data/themes/images/bg_call.jpg \
 data/themes/images/bg_keypad.jpg \
+data/themes/images/bt_add_call_pressed.png \
+data/themes/images/bt_add_call_released.png \
 data/themes/images/bt_add_contact_pressed.png \
 data/themes/images/bt_add_contact_released.png \
 data/themes/images/bt_backspace_pressed.png \
