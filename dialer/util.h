@@ -3,4 +3,6 @@
 
 char *phone_format(const char *number);
 
+char *date_format(time_t date);
+
 #endif
