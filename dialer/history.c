@@ -11,6 +11,7 @@
 #include "ofono.h"
 #include "log.h"
 #include "util.h"
+#include "gui.h"
 
 #define HISTORY_ENTRY "history"
 
@@ -25,7 +26,6 @@ typedef struct _History {
 	Call_Info_List *calls;
 	Elm_Genlist_Item_Class *itc;
 	Evas_Object *genlist_all, *genlist_missed;
-	Elm_Object_Item *all, *missed;
 } History;
 
 typedef struct _Call_Info {
@@ -200,46 +200,91 @@ static void _history_call_log_read(History *history)
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
-				const char *part __UNUSED__)
+				const char *part)
 {
 	Call_Info *call_info = data;
-	char *buf;
-	const char *name, *call_state;
-	char *t;
 
-	name = call_info->name;
+	if (strncmp(part, "text.call", strlen("text.call")))
+		return NULL;
 
-	if (!call_info->name || call_info->name[0] == '\0')
-		name = call_info->line_id;
+	part += strlen("text.call.");
 
-	if (call_info->state == OFONO_CALL_STATE_INCOMING)
-		call_state = "Missed";
-	else if (call_info->state == OFONO_CALL_STATE_DIALING)
-		call_state = "Not Awnsered";
+	if (!strcmp(part, "name")) {
+		const char *name;
+		name = call_info->name;
+		if (!call_info->name || call_info->name[0] == '\0')
+			name = call_info->line_id;
+		return strdup(name);
+	}
+
+	if (!strcmp(part, "time"))
+		return date_format(call_info->end_time);
+
+	/* TODO: Fetch phone type from contacts information*/
+	if (!strcmp(part, "type"))
+		return strdup("TODO:TELEPHONE TYPE");
+
+	ERR("Unexpected text part: %s", part);
+	return NULL;
+}
+
+
+static Eina_Bool _item_state_get(void *data, Evas_Object *obj __UNUSED__,
+					const char  *part)
+{
+	Call_Info *call_info = data;
+
+	if (!strcmp(part, "missed")) {
+		if (call_info->state == OFONO_CALL_STATE_INCOMING ||
+			call_info->state == OFONO_CALL_STATE_DIALING)
+			return EINA_TRUE;
+		else
+			return EINA_FALSE;
+	} else if (!strcmp(part, "completed")) {
+		if (call_info->state == OFONO_CALL_STATE_INCOMING ||
+			call_info->state == OFONO_CALL_STATE_DIALING)
+			return EINA_FALSE;
+		else
+			return EINA_TRUE;
+	} else if (!strcmp(part, "outgoing"))
+		return EINA_TRUE;
+	else if (!strcmp(part, "incoming"))
+		return EINA_TRUE;
+
+	ERR("Unexpected state part: %s", part);
+	return EINA_FALSE;
+}
+
+static void _on_clicked(void *data __UNUSED__, Evas_Object *obj __UNUSED__,
+			const char *emission, const char *source __UNUSED__)
+{
+	EINA_SAFETY_ON_NULL_RETURN(emission);
+	emission += strlen("clicked,");
+
+	if (!strcmp(emission, "all"))
+		elm_object_signal_emit(obj, "show,all", "gui");
 	else
-		call_state = "Completed";
-
-	t = date_format(call_info->end_time);
-
-	if (asprintf(&buf, "%s-%s-%s", name, call_state, t) < 0)
-		buf = strdup("");
-
-	free(t);
-	return buf;
+		elm_object_signal_emit(obj, "show,missed", "gui");
 }
 
-static void _btn_naviframe_next_click(void *data, Evas_Object *obj __UNUSED__,
-					void *event_inf __UNUSED__)
+static void _on_more_clicked(void *data __UNUSED__, Evas_Object *obj __UNUSED__,
+				const char *emission __UNUSED__,
+				const char *source __UNUSED__)
 {
-	History *history = data;
-	elm_naviframe_item_promote(history->missed);
+	DBG("TODO");
 }
 
-static void _btn_naviframe_prev_click(void *data, Evas_Object *obj __UNUSED__,
-					void *event_inf __UNUSED__)
+static Evas_Object *_item_content_get(void *data __UNUSED__, Evas_Object *obj,
+					const char *part __UNUSED__)
 {
-	History *history = data;
-	elm_naviframe_item_promote(history->all);
+	Evas_Object *btn;
+
+	btn = gui_layout_add(obj, "history/img");
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
+	elm_object_signal_callback_add(btn, "clicked,more", "gui",
+					_on_more_clicked, NULL);
+
+	return btn;
 }
 
 Evas_Object *history_add(Evas_Object *parent)
@@ -248,15 +293,14 @@ Evas_Object *history_add(Evas_Object *parent)
 	const char *config_path;
 	char path[PATH_MAX];
 	Elm_Genlist_Item_Class *itc;
-	Evas_Object *obj, *genlist_all, *genlist_missed, *btn;
+	Evas_Object *obj, *genlist_all, *genlist_missed;
 
 	eet_init();
 	history = calloc(1, sizeof(History));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history, NULL);
 
-	obj = elm_naviframe_add(parent);
-	EINA_SAFETY_ON_NULL_GOTO(obj, err_naviframe);
-	elm_naviframe_prev_btn_auto_pushed_set(obj, EINA_FALSE);
+	obj = gui_layout_add(parent, "history_bg");
+	EINA_SAFETY_ON_NULL_GOTO(obj, err_layout);
 
 	genlist_all = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_all, err_object_new);
@@ -266,40 +310,20 @@ Evas_Object *history_add(Evas_Object *parent)
 
 	itc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_object_new);
-	itc->item_style = "default";
+	itc->item_style = "history";
 	itc->func.text_get = _item_label_get;
-	itc->func.content_get = NULL;
-	itc->func.state_get = NULL;
+	itc->func.content_get = _item_content_get;
+	itc->func.state_get = _item_state_get;
 	itc->func.del = NULL;
 	history->genlist_all = genlist_all;
 	history->genlist_missed = genlist_missed;
-
-	btn = elm_button_add(obj);
-	EINA_SAFETY_ON_NULL_GOTO(btn, err_item_class);
-	elm_object_text_set(btn, "Missed");
-	evas_object_smart_callback_add(btn, "clicked",
-					_btn_naviframe_next_click, history);
-
-	Elm_Object_Item *all =
-		elm_naviframe_item_push(obj, "All", NULL, btn, genlist_all,
-					NULL);
-	EINA_SAFETY_ON_NULL_GOTO(all, err_item_class);
-
-	btn = elm_button_add(obj);
-	EINA_SAFETY_ON_NULL_GOTO(btn, err_item_class);
-	elm_object_text_set(btn, "All");
-	evas_object_smart_callback_add(btn, "clicked",
-					_btn_naviframe_prev_click, history);
-
-	Elm_Object_Item *missed =
-		elm_naviframe_item_push(obj, "Missed", btn, NULL,
-					genlist_missed, NULL);
-	EINA_SAFETY_ON_NULL_GOTO(missed, err_item_class);
-	elm_naviframe_item_promote(all);
-
-	history->all = all;
-	history->missed = missed;
 	history->itc = itc;
+
+	elm_object_part_content_set(obj, "elm.swallow.all", genlist_all);
+	elm_object_part_content_set(obj, "elm.swallow.missed", genlist_missed);
+	elm_object_signal_emit(obj, "show,all", "gui");
+	elm_object_signal_callback_add(obj, "clicked,*", "gui",
+					_on_clicked, NULL);
 
 	config_path = efreet_config_home_get();
 	snprintf(path, sizeof(path), "%s/%s", config_path, PACKAGE_NAME);
@@ -307,11 +331,11 @@ Evas_Object *history_add(Evas_Object *parent)
 	snprintf(path, sizeof(path), "%s/%s/history.eet", config_path,
 			PACKAGE_NAME);
 	history->log = eet_open(path, EET_FILE_MODE_READ_WRITE);
-	EINA_SAFETY_ON_NULL_RETURN_VAL(history->log, NULL);
+	EINA_SAFETY_ON_NULL_GOTO(history->log, err_item_class);
 
 	_history_call_info_descriptor_init(&history->edd, &history->edd_list);
 	_history_call_log_read(history);
-	EINA_SAFETY_ON_NULL_RETURN_VAL(history->calls, NULL);
+	EINA_SAFETY_ON_NULL_GOTO(history->calls, err_log_read);
 	evas_object_event_callback_add(obj, EVAS_CALLBACK_DEL, _on_del,
 					history);
 	callback_node_call_changed =
@@ -320,11 +344,14 @@ Evas_Object *history_add(Evas_Object *parent)
 		ofono_call_removed_cb_add(_history_call_removed, history);
 	return obj;
 
+err_log_read:
+	eet_close(history->log);
 err_item_class:
 	elm_genlist_item_class_free(itc);
 err_object_new:
 	free(obj);
-err_naviframe:
+err_layout:
 	free(history);
+	eet_shutdown();
 	return NULL;
 }

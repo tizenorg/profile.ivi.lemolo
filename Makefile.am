@@ -64,6 +64,7 @@ data/themes/images/bt_add_call_pressed.png \
 data/themes/images/bt_add_call_released.png \
 data/themes/images/bt_add_contact_pressed.png \
 data/themes/images/bt_add_contact_released.png \
+data/themes/images/bt_arrow_right.png
 data/themes/images/bt_backspace_pressed.png \
 data/themes/images/bt_backspace_released.png \
 data/themes/images/bt_call_pressed.png \
@@ -87,11 +88,13 @@ data/themes/images/bt_mute_released.png \
 data/themes/images/bt_speaker_pressed.png \
 data/themes/images/bt_speaker_released.png \
 data/themes/images/bt_swap_pressed.png \
-data/themes/images/bt_swap_released.png
+data/themes/images/bt_swap_released.png \
 
 THEME_INCLUDES = \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
+data/themes/includes/history-bg.edc \
+data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
 data/themes/includes/main.edc \
 data/themes/includes/multiparty-list.edc

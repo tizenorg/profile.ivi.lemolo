@@ -1,0 +1,191 @@
+group {
+   name: "elm/layout/dialer/history/img";
+
+   images.image: "bt_arrow_right.png" COMP;
+
+   parts {
+      part {
+         name: "call.img.more";
+         type: IMAGE;
+         description {
+            state: "default" 0.0;
+            min: 56 56;
+            max: 56 56;
+            color_class: "action";
+            image {
+               normal: "bt_arrow_right.png";
+               scale_hint: STATIC;
+            }
+         }
+      }
+   }
+   programs {
+      program {
+         signal: "mouse,clicked,1";
+         source: "call.img.more";
+         action: SIGNAL_EMIT "clicked,more" "gui";
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item/history/default";
+
+   data {
+      item: "texts" "text.call.name text.call.time text.call.type";
+      item: "contents" "call.swallow.more";
+      item: "states" "missed";
+   }
+
+   parts{
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 240 100;
+            max: 240 100;
+         }
+      }
+      part {
+         name: "text.call.name";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 40 0;
+            }
+            rel2 {
+               to_x: "call.swallow.more";
+               relative: 0.0 0.5;
+               offset: -16 -1;
+            }
+            text {
+               font: "Verdana";
+               size: 45;
+               size_range: 40 45;
+               fit: 1 1;
+               align: 0.0 1.0;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+      }
+
+      part {
+         name: "text.call.time";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.5;
+               offset: 40 0;
+            }
+            rel2 {
+               relative: 0.5 1.0;
+               offset: 0 69;
+            }
+            text {
+               font: "Verdana";
+               size: 30;
+               size_range: 25 30;
+               fit: 1 1;
+               align: 0.0 0.0;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+      }
+
+      part {
+         name: "text.call.type";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               relative: 0.5 0.5;
+               offset: -60 0;
+            }
+            rel2 {
+               relative: 0.5 0.5;
+               offset: 200 70;
+            }
+            text {
+               font: "Verdana";
+               size: 30;
+               size_range: 25 30;
+               fit: 1 1;
+               align: 0.0 0.0;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+      }
+
+      part {
+         name: "call.swallow.more";
+         type: SWALLOW;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            min: 56 56;
+            max: 56 56;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: -96 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -41 -1;
+            }
+         }
+      }
+   }
+
+   programs {
+      program {
+         signal: "elm,state,missed,active";
+         source: "elm";
+         action: STATE_SET "missed" 0.0;
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+      }
+
+      program {
+         signal: "elm,state,missed,passive";
+         source: "elm";
+         action: STATE_SET "default" 0.0;
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+      }
+   }
+}
