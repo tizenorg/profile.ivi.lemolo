@@ -192,7 +192,8 @@ calls_list_alloc:
 	history->calls = calloc(1, sizeof(Call_Info_List));
 }
 
-static char *_item_label_get(void *data, Evas_Object *obj, const char *part) {
+static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
+				const char *part __UNUSED__) {
 	Call_Info *call_info = data;
 	char *buf;
 	const char *name, *call_state;
@@ -219,14 +220,14 @@ static char *_item_label_get(void *data, Evas_Object *obj, const char *part) {
 	return buf;
 }
 
-static void _btn_naviframe_next_click(void *data, Evas_Object *obj,
-					void *event_inf) {
+static void _btn_naviframe_next_click(void *data, Evas_Object *obj __UNUSED__,
+					void *event_inf __UNUSED__) {
 	History *history = data;
 	elm_naviframe_item_promote(history->missed);
 }
 
-static void _btn_naviframe_prev_click(void *data, Evas_Object *obj,
-					void *event_inf) {
+static void _btn_naviframe_prev_click(void *data, Evas_Object *obj __UNUSED__,
+					void *event_inf __UNUSED__) {
 	History *history = data;
 	elm_naviframe_item_promote(history->all);
 }
