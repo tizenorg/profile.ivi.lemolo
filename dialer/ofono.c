@@ -13,12 +13,15 @@ typedef struct _OFono_Bus_Object OFono_Bus_Object;
 
 static const char bus_name[] = "org.ofono";
 
+static const char *known_modem_types[] = {"hfp", "sap", "hardware", NULL};
+
 static E_DBus_Connection *bus_conn = NULL;
 static char *bus_id = NULL;
 static Eina_Hash *modems = NULL;
 static OFono_Modem *modem_selected = NULL;
 static const char *modem_path_wanted = NULL;
 static unsigned int modem_api_mask = 0;
+static Eina_List *modem_types = NULL;
 static E_DBus_Signal_Handler *sig_modem_added = NULL;
 static E_DBus_Signal_Handler *sig_modem_removed = NULL;
 static E_DBus_Signal_Handler *sig_modem_prop_changed = NULL;
@@ -1029,7 +1032,23 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		const char *type;
 		dbus_message_iter_get_basic(value, &type);
 		DBG("%s Type %s", m->base.path, type);
-		m->ignored = strcmp(type, "hardware") != 0;
+
+		if (!modem_types)
+			m->ignored = EINA_FALSE;
+		else {
+			const Eina_List *n;
+			const char *t;
+			m->ignored = EINA_TRUE;
+			EINA_LIST_FOREACH(modem_types, n, t) {
+				if (strcmp(t, type) == 0) {
+					m->ignored = EINA_FALSE;
+					break;
+				}
+			}
+			if (m->ignored)
+				INF("Modem %s type %s is ignored",
+					m->base.path, type);
+		}
 	} else
 		DBG("%s %s (unused property)", m->base.path, key);
 
@@ -1963,6 +1982,60 @@ void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix)
 		fprintf(fp, "%s%s%s", prefix, itr->name, suffix);
 }
 
+void ofono_modem_type_require(const char *spec)
+{
+	Eina_List *lst = NULL;
+	const char *name = spec;
+
+	EINA_SAFETY_ON_NULL_RETURN(spec);
+
+	do {
+		const char **itr;
+		const char *p;
+		unsigned int namelen;
+
+		p = strchr(name, ',');
+		if (p)
+			namelen = p - name;
+		else
+			namelen = strlen(name);
+
+		for (itr = known_modem_types; *itr != NULL; itr++) {
+			unsigned int itrlen = strlen(*itr);
+			if ((itrlen == namelen) &&
+				(memcmp(*itr, name, namelen) == 0)) {
+				lst = eina_list_append(lst, *itr);
+				break;
+			}
+		}
+		if (*itr == NULL)
+			WRN("Unknown oFono type: %.*s", namelen, name);
+
+		if (p)
+			name = p + 1;
+		else
+			name = NULL;
+	} while (name);
+
+	if (lst)
+		DBG("Type parsed: '%s'", spec);
+	else {
+		ERR("Could not parse type: %s", spec);
+		return;
+	}
+
+	eina_list_free(modem_types);
+	modem_types = lst;
+	modem_selected = NULL;
+}
+
+void ofono_modem_type_list(FILE *fp, const char *prefix, const char *suffix)
+{
+	const char **itr;
+	for (itr = known_modem_types; *itr != NULL; itr++)
+		fprintf(fp, "%s%s%s", prefix, *itr, suffix);
+}
+
 void ofono_modem_path_wanted_set(const char *path)
 {
 	if (eina_stringshare_replace(&modem_path_wanted, path))
@@ -2040,6 +2113,8 @@ void ofono_shutdown(void)
 
 	eina_hash_free(modems);
 	modems = NULL;
+
+	eina_list_free(modem_types);
 
 	_ofono_callback_modem_list_free(&ofono_callback_modem_changed_list);
 	_ofono_callback_modem_list_free(&ofono_callback_modem_connected_list);

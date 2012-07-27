@@ -18,6 +18,10 @@ static const char def_modem_api[] =
 	"SimToolkit,"
 	"CallForwarding";
 
+static const char def_modem_type[] =
+	"hardware,"
+	"hfp";
+
 static const Ecore_Getopt options = {
 	PACKAGE_NAME,
 	"%prog [options]",
@@ -30,6 +34,10 @@ static const Ecore_Getopt options = {
 	 ECORE_GETOPT_STORE_DEF_STR('a', "api", "oFono modem APIs to use.",
 					def_modem_api),
 	 ECORE_GETOPT_STORE_TRUE('A', "list-api", "list all oFono modem API."),
+	 ECORE_GETOPT_STORE_DEF_STR('t', "type", "oFono modem type to use.",
+					def_modem_type),
+	 ECORE_GETOPT_STORE_TRUE('T', "list-types",
+					"list all oFono modem types."),
 	 ECORE_GETOPT_VERSION('V', "version"),
 	 ECORE_GETOPT_COPYRIGHT('C', "copyright"),
 	 ECORE_GETOPT_LICENSE('L', "license"),
@@ -46,12 +54,16 @@ EAPI int elm_main(int argc, char **argv)
 	int args;
 	char *modem_path = NULL;
 	char *modem_api = NULL;
+	char *modem_type = NULL;
 	Eina_Bool list_api = EINA_FALSE;
+	Eina_Bool list_type = EINA_FALSE;
 	Eina_Bool quit_option = EINA_FALSE;
 	Ecore_Getopt_Value values[] = {
 		ECORE_GETOPT_VALUE_STR(modem_path),
 		ECORE_GETOPT_VALUE_STR(modem_api),
 		ECORE_GETOPT_VALUE_BOOL(list_api),
+		ECORE_GETOPT_VALUE_STR(modem_type),
+		ECORE_GETOPT_VALUE_BOOL(list_type),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
@@ -77,6 +89,11 @@ EAPI int elm_main(int argc, char **argv)
 	if (list_api) {
 		puts("Supported oFono API:");
 		ofono_modem_api_list(stdout, "\t", "\n");
+		goto end;
+	}
+	if (list_type) {
+		puts("Supported oFono type:");
+		ofono_modem_type_list(stdout, "\t", "\n");
 		goto end;
 	}
 
@@ -106,6 +123,14 @@ EAPI int elm_main(int argc, char **argv)
 	} else {
 		INF("Using default modem API: %s", def_modem_api);
 		ofono_modem_api_require(def_modem_api);
+	}
+
+	if (modem_type) {
+		INF("User-defined modem type: %s", modem_type);
+		ofono_modem_type_require(modem_type);
+	} else {
+		INF("Using default modem type: %s", def_modem_type);
+		ofono_modem_type_require(def_modem_type);
 	}
 
 	if (!gui_init()) {
