@@ -196,7 +196,7 @@ static char *_item_label_get(void *data, Evas_Object *obj, const char *part) {
 	Call_Info *call_info = data;
 	char *buf;
 	const char *name, *call_state;
-	char *time;
+	char *t;
 
 	name = call_info->name;
 
@@ -210,12 +210,12 @@ static char *_item_label_get(void *data, Evas_Object *obj, const char *part) {
 	else
 		call_state = "Completed";
 
-	time = date_format(call_info->end_time);
+	t = date_format(call_info->end_time);
 
-	if (asprintf(&buf, "%s-%s-%s", name, call_state, time) < 0)
+	if (asprintf(&buf, "%s-%s-%s", name, call_state, t) < 0)
 		buf = strdup("");
 
-	free(time);
+	free(t);
 	return buf;
 }
 
