@@ -11,6 +11,13 @@
 
 #include <Ecore_Getopt.h>
 
+static const char def_modem_api[] =
+	"SimManager,"
+	"VoiceCallManager,"
+	"MessageManager,"
+	"SimToolkit,"
+	"CallForwarding";
+
 static const Ecore_Getopt options = {
 	PACKAGE_NAME,
 	"%prog [options]",
@@ -20,7 +27,8 @@ static const Ecore_Getopt options = {
 	"Phone Dialer using oFono and EFL.",
 	EINA_FALSE,
 	{ECORE_GETOPT_STORE_STR('m', "modem", "Modem object path in oFono."),
-	 ECORE_GETOPT_STORE_UINT('a', "api", "oFono modem API mask."),
+	 ECORE_GETOPT_STORE_DEF_STR('a', "api", "oFono modem APIs to use.",
+					def_modem_api),
 	 ECORE_GETOPT_VERSION('V', "version"),
 	 ECORE_GETOPT_COPYRIGHT('C', "copyright"),
 	 ECORE_GETOPT_LICENSE('L', "license"),
@@ -36,11 +44,11 @@ EAPI int elm_main(int argc, char **argv)
 {
 	int args;
 	char *modem_path = NULL;
-	unsigned int modem_api = 0;
+	char *modem_api = NULL;
 	Eina_Bool quit_option = EINA_FALSE;
 	Ecore_Getopt_Value values[] = {
 		ECORE_GETOPT_VALUE_STR(modem_path),
-		ECORE_GETOPT_VALUE_UINT(modem_api),
+		ECORE_GETOPT_VALUE_STR(modem_api),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
@@ -84,8 +92,11 @@ EAPI int elm_main(int argc, char **argv)
 	}
 
 	if (modem_api) {
-		INF("User-defined modem API mask: %#x", modem_api);
+		INF("User-defined modem API: %s", modem_api);
 		ofono_modem_api_require(modem_api);
+	} else {
+		INF("Using default modem API: %s", def_modem_api);
+		ofono_modem_api_require(def_modem_api);
 	}
 
 	if (!gui_init()) {

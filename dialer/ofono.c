@@ -18,11 +18,7 @@ static char *bus_id = NULL;
 static Eina_Hash *modems = NULL;
 static OFono_Modem *modem_selected = NULL;
 static const char *modem_path_wanted = NULL;
-static unsigned int modem_api_mask = (OFONO_API_SIM |
-					OFONO_API_VOICE |
-					OFONO_API_MSG |
-					OFONO_API_STK |
-					OFONO_API_CALL_FW);
+static unsigned int modem_api_mask = 0;
 static E_DBus_Signal_Handler *sig_modem_added = NULL;
 static E_DBus_Signal_Handler *sig_modem_removed = NULL;
 static E_DBus_Signal_Handler *sig_modem_prop_changed = NULL;
@@ -1913,8 +1909,47 @@ const char *ofono_modem_serial_get(void)
 	return m->serial;
 }
 
-void ofono_modem_api_require(unsigned int api_mask)
+void ofono_modem_api_require(const char *spec)
 {
+	unsigned int api_mask = 0;
+	const char *name = spec;
+
+	EINA_SAFETY_ON_NULL_RETURN(spec);
+
+	do {
+		const struct API_Interface_Map *itr;
+		const char *p;
+		unsigned int namelen;
+
+		p = strchr(name, ',');
+		if (p)
+			namelen = p - name;
+		else
+			namelen = strlen(name);
+
+		for (itr = api_iface_map; itr->name != NULL; itr++) {
+			if ((itr->namelen == namelen) &&
+				(memcmp(itr->name, name, namelen) == 0)) {
+				api_mask |= itr->bit;
+				break;
+			}
+		}
+		if (itr->name == NULL)
+			WRN("Unknown oFono API: %.*s", namelen, name);
+
+		if (p)
+			name = p + 1;
+		else
+			name = NULL;
+	} while (name);
+
+	if (api_mask)
+		DBG("API parsed: '%s' = %#x", spec, api_mask);
+	else {
+		ERR("Could not parse API: %s", spec);
+		return;
+	}
+
 	if (modem_api_mask == api_mask)
 		return;
 	modem_api_mask = api_mask;
