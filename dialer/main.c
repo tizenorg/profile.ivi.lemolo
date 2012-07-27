@@ -29,6 +29,7 @@ static const Ecore_Getopt options = {
 	{ECORE_GETOPT_STORE_STR('m', "modem", "Modem object path in oFono."),
 	 ECORE_GETOPT_STORE_DEF_STR('a', "api", "oFono modem APIs to use.",
 					def_modem_api),
+	 ECORE_GETOPT_STORE_TRUE('A', "list-api", "list all oFono modem API."),
 	 ECORE_GETOPT_VERSION('V', "version"),
 	 ECORE_GETOPT_COPYRIGHT('C', "copyright"),
 	 ECORE_GETOPT_LICENSE('L', "license"),
@@ -45,10 +46,12 @@ EAPI int elm_main(int argc, char **argv)
 	int args;
 	char *modem_path = NULL;
 	char *modem_api = NULL;
+	Eina_Bool list_api = EINA_FALSE;
 	Eina_Bool quit_option = EINA_FALSE;
 	Ecore_Getopt_Value values[] = {
 		ECORE_GETOPT_VALUE_STR(modem_path),
 		ECORE_GETOPT_VALUE_STR(modem_api),
+		ECORE_GETOPT_VALUE_BOOL(list_api),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
@@ -71,6 +74,12 @@ EAPI int elm_main(int argc, char **argv)
 		_app_exit_code = EXIT_FAILURE;
 		goto end;
 	}
+	if (list_api) {
+		puts("Supported oFono API:");
+		ofono_modem_api_list(stdout, "\t", "\n");
+		goto end;
+	}
+
 	if (quit_option)
 		goto end;
 

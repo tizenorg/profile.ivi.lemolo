@@ -147,6 +147,7 @@ OFono_Pending *ofono_volume_microphone_set(unsigned char volume, OFono_Simple_Cb
 unsigned char ofono_volume_microphone_get(void);
 
 /* Setup: */
+void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix);
 void ofono_modem_api_require(const char *spec);
 void ofono_modem_path_wanted_set(const char *path);
 

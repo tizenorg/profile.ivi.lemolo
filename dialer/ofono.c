@@ -1956,6 +1956,13 @@ void ofono_modem_api_require(const char *spec)
 	modem_selected = NULL;
 }
 
+void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix)
+{
+	const struct API_Interface_Map *itr;
+	for (itr = api_iface_map; itr->name != NULL; itr++)
+		fprintf(fp, "%s%s%s", prefix, itr->name, suffix);
+}
+
 void ofono_modem_path_wanted_set(const char *path)
 {
 	if (eina_stringshare_replace(&modem_path_wanted, path))
