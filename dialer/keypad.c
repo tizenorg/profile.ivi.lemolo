@@ -413,7 +413,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	free(ctx);
 }
 
-Evas_Object *keypad_add(Evas_Object *parent) {
+Evas_Object *keypad_add(Evas_Object *parent)
+{
 	Keypad *ctx;
 	Evas_Object *obj = gui_layout_add(parent, "keypad");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);

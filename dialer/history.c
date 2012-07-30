@@ -40,7 +40,8 @@ static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
 static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
 
 static Call_Info *_history_call_info_list_search(Eina_List *list,
-							const char *line_id) {
+							const char *line_id)
+{
 	Call_Info *call_info;
 	Eina_List *l;
 
@@ -51,7 +52,8 @@ static Call_Info *_history_call_info_list_search(Eina_List *list,
 	return NULL;
 }
 
-static void _history_call_changed(void *data, OFono_Call *call) {
+static void _history_call_changed(void *data, OFono_Call *call)
+{
 	History *history = data;
 	const char *line_id = ofono_call_line_id_get(call);
 	Call_Info *call_info;
@@ -81,14 +83,16 @@ static void _history_call_changed(void *data, OFono_Call *call) {
 		eina_list_prepend(history->calls->list, call_info);
 }
 
-static void _history_call_log_save(History *history) {
+static void _history_call_log_save(History *history)
+{
 	if (!(eet_data_write(history->log,
 				history->edd_list, HISTORY_ENTRY,
 				history->calls, EET_COMPRESSION_DEFAULT)))
 		ERR("Could in the history log file");
 }
 
-static void _history_call_removed(void *data, OFono_Call *call) {
+static void _history_call_removed(void *data, OFono_Call *call)
+{
 	History *history = data;
 	const char *line_id = ofono_call_line_id_get(call);
 	Call_Info *call_info;
@@ -117,14 +121,16 @@ static void _history_call_removed(void *data, OFono_Call *call) {
 				NULL, ELM_GENLIST_ITEM_NONE, NULL, NULL);
 }
 
-static void _call_info_free(Call_Info *call_info) {
+static void _call_info_free(Call_Info *call_info)
+{
 	eina_stringshare_del(call_info->line_id);
 	eina_stringshare_del(call_info->name);
 	free(call_info);
 }
 
 static void _on_del(void *data, Evas *e __UNUSED__,
-			Evas_Object *obj __UNUSED__, void *event __UNUSED__) {
+			Evas_Object *obj __UNUSED__, void *event __UNUSED__)
+{
 	History *history = data;
 	Call_Info *call_info;
 	ofono_call_removed_cb_del(callback_node_call_removed);
@@ -132,9 +138,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	eet_close(history->log);
 	eet_data_descriptor_free(history->edd);
 	eet_data_descriptor_free(history->edd_list);
-	EINA_LIST_FREE(history->calls->list, call_info) {
+	EINA_LIST_FREE(history->calls->list, call_info)
 		_call_info_free(call_info);
-	}
 	free(history->calls);
 	elm_genlist_item_class_free(history->itc);
 	free(history);
@@ -142,7 +147,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 }
 
 static void _history_call_info_descriptor_init(Eet_Data_Descriptor **edd,
-						Eet_Data_Descriptor **edd_list) {
+						Eet_Data_Descriptor **edd_list)
+{
 	Eet_Data_Descriptor_Class eddc;
 
 	EET_EINA_STREAM_DATA_DESCRIPTOR_CLASS_SET(&eddc, Call_Info);
@@ -166,7 +172,8 @@ static void _history_call_info_descriptor_init(Eet_Data_Descriptor **edd,
 					*edd);
 }
 
-static void _history_call_log_read(History *history) {
+static void _history_call_log_read(History *history)
+{
 	Call_Info *call_info;
 	Eina_List *l;
 
@@ -193,7 +200,8 @@ static void _history_call_log_read(History *history) {
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
-				const char *part __UNUSED__) {
+				const char *part __UNUSED__)
+{
 	Call_Info *call_info = data;
 	char *buf;
 	const char *name, *call_state;
@@ -221,18 +229,21 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 }
 
 static void _btn_naviframe_next_click(void *data, Evas_Object *obj __UNUSED__,
-					void *event_inf __UNUSED__) {
+					void *event_inf __UNUSED__)
+{
 	History *history = data;
 	elm_naviframe_item_promote(history->missed);
 }
 
 static void _btn_naviframe_prev_click(void *data, Evas_Object *obj __UNUSED__,
-					void *event_inf __UNUSED__) {
+					void *event_inf __UNUSED__)
+{
 	History *history = data;
 	elm_naviframe_item_promote(history->all);
 }
 
-Evas_Object *history_add(Evas_Object *parent) {
+Evas_Object *history_add(Evas_Object *parent)
+{
 	History *history;
 	const char *config_path;
 	char path[PATH_MAX];
