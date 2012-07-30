@@ -169,10 +169,14 @@ static void _history_call_info_descriptor_init(Eet_Data_Descriptor **edd,
 static void _history_call_log_read(History *history) {
 	Call_Info *call_info;
 	Eina_List *l;
+
 	history->calls = eet_data_read(history->log, history->edd_list,
 							HISTORY_ENTRY);
 
-	EINA_SAFETY_ON_NULL_GOTO(history->calls, calls_list_alloc);
+	if (!history->calls) {
+		history->calls = calloc(1, sizeof(Call_Info_List));
+		return;
+	}
 
 	EINA_LIST_FOREACH (history->calls->list, l, call_info) {
 		if (!call_info)
@@ -186,10 +190,6 @@ static void _history_call_log_read(History *history) {
 						ELM_GENLIST_ITEM_NONE,
 						NULL, NULL);
 	}
-	return;
-
-calls_list_alloc:
-	history->calls = calloc(1, sizeof(Call_Info_List));
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
