@@ -957,7 +957,7 @@ static void _call_volume_property_changed(void *data, DBusMessage *msg)
 	dbus_message_iter_recurse(&iter, &variant_iter);
 	_call_volume_property_update(m, prop_name, &variant_iter);
 
-	_notify_ofono_callbacks_modem_list(ofono_callback_call_changed_list);
+	_notify_ofono_callbacks_modem_list(ofono_callback_modem_changed_list);
 }
 
 static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
