@@ -11,16 +11,18 @@
 
 #include <Ecore_Getopt.h>
 
-static const char def_modem_api[] =
+static const char def_modem_hardware_api[] =
 	"SimManager,"
 	"VoiceCallManager,"
 	"MessageManager,"
 	"SimToolkit,"
 	"CallForwarding";
 
+static const char def_modem_hfp_api[] =
+	"VoiceCallManager";
+
 static const char def_modem_type[] =
-	"hardware,"
-	"hfp";
+	"hardware";
 
 static const Ecore_Getopt options = {
 	PACKAGE_NAME,
@@ -31,8 +33,9 @@ static const Ecore_Getopt options = {
 	"Phone Dialer using oFono and EFL.",
 	EINA_FALSE,
 	{ECORE_GETOPT_STORE_STR('m', "modem", "Modem object path in oFono."),
-	 ECORE_GETOPT_STORE_DEF_STR('a', "api", "oFono modem APIs to use.",
-					def_modem_api),
+	 ECORE_GETOPT_STORE_STR('a', "api", "oFono modem APIs to use, comma "
+				"separated. Example: "
+				"SimManager,VoiceCallManager. See --list-api"),
 	 ECORE_GETOPT_STORE_TRUE('A', "list-api", "list all oFono modem API."),
 	 ECORE_GETOPT_STORE_DEF_STR('t', "type", "oFono modem type to use.",
 					def_modem_type),
@@ -121,8 +124,20 @@ EAPI int elm_main(int argc, char **argv)
 		INF("User-defined modem API: %s", modem_api);
 		ofono_modem_api_require(modem_api);
 	} else {
-		INF("Using default modem API: %s", def_modem_api);
-		ofono_modem_api_require(def_modem_api);
+		const char *api;
+		if (!modem_type)
+			api = def_modem_hardware_api;
+		else if (strstr(modem_type, "hfp"))
+			api = def_modem_hfp_api;
+		else if (strcmp(modem_type, "hardware"))
+			api = def_modem_hardware_api;
+		else {
+			WRN("modem type not handled: %s", modem_type);
+			api = "VoiceCallManager";
+		}
+
+		INF("Using default modem API: %s", api);
+		ofono_modem_api_require(api);
 	}
 
 	if (modem_type) {
