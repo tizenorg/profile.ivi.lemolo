@@ -291,9 +291,9 @@ Evas_Object *history_add(Evas_Object *parent) {
 	history->itc = itc;
 
 	config_path = efreet_config_home_get();
-	snprintf(path, sizeof(path), "%s%s", config_path, PACKAGE_NAME);
+	snprintf(path, sizeof(path), "%s/%s", config_path, PACKAGE_NAME);
 	ecore_file_mkpath(path);
-	snprintf(path, sizeof(path), "%s%s/history.eet", config_path,
+	snprintf(path, sizeof(path), "%s/%s/history.eet", config_path,
 			PACKAGE_NAME);
 	history->log = eet_open(path, EET_FILE_MODE_READ_WRITE);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history->log, NULL);
