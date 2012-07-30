@@ -44,7 +44,7 @@ static Call_Info *_history_call_info_list_search(Eina_List *list,
 	Call_Info *call_info;
 	Eina_List *l;
 
-	EINA_LIST_FOREACH (list, l, call_info)
+	EINA_LIST_FOREACH(list, l, call_info)
 		if (!strcmp(call_info->line_id, line_id))
 			return call_info;
 
@@ -178,7 +178,7 @@ static void _history_call_log_read(History *history) {
 		return;
 	}
 
-	EINA_LIST_FOREACH (history->calls->list, l, call_info) {
+	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
 		if (!call_info)
 			continue;
 		elm_genlist_item_append(history->genlist_all, history->itc,
