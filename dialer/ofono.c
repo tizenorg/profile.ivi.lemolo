@@ -2066,39 +2066,6 @@ Eina_Bool ofono_init(void)
 	return EINA_TRUE;
 }
 
-static void _ofono_callback_modem_list_free(Eina_Inlist **list)
-{
-	OFono_Callback_List_Modem_Node *node;
-
-	while (*list) {
-		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Modem_Node);
-		*list = eina_inlist_remove(*list, *list);
-		free(node);
-	}
-}
-
-static void _ofono_callback_call_list_free(Eina_Inlist **list)
-{
-	OFono_Callback_List_Call_Node *node;
-
-	while (*list) {
-		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Call_Node);
-		*list = eina_inlist_remove(*list, *list);
-		free(node);
-	}
-}
-
-static void _ofono_callback_call_disconnected_list_free(Eina_Inlist **list)
-{
-	OFono_Callback_List_Call_Disconnected_Node *node;
-
-	while (*list) {
-		node = EINA_INLIST_CONTAINER_GET(*list, OFono_Callback_List_Call_Disconnected_Node);
-		*list = eina_inlist_remove(*list, *list);
-		free(node);
-	}
-}
-
 void ofono_shutdown(void)
 {
 	if (pc_get_modems) {
@@ -2113,15 +2080,6 @@ void ofono_shutdown(void)
 	modems = NULL;
 
 	eina_list_free(modem_types);
-
-	_ofono_callback_modem_list_free(&cbs_modem_changed);
-	_ofono_callback_modem_list_free(&cbs_modem_connected);
-	_ofono_callback_modem_list_free(&cbs_modem_disconnected);
-
-	_ofono_callback_call_list_free(&cbs_call_changed);
-	_ofono_callback_call_list_free(&cbs_call_added);
-	_ofono_callback_call_list_free(&cbs_call_removed);
-	_ofono_callback_call_disconnected_list_free(&cbs_call_disconnected);
 }
 
 static OFono_Pending *_ofono_call_volume_property_set(char *property,
