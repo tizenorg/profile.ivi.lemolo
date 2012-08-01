@@ -20,7 +20,7 @@ typedef struct _Call_Info_List {
 } Call_Info_List;
 
 typedef struct _History {
-	Eet_File *log;
+	char *path, *bkp;
 	Eet_Data_Descriptor *edd;
 	Eet_Data_Descriptor *edd_list;
 	Call_Info_List *calls;
@@ -85,10 +85,18 @@ static void _history_call_changed(void *data, OFono_Call *call)
 
 static void _history_call_log_save(History *history)
 {
-	if (!(eet_data_write(history->log,
+	Eet_File *efile;
+
+	ecore_file_unlink(history->bkp);
+	ecore_file_mv(history->path, history->bkp);
+	efile = eet_open(history->path, EET_FILE_MODE_WRITE);
+	EINA_SAFETY_ON_NULL_RETURN(efile);
+	if (!(eet_data_write(efile,
 				history->edd_list, HISTORY_ENTRY,
 				history->calls, EET_COMPRESSION_DEFAULT)))
 		ERR("Could in the history log file");
+
+	eet_close(efile);
 }
 
 static void _history_call_removed(void *data, OFono_Call *call)
@@ -135,14 +143,16 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	Call_Info *call_info;
 	ofono_call_removed_cb_del(callback_node_call_removed);
 	ofono_call_changed_cb_del(callback_node_call_changed);
-	eet_close(history->log);
 	eet_data_descriptor_free(history->edd);
 	eet_data_descriptor_free(history->edd_list);
 	EINA_LIST_FREE(history->calls->list, call_info)
 		_call_info_free(call_info);
 	free(history->calls);
 	elm_genlist_item_class_free(history->itc);
+	free(history->path);
+	free(history->bkp);
 	free(history);
+	ecore_file_shutdown();
 	eet_shutdown();
 }
 
@@ -176,14 +186,30 @@ static void _history_call_log_read(History *history)
 {
 	Call_Info *call_info;
 	Eina_List *l;
+	Eet_File *efile;
+	Call_Info_List *calls = NULL;
 
-	history->calls = eet_data_read(history->log, history->edd_list,
-							HISTORY_ENTRY);
+	efile = eet_open(history->path, EET_FILE_MODE_READ);
 
-	if (!history->calls) {
-		history->calls = calloc(1, sizeof(Call_Info_List));
-		return;
+	if (efile) {
+		calls = eet_data_read(efile, history->edd_list, HISTORY_ENTRY);
+		eet_close(efile);
 	}
+
+	if (!calls) {
+		efile = eet_open(history->bkp, EET_FILE_MODE_READ);
+		if (efile) {
+			calls = eet_data_read(efile, history->edd_list,
+						HISTORY_ENTRY);
+			eet_close(efile);
+		}
+	}
+
+	if (!calls)
+		history->calls = calloc(1, sizeof(Call_Info_List));
+
+	history->calls = calls;
+	EINA_SAFETY_ON_NULL_RETURN(history->calls);
 
 	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
 		if (!call_info)
@@ -289,13 +315,15 @@ static Evas_Object *_item_content_get(void *data __UNUSED__, Evas_Object *obj,
 
 Evas_Object *history_add(Evas_Object *parent)
 {
+	int r;
 	History *history;
 	const char *config_path;
-	char path[PATH_MAX];
+	char *path, base_dir[PATH_MAX];
 	Elm_Genlist_Item_Class *itc;
 	Evas_Object *obj, *genlist_all, *genlist_missed;
 
 	eet_init();
+	ecore_file_init();
 	history = calloc(1, sizeof(History));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history, NULL);
 
@@ -326,12 +354,22 @@ Evas_Object *history_add(Evas_Object *parent)
 					_on_clicked, NULL);
 
 	config_path = efreet_config_home_get();
-	snprintf(path, sizeof(path), "%s/%s", config_path, PACKAGE_NAME);
-	ecore_file_mkpath(path);
-	snprintf(path, sizeof(path), "%s/%s/history.eet", config_path,
+	snprintf(base_dir, sizeof(base_dir), "%s/%s", config_path,
 			PACKAGE_NAME);
-	history->log = eet_open(path, EET_FILE_MODE_READ_WRITE);
-	EINA_SAFETY_ON_NULL_GOTO(history->log, err_item_class);
+	ecore_file_mkpath(base_dir);
+	r = asprintf(&path,  "%s/%s/history.eet", config_path, PACKAGE_NAME);
+
+	if (r < 0)
+		goto err_item_class;
+
+	history->path = path;
+	r = asprintf(&path,  "%s/%s/history.eet.bkp", config_path,
+			PACKAGE_NAME);
+
+	if (r < 0)
+		goto err_path;
+
+	history->bkp = path;
 
 	_history_call_info_descriptor_init(&history->edd, &history->edd_list);
 	_history_call_log_read(history);
@@ -345,13 +383,18 @@ Evas_Object *history_add(Evas_Object *parent)
 	return obj;
 
 err_log_read:
-	eet_close(history->log);
+	free(history->bkp);
+	eet_data_descriptor_free(history->edd);
+	eet_data_descriptor_free(history->edd_list);
+err_path:
+	free(history->path);
 err_item_class:
 	elm_genlist_item_class_free(itc);
 err_object_new:
 	free(obj);
 err_layout:
 	free(history);
+	ecore_file_shutdown();
 	eet_shutdown();
 	return NULL;
 }
