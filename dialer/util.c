@@ -5,6 +5,12 @@
 #include <Eina.h>
 #include <time.h>
 
+#define MINUTE 60
+#define HOUR ((MINUTE) * 60)
+#define DAY ((HOUR) * 24)
+#define MONTH ((DAY) * 30)
+#define YEAR ((MONTH) *12)
+
 /* TODO: find a configurable way to format the number.
  * Right now it's: 1-234-567-8901 as per
  * http://en.wikipedia.org/wiki/Local_conventions_for_writing_telephone_numbers#North_America
@@ -64,30 +70,30 @@ char *date_format(time_t date)
 
 	if (dt < 30)
 		r = asprintf(&buf, "Just now");
-	else if (dt < 90)
+	else if (dt < (MINUTE + 30))
 		r = asprintf(&buf, "One minute ago");
-	else if (dt < 3700)
+	else if (dt < (HOUR + 100))
 		r = asprintf(&buf, "%d minutes ago", (int)dt/60);
-	else if (dt < 3600 * 4)
+	else if (dt < (HOUR * 4))
 		r = asprintf(&buf, "%d hours ago", (int)dt/3600);
-	else if (dt < 3600 * 24) {
+	else if (dt < DAY) {
 		struct tm *f_time = gmtime(&date);
 		EINA_SAFETY_ON_NULL_GOTO(f_time, err_gmtime);
 		r = asprintf(&buf,  "%02d:%02d", f_time->tm_hour,
 				f_time->tm_min);
-	} else if(dt < 3600 * 24 * 30){
+	} else if(dt < MONTH){
 		struct tm f_time;
 		struct tm f_now;
 		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&now, &f_now), err_gmtime);
 		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&date, &f_time), err_gmtime);
 		r = asprintf(&buf, "%d days ago",
 				f_now.tm_mday - f_time.tm_mday);
-	} else if (dt < 3600 * 24 * 30 * 12) {
+	} else if (dt < YEAR) {
 		struct tm f_time;
 		struct tm f_now;
 		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&now, &f_now), err_gmtime);
 		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&date, &f_time), err_gmtime);
-		r = asprintf(&buf, "%d years ago",
+		r = asprintf(&buf, "%d months ago",
 				f_now.tm_mon - f_time.tm_mon);
 	} else {
 		struct tm f_time;
