@@ -13,6 +13,10 @@
 #include "util.h"
 #include "gui.h"
 
+#ifndef EET_COMPRESSION_DEFAULT
+#define EET_COMPRESSION_DEFAULT 1
+#endif
+
 #define HISTORY_ENTRY "history"
 
 typedef struct _Call_Info_List {
