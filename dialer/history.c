@@ -21,6 +21,7 @@
 
 typedef struct _Call_Info_List {
 	Eina_List *list;
+	Eina_Bool dirty;
 } Call_Info_List;
 
 typedef struct _History {
@@ -33,27 +34,59 @@ typedef struct _History {
 } History;
 
 typedef struct _Call_Info {
-	int state;
 	long long start_time;
 	long long end_time;
 	const char *line_id;
 	const char *name;
+	Eina_Bool completed;
+	Eina_Bool incoming;
+	const OFono_Call *call; /* not in edd */
 } Call_Info;
 
 static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
 static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
 
-static Call_Info *_history_call_info_list_search(Eina_List *list,
-							const char *line_id)
+static Call_Info *_history_call_info_search(const History *history,
+						const OFono_Call *call)
 {
 	Call_Info *call_info;
 	Eina_List *l;
 
-	EINA_LIST_FOREACH(list, l, call_info)
-		if (!strcmp(call_info->line_id, line_id))
+	EINA_LIST_FOREACH(history->calls->list, l, call_info)
+		if (call_info->call == call)
 			return call_info;
 
 	return NULL;
+}
+
+static Eina_Bool _history_call_info_update(Call_Info *call_info)
+{
+	OFono_Call_State state;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(call_info->call, EINA_FALSE);
+	state = ofono_call_state_get(call_info->call);
+
+	if (state == OFONO_CALL_STATE_INCOMING ||
+		state == OFONO_CALL_STATE_WAITING) {
+		if (!call_info->incoming) {
+			call_info->incoming = EINA_TRUE;
+			return EINA_TRUE;
+		}
+	} else if (state == OFONO_CALL_STATE_DIALING ||
+			state == OFONO_CALL_STATE_ALERTING) {
+		if (!call_info->incoming) {
+			call_info->incoming = EINA_FALSE;
+			return EINA_TRUE;
+		}
+	} else if (state == OFONO_CALL_STATE_ACTIVE ||
+			state == OFONO_CALL_STATE_HELD) {
+		if (!call_info->completed) {
+			call_info->completed = EINA_TRUE;
+			return EINA_TRUE;
+		}
+	}
+
+	return EINA_FALSE;
 }
 
 static void _history_call_changed(void *data, OFono_Call *call)
@@ -63,33 +96,40 @@ static void _history_call_changed(void *data, OFono_Call *call)
 	Call_Info *call_info;
 	OFono_Call_State state = ofono_call_state_get(call);
 
-	call_info =
-		_history_call_info_list_search(history->calls->list, line_id);
+	call_info = _history_call_info_search(history, call);
+	DBG("call=%p, id=%s, state=%d, completed=%d, incoming=%d, info=%p",
+		call, line_id, state,
+		call_info ? call_info->completed : EINA_FALSE,
+		call_info ? call_info->incoming : EINA_FALSE,
+		call_info);
 
-	if (call_info) {
-		/* Otherwise I missed the call or the person didn't
-		 * awnser my call!
-		 */
-		if ((call_info->state == OFONO_CALL_STATE_INCOMING ||
-			call_info->state == OFONO_CALL_STATE_DIALING) &&
-			state != OFONO_CALL_STATE_DISCONNECTED)
-			call_info->state = state;
-		return;
-	}
+	if (call_info)
+		goto end;
+
 	call_info = calloc(1, sizeof(Call_Info));
 	EINA_SAFETY_ON_NULL_RETURN(call_info);
 
-	call_info->state = state;
+	call_info->call = call;
 	call_info->start_time = time(NULL);
 	call_info->line_id = eina_stringshare_add(line_id);
 	call_info->name = eina_stringshare_add(ofono_call_name_get(call));
 	history->calls->list =
 		eina_list_prepend(history->calls->list, call_info);
+	history->calls->dirty = EINA_TRUE;
+
+end:
+	if (_history_call_info_update(call_info))
+		history->calls->dirty = EINA_TRUE;
 }
 
 static void _history_call_log_save(History *history)
 {
 	Eet_File *efile;
+
+	EINA_SAFETY_ON_NULL_RETURN(history->calls);
+	DBG("save history (%u calls, dirty: %d) to %s",
+		eina_list_count(history->calls->list), history->calls->dirty,
+		history->path);
 
 	ecore_file_unlink(history->bkp);
 	ecore_file_mv(history->path, history->bkp);
@@ -111,26 +151,34 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	time_t start;
 	char *tm;
 
-	call_info =
-		_history_call_info_list_search(history->calls->list, line_id);
+	call_info = _history_call_info_search(history, call);
+	DBG("call=%p, id=%s, info=%p", call, line_id, call_info);
 	EINA_SAFETY_ON_NULL_RETURN(call_info);
 	start = call_info->start_time;
 	tm = ctime(&start);
 
-	if (call_info->state == OFONO_CALL_STATE_INCOMING) {
-		INF("Missed call - Id: %s - time: %s", line_id, tm);
-		elm_genlist_item_append(history->genlist_missed, history->itc,
-					call_info, NULL, ELM_GENLIST_ITEM_NONE,
-					NULL, NULL);
-	} else if (call_info->state == OFONO_CALL_STATE_DIALING)
-		INF("Call not answered - Id: %s - time: %s", line_id, tm);
-	else
-		INF("A call has ended - Id: %s - time: %s", line_id, tm);
+	if (call_info->completed)
+		INF("Call end:  %s at %s", line_id, tm);
+	else {
+		if (!call_info->incoming)
+			INF("Not answered: %s at %s", line_id, tm);
+		else {
+			INF("Missed: %s at %s", line_id, tm);
+			elm_genlist_item_prepend(history->genlist_missed,
+							history->itc,
+							call_info, NULL,
+							ELM_GENLIST_ITEM_NONE,
+							NULL, NULL);
+		}
+	}
 
 	call_info->end_time = time(NULL);
+	call_info->call = NULL;
+	history->calls->dirty = EINA_TRUE;
 	_history_call_log_save(history);
-	elm_genlist_item_append(history->genlist_all, history->itc, call_info,
-				NULL, ELM_GENLIST_ITEM_NONE, NULL, NULL);
+	elm_genlist_item_prepend(history->genlist_all, history->itc, call_info,
+					NULL, ELM_GENLIST_ITEM_NONE,
+					NULL, NULL);
 }
 
 static void _call_info_free(Call_Info *call_info)
@@ -145,6 +193,10 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 {
 	History *history = data;
 	Call_Info *call_info;
+
+	if (history->calls->dirty)
+		_history_call_log_save(history);
+
 	ofono_call_removed_cb_del(callback_node_call_removed);
 	ofono_call_changed_cb_del(callback_node_call_changed);
 	eet_data_descriptor_free(history->edd);
@@ -172,7 +224,10 @@ static void _history_call_info_descriptor_init(Eet_Data_Descriptor **edd,
 	*edd_list = eet_data_descriptor_stream_new(&eddc);
 
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Call_Info,
-					"state", state, EET_T_INT);
+					"completed", completed, EET_T_UCHAR);
+	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Call_Info,
+					"incoming", incoming, EET_T_UCHAR);
+
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Call_Info,
 					"start_time", start_time, EET_T_LONG_LONG);
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Call_Info,
@@ -210,18 +265,16 @@ static void _history_call_log_read(History *history)
 	}
 
 	if (!calls)
-		history->calls = calloc(1, sizeof(Call_Info_List));
+		calls = calloc(1, sizeof(Call_Info_List));
 
 	history->calls = calls;
 	EINA_SAFETY_ON_NULL_RETURN(history->calls);
 
 	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
-		if (!call_info)
-			continue;
 		elm_genlist_item_append(history->genlist_all, history->itc,
 					call_info, NULL, ELM_GENLIST_ITEM_NONE,
 					NULL, NULL);
-		if (call_info->state == OFONO_CALL_STATE_INCOMING)
+		if (!call_info->completed)
 			elm_genlist_item_append(history->genlist_missed,
 						history->itc, call_info, NULL,
 						ELM_GENLIST_ITEM_NONE,
@@ -262,22 +315,14 @@ static Eina_Bool _item_state_get(void *data, Evas_Object *obj __UNUSED__,
 {
 	Call_Info *call_info = data;
 
-	if (!strcmp(part, "missed")) {
-		if (call_info->state == OFONO_CALL_STATE_INCOMING ||
-			call_info->state == OFONO_CALL_STATE_DIALING)
-			return EINA_TRUE;
-		else
-			return EINA_FALSE;
-	} else if (!strcmp(part, "completed")) {
-		if (call_info->state == OFONO_CALL_STATE_INCOMING ||
-			call_info->state == OFONO_CALL_STATE_DIALING)
-			return EINA_FALSE;
-		else
-			return EINA_TRUE;
-	} else if (!strcmp(part, "outgoing"))
-		return EINA_TRUE;
+	if (!strcmp(part, "missed"))
+		return !call_info->completed;
+	else if (!strcmp(part, "completed"))
+		return call_info->completed;
+	else if (!strcmp(part, "outgoing"))
+		return !call_info->incoming;
 	else if (!strcmp(part, "incoming"))
-		return EINA_TRUE;
+		return call_info->incoming;
 
 	ERR("Unexpected state part: %s", part);
 	return EINA_FALSE;
