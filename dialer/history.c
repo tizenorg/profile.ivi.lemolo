@@ -152,6 +152,7 @@ static void _history_call_log_save(History *history)
 
 static void _history_call_removed(void *data, OFono_Call *call)
 {
+	Elm_Object_Item *it;
 	History *history = data;
 	const char *line_id = ofono_call_line_id_get(call);
 	Call_Info *call_info;
@@ -171,12 +172,13 @@ static void _history_call_removed(void *data, OFono_Call *call)
 			INF("Not answered: %s at %s", line_id, tm);
 		else {
 			INF("Missed: %s at %s", line_id, tm);
-			elm_genlist_item_prepend(history->genlist_missed,
+			it = elm_genlist_item_prepend(history->genlist_missed,
 							history->itc,
 							call_info, NULL,
 							ELM_GENLIST_ITEM_NONE,
 							_on_item_clicked,
 							call_info->line_id);
+			elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
 		}
 	}
 
@@ -185,9 +187,10 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	history->calls->dirty = EINA_TRUE;
 	_history_call_log_save(history);
 
-	elm_genlist_item_prepend(history->genlist_all, history->itc, call_info,
-					NULL, ELM_GENLIST_ITEM_NONE,
+	it = elm_genlist_item_prepend(history->genlist_all, history->itc,
+					call_info, NULL, ELM_GENLIST_ITEM_NONE,
 					_on_item_clicked, call_info->line_id);
+	elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
 }
 
 static void _call_info_free(Call_Info *call_info)
@@ -256,6 +259,7 @@ static void _history_call_log_read(History *history)
 	Eina_List *l;
 	Eet_File *efile;
 	Call_Info_List *calls = NULL;
+	Elm_Object_Item *it;
 
 	efile = eet_open(history->path, EET_FILE_MODE_READ);
 
@@ -290,6 +294,14 @@ static void _history_call_log_read(History *history)
 						_on_item_clicked,
 						call_info->line_id);
 	}
+
+	it = elm_genlist_first_item_get(history->genlist_all);
+	if (it)
+		elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_TOP);
+
+	it = elm_genlist_first_item_get(history->genlist_missed);
+	if (it)
+		elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_TOP);
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
