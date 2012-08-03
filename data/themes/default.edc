@@ -7,5 +7,6 @@ collections {
 #include "includes/multiparty-list.edc"
 #include "includes/history.edc"
 #include "includes/history-bg.edc"
+#include "includes/scroller.edc"
 
 }

@@ -240,11 +240,9 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	part += strlen("text.call.");
 
 	if (!strcmp(part, "name")) {
-		const char *name;
-		name = call_info->name;
 		if (!call_info->name || call_info->name[0] == '\0')
-			name = call_info->line_id;
-		return strdup(name);
+			return phone_format(call_info->line_id);
+		return strdup(call_info->name);
 	}
 
 	if (!strcmp(part, "time"))
@@ -336,9 +334,11 @@ Evas_Object *history_add(Evas_Object *parent)
 
 	genlist_all = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_all, err_object_new);
+	elm_object_style_set(genlist_all, "history");
 
 	genlist_missed = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_missed, err_object_new);
+	elm_object_style_set(genlist_missed, "history");
 
 	itc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_object_new);

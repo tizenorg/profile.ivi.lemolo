@@ -41,12 +41,12 @@ group {
       part {
          name: "bg";
          type: RECT;
+         scale: 1;
          mouse_events: 0;
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: 240 100;
-            max: 240 100;
+            min: 240 120;
          }
       }
       part {
@@ -60,7 +60,7 @@ group {
             color_class: "action";
             rel1 {
                relative: 0.0 0.0;
-               offset: 40 0;
+               offset: 40 26;
             }
             rel2 {
                to_x: "call.swallow.more";
@@ -98,7 +98,7 @@ group {
             }
             rel2 {
                relative: 0.5 1.0;
-               offset: 0 69;
+               offset: -41 -27;
             }
             text {
                font: "Verdana";
@@ -127,11 +127,12 @@ group {
             color_class: "action";
             rel1 {
                relative: 0.5 0.5;
-               offset: -60 0;
+               offset: 0 0;
             }
             rel2 {
-               relative: 0.5 0.5;
-               offset: 200 70;
+               to_x: "call.swallow.more";
+               relative: 0.0 1.0;
+               offset: -16 -27;
             }
             text {
                font: "Verdana";

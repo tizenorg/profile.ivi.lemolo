@@ -97,7 +97,8 @@ data/themes/includes/history-bg.edc \
 data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
 data/themes/includes/main.edc \
-data/themes/includes/multiparty-list.edc
+data/themes/includes/multiparty-list.edc \
+data/themes/includes/scroller.edc
 
 
 EXTRA_DIST = data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)

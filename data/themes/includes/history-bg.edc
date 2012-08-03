@@ -32,10 +32,10 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: 720 170;
+            min: 720 85;
             rel2 {
                relative: 1.0 0.0;
-               offset: -1.0 169;
+               offset: -1.0 84;
             }
          }
       }
@@ -90,11 +90,8 @@ group {
          description {
             state: "default" 0.0;
             rel1 {
-               relative: 0.0 0.0;
-               offset: 0.0 210;
-            }
-            rel2 {
-               relative: 1.0 1.0;
+               to_y: "separator.bg.button";
+               relative: 0.0 1.0;
             }
             visible: 1;
          }
@@ -110,16 +107,10 @@ group {
          type: SWALLOW;
          description {
             state: "default" 0.0;
-
             rel1 {
+               to_y: "separator.bg.button";
                relative: 0.0 0.0;
-               offset: 0.0 210;
             }
-
-            rel2 {
-               relative: 1.0 1.0;
-            }
-
             visible: 0;
          }
          description {
@@ -128,7 +119,8 @@ group {
             visible: 1;
          }
       }
-#define BUTTON(id, label, sub, ccls, r1, r2)                            \
+
+#define BUTTON(id, label, ccls, r1, r2)                                 \
       part {                                                            \
          name: "button."##id;                                           \
          type: RECT;                                                    \
@@ -137,7 +129,6 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-                                                                        \
             rel1 {                                                      \
                to: "bg.buttons";                                        \
                relative: r1;                                            \
@@ -145,7 +136,6 @@ group {
             rel2 {                                                      \
                to: "bg.buttons";                                        \
                relative: r2;                                            \
-               offset: 0 0;                                             \
             }                                                           \
          }                                                              \
          description {                                                  \
@@ -165,39 +155,11 @@ group {
             rel1.to: "button."##id;                                     \
             rel2 {                                                      \
                to: "button."##id;                                       \
-               relative: 1.0 0.8;                                       \
             }                                                           \
             text {                                                      \
                text: label;                                             \
                font: "Verdana";                                         \
                size: 45;                                                \
-               align: 0.5 0.5;                                          \
-            }                                                           \
-         }                                                              \
-         description {                                                  \
-            state: "pressed" 0.0;                                       \
-            inherit: "default" 0.0;                                     \
-            color: 16 16 16 255;                                        \
-         }                                                              \
-      }                                                                 \
-      part {                                                            \
-         name: "sub."##id;                                              \
-         type: TEXT;                                                    \
-         mouse_events: 0;                                               \
-         description {                                                  \
-            state: "default" 0.0;                                       \
-            color: 255 255 255 255;                                     \
-            color_class: "light";                                       \
-            rel1 {                                                      \
-               to: "button."##id;                                       \
-               relative: 0.0 0.5;                                       \
-               offset: 0 2;                                             \
-            }                                                           \
-            rel2.to: "button."##id;                                     \
-            text {                                                      \
-               text: sub;                                               \
-               font: "Verdana:style=Bold";                              \
-               size: 16;                                                \
                align: 0.5 0.5;                                          \
             }                                                           \
          }                                                              \
@@ -215,7 +177,6 @@ group {
             action: STATE_SET "pressed" 0.0;                            \
             target: "button."##id;                                      \
             target: "label."##id;                                       \
-            target: "sub."##id;                                         \
          }                                                              \
          program {                                                      \
             signal: "toggle,off,"##id;                                  \
@@ -223,7 +184,6 @@ group {
             action: STATE_SET "default" 0.0;                            \
             target: "button."##id;                                      \
             target: "label."##id;                                       \
-            target: "sub."##id;                                         \
          }                                                              \
          program {                                                      \
             signal: "mouse,clicked,1";                                  \
@@ -233,8 +193,8 @@ group {
          }                                                              \
       }
 
-      BUTTON("all",    "All",     "", "action", 0.0 0.0, 0.5 1.0);
-      BUTTON("missed",    "Missed",  "", "action", 0.5 0.0, 1.0 1.0);
+      BUTTON("all",    "All",    "action", 0.0 0.0, 0.5 1.0);
+      BUTTON("missed", "Missed", "action", 0.5 0.0, 1.0 1.0);
 #undef BUTTON
    }
    programs {
