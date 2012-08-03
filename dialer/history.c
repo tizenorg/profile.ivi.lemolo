@@ -89,6 +89,13 @@ static Eina_Bool _history_call_info_update(Call_Info *call_info)
 	return EINA_FALSE;
 }
 
+static void _on_item_clicked(void *data, Evas_Object *obj __UNUSED__,
+				void *event_inf __UNUSED__)
+{
+	const char *number = data;
+	gui_number_set(number, EINA_TRUE);
+}
+
 static void _history_call_changed(void *data, OFono_Call *call)
 {
 	History *history = data;
@@ -168,7 +175,8 @@ static void _history_call_removed(void *data, OFono_Call *call)
 							history->itc,
 							call_info, NULL,
 							ELM_GENLIST_ITEM_NONE,
-							NULL, NULL);
+							_on_item_clicked,
+							call_info->line_id);
 		}
 	}
 
@@ -176,9 +184,10 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	call_info->call = NULL;
 	history->calls->dirty = EINA_TRUE;
 	_history_call_log_save(history);
+
 	elm_genlist_item_prepend(history->genlist_all, history->itc, call_info,
 					NULL, ELM_GENLIST_ITEM_NONE,
-					NULL, NULL);
+					_on_item_clicked, call_info->line_id);
 }
 
 static void _call_info_free(Call_Info *call_info)
@@ -273,12 +282,13 @@ static void _history_call_log_read(History *history)
 	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
 		elm_genlist_item_append(history->genlist_all, history->itc,
 					call_info, NULL, ELM_GENLIST_ITEM_NONE,
-					NULL, NULL);
+					_on_item_clicked, call_info->line_id);
 		if (!call_info->completed)
 			elm_genlist_item_append(history->genlist_missed,
 						history->itc, call_info, NULL,
 						ELM_GENLIST_ITEM_NONE,
-						NULL, NULL);
+						_on_item_clicked,
+						call_info->line_id);
 	}
 }
 
@@ -356,6 +366,7 @@ static Evas_Object *_item_content_get(void *data __UNUSED__, Evas_Object *obj,
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
 	elm_object_signal_callback_add(btn, "clicked,more", "gui",
 					_on_more_clicked, NULL);
+	evas_object_propagate_events_set(btn, EINA_FALSE);
 
 	return btn;
 }
