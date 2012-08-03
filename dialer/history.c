@@ -90,10 +90,12 @@ static Eina_Bool _history_call_info_update(Call_Info *call_info)
 }
 
 static void _on_item_clicked(void *data, Evas_Object *obj __UNUSED__,
-				void *event_inf __UNUSED__)
+				void *event_info)
 {
+	Elm_Object_Item *it = event_info;
 	const char *number = data;
 	gui_number_set(number, EINA_TRUE);
+	elm_genlist_item_selected_set(it, EINA_FALSE);
 }
 
 static void _history_call_changed(void *data, OFono_Call *call)
