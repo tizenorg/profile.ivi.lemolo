@@ -1,6 +1,7 @@
 group {
    name: "elm/scroller/base/multiparty-details";
    alias: "elm/genlist/base/history";
+   alias: "elm/genlist/base/contacts";
 
    script {
       public sbvis_v, sbalways_v, sbvis_timer;

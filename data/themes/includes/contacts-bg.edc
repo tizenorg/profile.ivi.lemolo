@@ -1,0 +1,174 @@
+group {
+   name: "elm/layout/dialer/contacts_bg";
+
+   images {
+      image: "bg_keypad.jpg" COMP;
+   }
+
+   parts {
+
+      part {
+         name: "bg";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            rel1.relative: 0.0 0.0;
+            rel2.relative: 1.0 1.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            image {
+               normal: "bg_keypad.jpg";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+      part {
+         name: "text.title";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: WIDTH ACTION_HEIGHT;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -1.0 (ACTION_HEIGHT - 1);
+            }
+            text {
+               text: "Contacts";
+               font: FONT;
+               size: SIZE_HUGE;
+               size_range: SIZE_TINY SIZE_HUGE;
+               fit: 1 1;
+               align: 0.5 0.5;
+               ellipsis: 1.0;
+            }
+         }
+      }
+#define SEPARATOR(id, rely, offy, relto)                                \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("title", 1.0, -SEPARATOR_HEIGHT, "text.title");
+#undef SEPARATOR
+      part {
+         name: "elm.swallow.details";
+         type: SWALLOW;
+         description {
+	    state: "default" 0.0;
+            visible: 0;
+            rel1 {
+               relative: 0.0 1.0;
+               to_y: "text.title";
+            }
+	 }
+         description {
+            state: "show" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "elm.swallow.genlist";
+         type: SWALLOW;
+         description {
+	    state: "default" 0.0;
+            visible: 1;
+            rel1 {
+               relative: 0.0 1.0;
+               to_y: "text.title";
+            }
+	 }
+         description {
+            state: "hide" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+   }
+
+   programs {
+
+      program {
+         name: "hide,genlist";
+         action: STATE_SET "hide" 0.0;
+         target: "elm.swallow.genlist";
+      }
+
+      program {
+         name: "show,genlist";
+         action: STATE_SET "default" 0.0;
+         target: "elm.swallow.genlist";
+      }
+
+      program {
+         name: "hide,details";
+         action: STATE_SET "default" 0.0;
+         target: "elm.swallow.details";
+      }
+
+      program {
+         name: "show,details";
+         action: STATE_SET "show" 0.0;
+         target: "elm.swallow.details";
+      }
+
+      program {
+         signal: "show,details";
+         source: "gui";
+         after: "hide,genlist";
+         after: "show,details";
+      }
+
+      program {
+         signal: "hide,details";
+         source: "gui";
+         after: "hide,details";
+         after: "show,genlist";
+      }
+   }
+}

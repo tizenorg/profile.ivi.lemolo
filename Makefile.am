@@ -97,6 +97,8 @@ data/themes/images/bt_swap_released.png
 THEME_INCLUDES = \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
+data/themes/includes/contacts-bg.edc \
+data/themes/includes/contacts.edc \
 data/themes/includes/history-bg.edc \
 data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \

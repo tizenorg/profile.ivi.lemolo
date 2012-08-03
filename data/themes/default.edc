@@ -4,6 +4,8 @@ collections {
 #include "includes/main.edc"
 #include "includes/keypad.edc"
 #include "includes/call.edc"
+#include "includes/contacts-bg.edc"
+#include "includes/contacts.edc"
 #include "includes/multiparty-list.edc"
 #include "includes/history.edc"
 #include "includes/history-bg.edc"

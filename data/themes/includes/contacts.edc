@@ -1,0 +1,304 @@
+group {
+   name: "elm/genlist/item/contacts/default";
+
+   data {
+      item: "texts" "text.contacts.name";
+   }
+
+   parts{
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            min: ACTION_WIDTH LIST_ITEM_HEIGHT;
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+
+      part {
+         name: "text.contacts.name";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING 0;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+	       size_range: SIZE_SMALL SIZE_MEDIUM;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+   }
+
+   programs {
+
+      program {
+         signal: "elm,state,selected";
+         source: "elm";
+         action: STATE_SET "selected" 0.0;
+         target: "bg";
+         target: "text.contacts.name";
+      }
+
+      program {
+         signal: "elm,state,unselected";
+         source: "elm";
+         action: STATE_SET "default" 0.0;
+         target: "bg";
+         target: "text.contacts.name";
+      }
+   }
+}
+
+group {
+   name: "elm/layout/dialer/contacts_details";
+
+   parts {
+
+      part {
+         name: "text.name";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "img.photo";
+               relative: 1.0 0.0;
+               offset: 16 0;
+            }
+            rel2 {
+               to_y: "img.photo";
+               relative: 1.0 1.0;
+               offset: -47 -1;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_HUGE;
+               size_range: SIZE_LARGE SIZE_HUGE;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "img.photo";
+         type: SWALLOW;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            min: 170 170;
+            max: 170 170;
+            rel1{
+               relative: 0.0 0.0;
+               offset: 46 0;
+            }
+            rel2 {
+               relative: 0.0 0.0;
+               offset: 216 170;
+            }
+         }
+      }
+#define SEPARATOR(id, rely, offy, relto)                                \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("btn", 0.0, -SEPARATOR_HEIGHT, "bg.buttons");
+#undef SEPARATOR
+
+      part {
+         name: "box.phones";
+         type: BOX;
+         scale: 1;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            box {
+               layout: "vertical_homogeneous";
+               padding: 0 ITEM_PADDING;
+            }
+            rel1 {
+	       to_y: "text.name";
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to_y: "bg.buttons";
+               relative: 1.0 0.0;
+               offset: (-BORDER_PADDING-1) (-SEPARATOR_HEIGHT - 1);
+            }
+         }
+      }
+
+      part {
+         name: "bg.buttons";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: WIDTH ACTION_HEIGHT;
+            max: WIDTH 99999; /* keep it tight centered */
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -ACTION_HEIGHT;
+            }
+         }
+      }
+#define BUTTON(id, label, ccls, r1, r2)                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r2;                                            \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_HUGE;                                         \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "keypad";               \
+            after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("back",    "Back",    "action", 0.0 0.0, 1.0 1.0);
+#undef BUTTON
+   }
+}
