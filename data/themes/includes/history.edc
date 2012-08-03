@@ -1,28 +1,22 @@
 group {
    name: "elm/layout/dialer/history/img";
 
-   images.image: "bt_arrow_right.png" COMP;
-
    parts {
       part {
-         name: "call.img.more";
-         type: IMAGE;
+         name: "rect";
+         type: RECT;
          description {
             state: "default" 0.0;
             min: 56 56;
             max: 56 56;
-            color_class: "action";
-            image {
-               normal: "bt_arrow_right.png";
-               scale_hint: STATIC;
-            }
+            color: 0 0 0 0;
          }
       }
    }
    programs {
       program {
          signal: "mouse,clicked,1";
-         source: "call.img.more";
+         source: "rect";
          action: SIGNAL_EMIT "clicked,more" "gui";
       }
    }
@@ -37,6 +31,66 @@ group {
       item: "states" "missed";
    }
 
+   script {
+      public missed;
+      public selected;
+      public not_first; /* can't call it 'first' as globals start as 0 */
+
+      public anim_states() {
+         new m = get_int(missed);
+         new s = get_int(selected);
+
+         if (m) {
+            if (s)
+               run_program(PROGRAM:"show_selected");
+            else
+               run_program(PROGRAM:"show_missed");
+         } else {
+            if (s)
+               run_program(PROGRAM:"show_selected");
+            else
+               run_program(PROGRAM:"show_default");
+         }
+      }
+
+      public set_missed(val) {
+         new m = get_int(missed);
+         new s = get_int(selected);
+
+         if (m == val) return;
+         set_int(missed, val);
+         m = val;
+
+         if (get_int(not_first)) {
+            if (m) {
+               if (s)
+                  run_program(PROGRAM:"animate_selected");
+               else
+                  run_program(PROGRAM:"animate_missed");
+            } else {
+               if (s)
+                  run_program(PROGRAM:"animate_selected");
+               else
+                  run_program(PROGRAM:"animate_default");
+            }
+         } else {
+            set_int(not_first, 1);
+            anim_states();
+         }
+      }
+
+      public set_selected(val) {
+         new s = get_int(selected);
+
+         if (s == val) return;
+         set_int(selected, val);
+
+         anim_states();
+      }
+   }
+
+   images.image: "bt_arrow_right.png" COMP;
+
    parts{
       part {
          name: "bg";
@@ -45,8 +99,14 @@ group {
          mouse_events: 1;
          description {
             state: "default" 0.0;
-            color: 0 0 0 0;
+            color: 255 255 255 0;
+            color_class: "action";
             min: 240 120;
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
          }
       }
       part {
@@ -81,6 +141,11 @@ group {
             inherit: "default" 0.0;
             color_class: "caution";
          }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
       }
 
       part {
@@ -113,6 +178,11 @@ group {
             state: "missed" 0.0;
             inherit: "default" 0.0;
             color_class: "caution";
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
          }
       }
 
@@ -148,6 +218,36 @@ group {
             inherit: "default" 0.0;
             color_class: "caution";
          }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "call.img.more";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            rel1.to: "call.swallow.more";
+            rel2.to: "call.swallow.more";
+            color_class: "action";
+            image {
+               normal: "bt_arrow_right.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
       }
 
       part {
@@ -174,19 +274,89 @@ group {
       program {
          signal: "elm,state,missed,active";
          source: "elm";
-         action: STATE_SET "missed" 0.0;
-         target: "text.call.name";
-         target: "text.call.time";
-         target: "text.call.type";
+         script {
+            set_missed(1);
+         }
       }
-
       program {
          signal: "elm,state,missed,passive";
          source: "elm";
-         action: STATE_SET "default" 0.0;
+         script {
+            set_missed(0);
+         }
+      }
+      program {
+         signal:  "elm,state,selected";
+         source:  "elm";
+         script {
+            set_selected(1);
+         }
+      }
+      program {
+         signal:  "elm,state,unselected";
+         source:  "elm";
+         script {
+            set_selected(0);
+         }
+      }
+
+      program {
+         name: "show_missed";
+         action: STATE_SET "missed" 0.0;
+         target: "bg";
          target: "text.call.name";
          target: "text.call.time";
          target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "show_default";
+         action: STATE_SET "default" 0.0;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "show_selected";
+         action: STATE_SET "selected" 0.0;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+
+      program {
+         name: "animate_missed";
+         action: STATE_SET "missed" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "animate_default";
+         action: STATE_SET "default" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "animate_selected";
+         action: STATE_SET "selected" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
       }
    }
 }
