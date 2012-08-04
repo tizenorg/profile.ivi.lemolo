@@ -1934,6 +1934,12 @@ group {
             target: "clipper.multiparty-details-hidden";
          }
 
+	 program {
+            signal: "clicked,held-multiparty"; /* just show on user request */
+            source: "call";
+            after: "show-multiparty-details-phase1";
+         }
+
          program {
             name: "show-multiparty-details-phase1";
             signal: "clicked,multiparty"; /* just show on user request */
