@@ -117,15 +117,15 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: 96 96;
-            max: 96 96;
+            min: 80 80;
+            max: 80 80;
             rel1 {
                relative: 1.0 0.0;
-               offset: -96 37;
+               offset: -80 45;
             }
             rel2 {
                relative: 1.0 0.0;
-               offset: -1 133;
+               offset: -1 141;
             }
             image.normal: "bt_multiparty_released.png";
          }
@@ -397,17 +397,17 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: 96 96;
-            max: 96 96;
+            min: 80 80;
+            max: 80 80;
             rel1 {
                to_y: "elm.text.status";
                relative: 1.0 1.0;
-               offset: -96 57;
+               offset: -80 65;
             }
             rel2 {
                to_y: "elm.text.status";
                relative: 1.0 1.0;
-               offset: -1 153;
+               offset: -1 161;
             }
             image.normal: "bt_multiparty_released.png";
          }

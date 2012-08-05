@@ -642,37 +642,13 @@ static char *_call_name_or_id(const OFono_Call *call)
 	return phone_format(ofono_call_line_id_get(call));
 }
 
-static char *_call_name_get(const Callscreen *ctx, const OFono_Call *call)
+static char *_call_name_get(const Callscreen *ctx __UNUSED__,
+				const OFono_Call *call)
 {
-	Eina_Strbuf *buf;
-	const Eina_List *n;
-	Eina_Bool first = EINA_TRUE;
-	char *s;
-
 	if (!ofono_call_multiparty_get(call))
 		return _call_name_or_id(call);
 
-	buf = eina_strbuf_new();
-	eina_strbuf_append(buf, "Conf: ");
-	EINA_LIST_FOREACH(ctx->calls.list, n, call) {
-		char *name;
-
-		if (!ofono_call_multiparty_get(call))
-			continue;
-
-		name = _call_name_or_id(call);
-		if (!first)
-			eina_strbuf_append_printf(buf, ", %s", name);
-		else {
-			eina_strbuf_append(buf, name);
-			first = EINA_FALSE;
-		}
-		free(name);
-	}
-
-	s = eina_strbuf_string_steal(buf);
-	eina_strbuf_free(buf);
-	return s;
+	return strdup("Conference");
 }
 
 static void _call_changed(void *data, OFono_Call *c)
