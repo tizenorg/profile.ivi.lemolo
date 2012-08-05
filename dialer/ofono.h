@@ -85,6 +85,7 @@ const char *ofono_call_name_get(const OFono_Call *c);
 const char *ofono_call_line_id_get(const OFono_Call *c);
 Eina_Bool ofono_call_multiparty_get(const OFono_Call *c);
 double ofono_call_start_time_get(const OFono_Call *c);
+time_t ofono_call_full_start_time_get(const OFono_Call *c);
 
 #define ofono_call_state_valid_check(c) \
 	(ofono_call_state_get(c) != OFONO_CALL_STATE_DISCONNECTED)

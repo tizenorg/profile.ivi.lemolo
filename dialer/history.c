@@ -37,6 +37,7 @@ typedef struct _History {
 typedef struct _Call_Info {
 	long long start_time;
 	long long end_time;
+	long long creation_time; /* not in edd */
 	const char *line_id;
 	const char *name;
 	Eina_Bool completed;
@@ -98,6 +99,11 @@ static Eina_Bool _history_call_info_update(Call_Info *call_info)
 	} else if (state == OFONO_CALL_STATE_ACTIVE ||
 			state == OFONO_CALL_STATE_HELD) {
 		if (!call_info->completed) {
+			call_info->start_time = ofono_call_full_start_time_get
+				(call_info->call);
+			if (call_info->start_time == 0)
+				call_info->start_time = call_info->creation_time;
+
 			call_info->completed = EINA_TRUE;
 			return EINA_TRUE;
 		}
@@ -136,7 +142,8 @@ static void _history_call_changed(void *data, OFono_Call *call)
 	EINA_SAFETY_ON_NULL_RETURN(call_info);
 
 	call_info->call = call;
-	call_info->start_time = time(NULL);
+	call_info->start_time = ofono_call_full_start_time_get(call);
+	call_info->creation_time = time(NULL);
 	call_info->line_id = eina_stringshare_add(line_id);
 	call_info->name = eina_stringshare_add(ofono_call_name_get(call));
 	history->calls->list =
@@ -181,6 +188,10 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	call_info = _history_call_info_search(history, call);
 	DBG("call=%p, id=%s, info=%p", call, line_id, call_info);
 	EINA_SAFETY_ON_NULL_RETURN(call_info);
+
+	if (call_info->start_time == 0)
+		call_info->start_time = call_info->creation_time;
+
 	start = call_info->start_time;
 	tm = ctime(&start);
 
@@ -341,8 +352,11 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 		return strdup(call_info->name);
 	}
 
-	if (!strcmp(part, "time"))
-		return date_format(call_info->end_time);
+	if (!strcmp(part, "time")) {
+		if ((call_info->completed) && (call_info->end_time))
+			return date_format(call_info->end_time);
+		return date_format(call_info->start_time);
+	}
 
 	/* TODO: Fetch phone type from contacts information*/
 	if (!strcmp(part, "type"))
