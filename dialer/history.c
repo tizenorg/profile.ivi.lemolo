@@ -31,6 +31,7 @@ typedef struct _History {
 	Call_Info_List *calls;
 	Elm_Genlist_Item_Class *itc;
 	Evas_Object *genlist_all, *genlist_missed;
+	Ecore_Poller *updater;
 } History;
 
 typedef struct _Call_Info {
@@ -45,6 +46,22 @@ typedef struct _Call_Info {
 
 static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
 static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
+
+static Eina_Bool _history_time_updater(void *data)
+{
+	History *ctx = data;
+	Elm_Object_Item *it;
+
+	it = elm_genlist_first_item_get(ctx->genlist_all);
+	for (; it != NULL; it = elm_genlist_item_next_get(it))
+		elm_genlist_item_update(it);
+
+	it = elm_genlist_first_item_get(ctx->genlist_missed);
+	for (; it != NULL; it = elm_genlist_item_next_get(it))
+		elm_genlist_item_update(it);
+
+	return EINA_TRUE;
+}
 
 static Call_Info *_history_call_info_search(const History *history,
 						const OFono_Call *call)
@@ -207,6 +224,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 {
 	History *history = data;
 	Call_Info *call_info;
+
+	ecore_poller_del(history->updater);
 
 	if (history->calls->dirty)
 		_history_call_log_save(history);
@@ -454,6 +473,11 @@ Evas_Object *history_add(Evas_Object *parent)
 		ofono_call_changed_cb_add(_history_call_changed, history);
 	callback_node_call_removed =
 		ofono_call_removed_cb_add(_history_call_removed, history);
+
+	/* ECORE_POLLER_CORE is 1/8th of second. */
+	history->updater = ecore_poller_add(ECORE_POLLER_CORE, 8 * 60,
+						_history_time_updater,
+						history);
 	return obj;
 
 err_log_read:
