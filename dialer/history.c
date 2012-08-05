@@ -54,14 +54,23 @@ static Eina_Bool _history_time_updater(void *data)
 {
 	History *ctx = data;
 	Elm_Object_Item *it;
+	long long update_threshold = time(NULL) - WEEK - DAY;
 
 	it = elm_genlist_first_item_get(ctx->genlist_all);
-	for (; it != NULL; it = elm_genlist_item_next_get(it))
+	for (; it != NULL; it = elm_genlist_item_next_get(it)) {
+		const Call_Info *call_info = elm_object_item_data_get(it);
+		if (call_info->start_time < update_threshold)
+			continue;
 		elm_genlist_item_update(it);
+	}
 
 	it = elm_genlist_first_item_get(ctx->genlist_missed);
-	for (; it != NULL; it = elm_genlist_item_next_get(it))
+	for (; it != NULL; it = elm_genlist_item_next_get(it)) {
+		const Call_Info *call_info = elm_object_item_data_get(it);
+		if (call_info->start_time < update_threshold)
+			continue;
 		elm_genlist_item_update(it);
+	}
 
 	return EINA_TRUE;
 }

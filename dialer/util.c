@@ -5,11 +5,7 @@
 #include <Eina.h>
 #include <time.h>
 
-#define MINUTE 60
-#define HOUR ((MINUTE) * 60)
-#define DAY ((HOUR) * 24)
-#define MONTH ((DAY) * 30)
-#define YEAR ((MONTH) *12)
+#include "util.h"
 
 /* TODO: find a configurable way to format the number.
  * Right now it's: 1-234-567-8901 as per
@@ -76,32 +72,22 @@ char *date_format(time_t date)
 		r = asprintf(&buf, "%d minutes ago", (int)dt/60);
 	else if (dt < (HOUR * 4))
 		r = asprintf(&buf, "%d hours ago", (int)dt/3600);
-	else if (dt < DAY) {
+	else if (dt <= DAY) {
 		struct tm *f_time = gmtime(&date);
 		EINA_SAFETY_ON_NULL_GOTO(f_time, err_gmtime);
 		r = asprintf(&buf,  "%02d:%02d", f_time->tm_hour,
 				f_time->tm_min);
-	} else if(dt < MONTH){
-		struct tm f_time;
-		struct tm f_now;
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&now, &f_now), err_gmtime);
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&date, &f_time), err_gmtime);
-		r = asprintf(&buf, "%d days ago",
-				f_now.tm_mday - f_time.tm_mday);
-	} else if (dt < YEAR) {
-		struct tm f_time;
-		struct tm f_now;
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&now, &f_now), err_gmtime);
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&date, &f_time), err_gmtime);
-		r = asprintf(&buf, "%d months ago",
-				f_now.tm_mon - f_time.tm_mon);
+	} else if (dt < WEEK) {
+		char tmp[256];
+		struct tm *tm = localtime(&date);
+		strftime(tmp, sizeof(tmp), "%A", tm);
+		int days = dt / DAY;
+		r = asprintf(&buf, "%s, %d days ago", tmp, days);
 	} else {
-		struct tm f_time;
-		struct tm f_now;
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&now, &f_now), err_gmtime);
-		EINA_SAFETY_ON_NULL_GOTO(gmtime_r(&date, &f_time), err_gmtime);
-		r = asprintf(&buf, "%d years ago",
-				f_now.tm_year - f_time.tm_year);
+		char tmp[256];
+		struct tm *tm = localtime(&date);
+		strftime(tmp, sizeof(tmp), "%x", tm);
+		r = asprintf(&buf, "%s", tmp);
 	}
 
 	if (r < 0)
