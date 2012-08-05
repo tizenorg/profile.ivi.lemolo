@@ -3,103 +3,10 @@ group {
 
    images {
       image: "bt_multiparty_hangup.png" COMP;
-      image: "bt_multiparty_hangup_confirm.png" COMP;
       image: "bt_multiparty_private.png" COMP;
-      image: "bt_multiparty_private_confirm.png" COMP;
    }
 
    parts {
-      part {
-         name: "cancel.area";
-         type: RECT;
-         mouse_events: 1;
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            visible: 0;
-            rel1.offset: -1000 -1000;
-            rel2.offset: 1000 1000;
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            visible: 1;
-         }
-      }
-
-      programs {
-         program {
-            name: "do_cancel";
-            after: "show_hangup_ico_up";
-            after: "show_hangup_confirm_up_phase1";
-            after: "show_private_ico_up";
-            after: "show_private_confirm_up_phase1";
-         }
-
-         program {
-            name: "ask_raise";
-            action: SIGNAL_EMIT "raise" "call";
-         }
-
-         program {
-            signal: "mouse,down,1";
-            source: "cancel.area";
-            after: "do_cancel";
-         }
-         program {
-            signal: "mouse,down,1";
-            source: "hangup.blocker";
-            after: "do_cancel";
-         }
-         program {
-            signal: "mouse,down,1";
-            source: "private.blocker";
-            after: "do_cancel";
-         }
-
-         program {
-            name: "show_hangup_cancel";
-            after: "ask_raise";
-            after: "show_hangup_cancel_phase2";
-         }
-         program {
-            name: "show_hangup_cancel_phase2";
-            action: STATE_SET "visible" 0.0;
-            target: "cancel.area";
-            target: "private.blocker";
-            transition: ACCELERATE 0.3;
-         }
-
-         program {
-            name: "hide_hangup_cancel";
-            action: STATE_SET "default" 0.0;
-            target: "cancel.area";
-            target: "private.blocker";
-            transition: ACCELERATE 0.3;
-         }
-
-         program {
-            name: "show_private_cancel";
-            after: "ask_raise";
-            after: "show_private_cancel_phase2";
-         }
-         program {
-            name: "show_private_cancel_phase2";
-            action: STATE_SET "visible" 0.0;
-            target: "cancel.area";
-            target: "hangup.blocker";
-            transition: ACCELERATE 0.3;
-         }
-
-         program {
-            name: "hide_private_cancel";
-            action: STATE_SET "default" 0.0;
-            target: "cancel.area";
-            target: "hangup.blocker";
-            transition: ACCELERATE 0.3;
-         }
-      }
-
       part {
          name: "hangup.area";
          type: RECT;
@@ -110,14 +17,6 @@ group {
             rel2 {
                relative: 0.0 1.0;
                offset: 101 -1;
-            }
-         }
-         description {
-            state: "confirm" 0.0;
-            inherit: "default" 0.0;
-            rel2 {
-               relative: 0.0 1.0;
-               offset: 127 -1;
             }
          }
       }
@@ -145,68 +44,10 @@ group {
             inherit: "default" 0.0;
             color_class: "light";
          }
-         description {
-            state: "hidden" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
-      }
-
-      part {
-         name: "hangup.confirm";
-         type: IMAGE;
-         mouse_events: 1;
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 0;
-            color_class: "caution";
-            visible: 0;
-            min: 128 128;
-            max: 128 128;
-            align: 0.0 0.5;
-            rel2 {
-              relative: 0.0 1.0;
-              offset: 127 -1;
-            }
-            image.normal: "bt_multiparty_hangup_confirm.png";
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 255;
-            visible: 1;
-         }
-
-         description {
-            state: "pressed" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 128;
-            visible: 1;
-         }
-      }
-
-      part {
-         name: "hangup.blocker";
-         type: RECT;
-         mouse_events: 1;
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            rel1.to: "hangup.confirm";
-            rel2.to: "hangup.confirm";
-            visible: 0;
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            visible: 1;
-         }
       }
 
       programs {
          program {
-            name: "show_hangup_ico_down";
             signal: "mouse,down,1";
             source: "hangup.ico";
             action: STATE_SET "pressed" 0.0;
@@ -215,111 +56,16 @@ group {
          }
 
          program {
-            name: "show_hangup_ico_up";
             signal: "mouse,up,1";
             source: "hangup.ico";
             action: STATE_SET "default" 0.0;
-            in: 0.1 0.0;
             transition: DECELERATE 0.1;
             target: "hangup.ico";
          }
 
          program {
-            name: "clicked_hangup_ico_phase1";
             signal: "mouse,clicked,1";
             source: "hangup.ico";
-            action: ACTION_STOP;
-            target: "show_hangup_ico_up";
-            after: "clicked_hangup_ico_phase2";
-         }
-         program {
-            name: "clicked_hangup_ico_phase2";
-            action: STATE_SET "hidden" 0.0;
-            target: "hangup.ico";
-            after: "clicked_hangup_ico_phase3.1";
-            after: "clicked_hangup_ico_phase3.2";
-         }
-         program {
-            name: "clicked_hangup_ico_phase3.1";
-            action: STATE_SET "visible" 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.confirm";
-         }
-         program {
-            name: "clicked_hangup_ico_phase3.2";
-            action: STATE_SET "confirm" 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.area";
-            after: "show_hangup_cancel";
-         }
-
-         program {
-            name: "show_hangup_confirm_down";
-            signal: "mouse,down,1";
-            source: "hangup.confirm";
-            action: STATE_SET "pressed" 0.0;
-            transition: ACCELERATE 0.1;
-            target: "hangup.confirm";
-         }
-
-         program {
-            name: "show_hangup_confirm_up_phase1";
-            signal: "mouse,up,1";
-            source: "hangup.confirm";
-            action: STATE_SET "hidden" 0.0;
-            in: 0.1 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.confirm";
-            after: "show_hangup_confirm_up_phase2.1";
-            after: "show_hangup_confirm_up_phase2.2";
-            after: "hide_hangup_cancel";
-         }
-         program {
-            name: "show_hangup_confirm_up_phase2.1";
-            action: STATE_SET "default" 0.0;
-            transition: ACCELERATE 0.1;
-            target: "hangup.ico";
-         }
-         program {
-            name: "show_hangup_confirm_up_phase2.2";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.area";
-         }
-
-         program {
-            name: "clicked_hangup_confirm_phase1";
-            signal: "mouse,clicked,1";
-            source: "hangup.confirm";
-            action: ACTION_STOP;
-            target: "show_hangup_confirm_up_phase1";
-            target: "show_hangup_confirm_up_phase2.1";
-            target: "show_hangup_confirm_up_phase2.2";
-            after: "clicked_hangup_confirm_phase2";
-            after: "hide_hangup_cancel";
-         }
-         program {
-            name: "clicked_hangup_confirm_phase2";
-            action: STATE_SET "hidden" 0.0;
-            target: "hangup.confirm";
-            after: "clicked_hangup_confirm_phase3.1";
-            after: "clicked_hangup_confirm_phase3.2";
-            after: "clicked_hangup_confirm_phase3.3";
-         }
-         program {
-            name: "clicked_hangup_confirm_phase3.1";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.ico";
-         }
-         program {
-            name: "clicked_hangup_confirm_phase3.2";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "hangup.area";
-         }
-         program {
-            name: "clicked_hangup_confirm_phase3.3";
             action: SIGNAL_EMIT "clicked,hangup" "call";
          }
       }
@@ -390,12 +136,6 @@ group {
             inherit: "default" 0.0;
             color_class: "light";
          }
-         description {
-            state: "hidden" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
       }
 
       part {
@@ -432,70 +172,10 @@ group {
             inherit: "default" 0.0;
             color_class: "light";
          }
-         description {
-            state: "hidden" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
-      }
-
-      part {
-         name: "private.confirm";
-         type: IMAGE;
-         mouse_events: 1;
-         clip_to: "private.clipper";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 0;
-            color_class: "caution";
-            visible: 0;
-            min: 128 128;
-            max: 128 128;
-            align: 0.0 0.5;
-            rel1 {
-              relative: 1.0 0.0;
-              offset: -128 0;
-            }
-            image.normal: "bt_multiparty_private_confirm.png";
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 255;
-            visible: 1;
-         }
-
-         description {
-            state: "pressed" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 128;
-            visible: 1;
-         }
-      }
-
-      part {
-         name: "private.blocker";
-         type: RECT;
-         mouse_events: 1;
-         clip_to: "private.clipper";
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            rel1.to: "private.confirm";
-            rel2.to: "private.confirm";
-            visible: 0;
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            visible: 1;
-         }
       }
 
       programs {
          program {
-            name: "show_private_ico_down";
             signal: "mouse,down,1";
             source: "private.ico";
             action: STATE_SET "pressed" 0.0;
@@ -505,7 +185,6 @@ group {
          }
 
          program {
-            name: "show_private_ico_up";
             signal: "mouse,up,1";
             source: "private.ico";
             action: STATE_SET "default" 0.0;
@@ -519,101 +198,6 @@ group {
             name: "clicked_private_ico_phase1";
             signal: "mouse,clicked,1";
             source: "private.ico";
-            action: ACTION_STOP;
-            target: "show_private_ico_up";
-            after: "clicked_private_ico_phase2";
-         }
-         program {
-            name: "clicked_private_ico_phase2";
-            action: STATE_SET "hidden" 0.0;
-            target: "private.ico";
-            target: "private.label";
-            after: "clicked_private_ico_phase3.1";
-            after: "clicked_private_ico_phase3.2";
-         }
-         program {
-            name: "clicked_private_ico_phase3.1";
-            action: STATE_SET "visible" 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.confirm";
-         }
-         program {
-            name: "clicked_private_ico_phase3.2";
-            action: STATE_SET "confirm" 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.area";
-            after: "show_private_cancel";
-         }
-
-         program {
-            name: "show_private_confirm_down";
-            signal: "mouse,down,1";
-            source: "private.confirm";
-            action: STATE_SET "pressed" 0.0;
-            transition: ACCELERATE 0.1;
-            target: "private.confirm";
-         }
-
-         program {
-            name: "show_private_confirm_up_phase1";
-            signal: "mouse,up,1";
-            source: "private.confirm";
-            action: STATE_SET "hidden" 0.0;
-            in: 0.1 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.confirm";
-            after: "show_private_confirm_up_phase2.1";
-            after: "show_private_confirm_up_phase2.2";
-            after: "hide_private_cancel";
-         }
-         program {
-            name: "show_private_confirm_up_phase2.1";
-            action: STATE_SET "default" 0.0;
-            transition: ACCELERATE 0.1;
-            target: "private.ico";
-            target: "private.label";
-         }
-         program {
-            name: "show_private_confirm_up_phase2.2";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.area";
-         }
-
-         program {
-            name: "clicked_private_confirm_phase1";
-            signal: "mouse,clicked,1";
-            source: "private.confirm";
-            action: ACTION_STOP;
-            target: "show_private_confirm_up_phase1";
-            target: "show_private_confirm_up_phase2.1";
-            target: "show_private_confirm_up_phase2.2";
-            after: "clicked_private_confirm_phase2";
-            after: "hide_private_cancel";
-         }
-         program {
-            name: "clicked_private_confirm_phase2";
-            action: STATE_SET "hidden" 0.0;
-            target: "private.confirm";
-            after: "clicked_private_confirm_phase3.1";
-            after: "clicked_private_confirm_phase3.2";
-            after: "clicked_private_confirm_phase3.3";
-         }
-         program {
-            name: "clicked_private_confirm_phase3.1";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.ico";
-            target: "private.label";
-         }
-         program {
-            name: "clicked_private_confirm_phase3.2";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "private.area";
-         }
-         program {
-            name: "clicked_private_confirm_phase3.3";
             action: SIGNAL_EMIT "clicked,private" "call";
          }
 
