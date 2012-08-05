@@ -330,6 +330,8 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	}
 	if (ctx->calls.held == c) {
 		ctx->calls.held = NULL;
+		if (ofono_call_multiparty_get(c))
+			goto done;
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
 		goto done;
