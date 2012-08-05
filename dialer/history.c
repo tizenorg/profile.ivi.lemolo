@@ -43,6 +43,8 @@ typedef struct _Call_Info {
 	Eina_Bool completed;
 	Eina_Bool incoming;
 	const OFono_Call *call; /* not in edd */
+	Elm_Object_Item *it_all; /*not in edd */
+	Elm_Object_Item *it_missed; /*not in edd */
 } Call_Info;
 
 static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
@@ -69,10 +71,26 @@ static Call_Info *_history_call_info_search(const History *history,
 {
 	Call_Info *call_info;
 	Eina_List *l;
+	long long t = ofono_call_full_start_time_get(call);
+	const char *line_id = ofono_call_line_id_get(call); /* stringshare */
 
-	EINA_LIST_FOREACH(history->calls->list, l, call_info)
+	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
 		if (call_info->call == call)
 			return call_info;
+		else if (!call_info->call) {
+			if ((t > 0) && (call_info->start_time == t) &&
+				(line_id == call_info->line_id)) {
+				DBG("associated existing log %p %s (%lld) with "
+					"call %p %s (%lld)",
+					call_info,
+					call_info->line_id,
+					call_info->start_time,
+					call, line_id, t);
+				call_info->call = call;
+				return call_info;
+			}
+		}
+	}
 
 	return NULL;
 }
@@ -195,6 +213,9 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	start = call_info->start_time;
 	tm = ctime(&start);
 
+	call_info->end_time = time(NULL);
+	call_info->call = NULL;
+
 	if (call_info->completed)
 		INF("Call end:  %s at %s", line_id, tm);
 	else {
@@ -202,25 +223,38 @@ static void _history_call_removed(void *data, OFono_Call *call)
 			INF("Not answered: %s at %s", line_id, tm);
 		else {
 			INF("Missed: %s at %s", line_id, tm);
-			it = elm_genlist_item_prepend(history->genlist_missed,
-							history->itc,
-							call_info, NULL,
-							ELM_GENLIST_ITEM_NONE,
-							_on_item_clicked,
-							call_info->line_id);
-			elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
+			if (call_info->it_missed)
+				elm_genlist_item_update(call_info->it_missed);
+			else {
+				it = elm_genlist_item_prepend
+					(history->genlist_missed,
+						history->itc,
+						call_info, NULL,
+						ELM_GENLIST_ITEM_NONE,
+						_on_item_clicked,
+						call_info->line_id);
+				elm_genlist_item_show
+					(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
+				call_info->it_missed = it;
+			}
 		}
 	}
 
-	call_info->end_time = time(NULL);
-	call_info->call = NULL;
 	history->calls->dirty = EINA_TRUE;
 	_history_call_log_save(history);
 
-	it = elm_genlist_item_prepend(history->genlist_all, history->itc,
-					call_info, NULL, ELM_GENLIST_ITEM_NONE,
-					_on_item_clicked, call_info->line_id);
-	elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
+	if (call_info->it_all)
+		elm_genlist_item_update(call_info->it_all);
+	else {
+		it = elm_genlist_item_prepend(history->genlist_all,
+						history->itc,
+						call_info, NULL,
+						ELM_GENLIST_ITEM_NONE,
+						_on_item_clicked,
+						call_info->line_id);
+		elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
+		call_info->it_all = it;
+	}
 }
 
 static void _call_info_free(Call_Info *call_info)
@@ -316,15 +350,23 @@ static void _history_call_log_read(History *history)
 	EINA_SAFETY_ON_NULL_RETURN(history->calls);
 
 	EINA_LIST_FOREACH(history->calls->list, l, call_info) {
-		elm_genlist_item_append(history->genlist_all, history->itc,
-					call_info, NULL, ELM_GENLIST_ITEM_NONE,
-					_on_item_clicked, call_info->line_id);
-		if (!call_info->completed)
-			elm_genlist_item_append(history->genlist_missed,
+		it = elm_genlist_item_append(history->genlist_all,
+						history->itc,
+						call_info, NULL,
+						ELM_GENLIST_ITEM_NONE,
+						_on_item_clicked,
+						call_info->line_id);
+		call_info->it_all = it;
+
+		if (call_info->completed)
+			continue;
+
+		it = elm_genlist_item_append(history->genlist_missed,
 						history->itc, call_info, NULL,
 						ELM_GENLIST_ITEM_NONE,
 						_on_item_clicked,
 						call_info->line_id);
+		call_info->it_missed = it;
 	}
 
 	it = elm_genlist_first_item_get(history->genlist_all);
