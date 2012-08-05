@@ -1452,6 +1452,21 @@ group {
       }
       programs {
          program {
+            signal: "active,disconnected";
+            source: "call";
+            after: "hide_keypad";
+         }
+         program {
+            name: "hide_keypad";
+            signal: "clicked,hangup";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "clipper.keypad-visible";
+            target: "clipper.keypad-hidden";
+            target: "area.hide-keypad";
+         }
+
+         program {
             signal: "mouse,up,1";
             source: "button.hide-keypad";
             action: STATE_SET "default" 0.0;

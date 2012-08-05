@@ -341,6 +341,8 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	ctx->last_state = 0;
 	ctx->disconnected.call = c;
 
+	elm_object_signal_emit(ctx->self, "active,disconnected", "call");
+
 	if ((strcmp(reason, "local") == 0) || (strcmp(reason, "remote") == 0))
 		goto done;
 
