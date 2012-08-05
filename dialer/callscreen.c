@@ -270,6 +270,12 @@ static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 		gui_call_exit();
 	} else {
 		if (strcmp(reason, "local") == 0) {
+			/* Bug #11 says this shouldn't be done.
+			 *
+			 * TODO: talk to ofono devs and see what to do,
+			 * maybe introuce ReleaseAndSwap()
+			 */
+#if 0
 			/* If there is a held call and active is
 			 * hangup we're left with held but no active,
 			 * which is strange.
@@ -285,6 +291,7 @@ static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 				/* TODO: sound to notify user */
 				ofono_swap_calls(NULL, NULL);
 			}
+#endif
 		}
 	}
 	ctx->disconnected.call = NULL;
