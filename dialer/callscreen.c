@@ -16,7 +16,6 @@ typedef struct _Callscreen
 		Evas_Object *sc;
 		Evas_Object *bx;
 		Eina_List *calls;
-		Eina_Bool held;
 	} multiparty;
 	struct {
 		OFono_Call *active;
@@ -96,17 +95,10 @@ static void _multiparty_update(Callscreen *ctx)
 	const Eina_List *n1, *n2;
 	OFono_Call *c;
 	Evas_Object *it;
-	int held = -1;
 
 	EINA_LIST_FOREACH(ctx->calls.list, n1, c) {
-		if (ofono_call_multiparty_get(c)) {
-			OFono_Call_State s = ofono_call_state_get(c);
+		if (ofono_call_multiparty_get(c))
 			new = eina_list_append(new, c);
-			if (s == OFONO_CALL_STATE_ACTIVE)
-				held = EINA_FALSE;
-			else if (s == OFONO_CALL_STATE_HELD)
-				held = EINA_TRUE;
-		}
 	}
 
 	old = ctx->multiparty.calls;
@@ -121,15 +113,6 @@ static void _multiparty_update(Callscreen *ctx)
 	if (n1)
 		goto repopulate;
 
-	if ((held > -1) && ((Eina_Bool)held != ctx->multiparty.held)) {
-		Eina_List *lst = elm_box_children_get(ctx->multiparty.bx);
-		EINA_LIST_FREE(lst, it) {
-			const char *s = held ? "hide,private" : "show,private";
-			elm_object_signal_emit(it, s, "call");
-		}
-		ctx->multiparty.held = held;
-	}
-
 	eina_list_free(new);
 	return;
 
@@ -140,7 +123,6 @@ repopulate:
 	elm_box_clear(ctx->multiparty.bx);
 
 	if (!new) {
-		ctx->multiparty.held = EINA_FALSE;
 		elm_object_signal_emit(ctx->self, "hide,multiparty-details",
 					"call");
 		return;
@@ -166,11 +148,6 @@ repopulate:
 		else
 			elm_object_signal_emit(it, "show,name", "call");
 
-		if (held)
-			elm_object_signal_emit(it, "hide,private", "call");
-		else
-			elm_object_signal_emit(it, "show,private", "call");
-
 		elm_object_signal_callback_add(it, "clicked,hangup", "call",
 						_on_mp_hangup, c);
 		elm_object_signal_callback_add(it, "clicked,private", "call",
@@ -184,7 +161,16 @@ repopulate:
 		free(number);
 	}
 	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
-	ctx->multiparty.held = held;
+}
+
+static void _multiparty_private_available_update(Callscreen *ctx)
+{
+	Eina_List *lst = elm_box_children_get(ctx->multiparty.bx);
+	const char *sig = ctx->calls.held ? "hide,private" : "show,private";
+	Evas_Object *it;
+
+	EINA_LIST_FREE(lst, it)
+		elm_object_signal_emit(it, sig, "call");
 }
 
 static void _calls_update(Callscreen *ctx)
@@ -341,6 +327,7 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 			goto done;
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
+		_multiparty_private_available_update(ctx);
 		goto done;
 	}
 
@@ -693,11 +680,13 @@ static void _call_changed(void *data, OFono_Call *c)
 
 	is_held = (ctx->calls.held) && (ctx->calls.held != ctx->calls.active);
 
-	if ((is_held) && (!was_held))
+	if ((is_held) && (!was_held)) {
 		elm_object_signal_emit(ctx->self, "show,held", "call");
-	else if ((!is_held) && (was_held)) {
+		_multiparty_private_available_update(ctx);
+	} else if ((!is_held) && (was_held)) {
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
+		_multiparty_private_available_update(ctx);
 	}
 
 	c = ctx->calls.active;
