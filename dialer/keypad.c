@@ -230,6 +230,8 @@ static void _dial(Keypad *ctx)
 	INF("call %s", number);
 	ofono_dial(number, NULL, _dial_reply, ctx);
 	eina_stringshare_replace(&(ctx->last), number);
+	eina_strbuf_reset(ctx->number);
+	_number_display(ctx);
 }
 
 static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
