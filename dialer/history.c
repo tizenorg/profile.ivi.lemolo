@@ -30,8 +30,10 @@ typedef struct _History {
 	Eet_Data_Descriptor *edd_list;
 	Call_Info_List *calls;
 	Elm_Genlist_Item_Class *itc;
+	Evas_Object *self;
 	Evas_Object *genlist_all, *genlist_missed;
 	Ecore_Poller *updater;
+	double last_update;
 } History;
 
 typedef struct _Call_Info {
@@ -55,6 +57,11 @@ static Eina_Bool _history_time_updater(void *data)
 	History *ctx = data;
 	Elm_Object_Item *it;
 	long long update_threshold = time(NULL) - WEEK - DAY;
+	double now = ecore_loop_time_get();
+
+	if (now - ctx->last_update < 1.0)
+		return EINA_TRUE;
+	ctx->last_update = now;
 
 	it = elm_genlist_first_item_get(ctx->genlist_all);
 	for (; it != NULL; it = elm_genlist_item_next_get(it)) {
@@ -73,6 +80,45 @@ static Eina_Bool _history_time_updater(void *data)
 	}
 
 	return EINA_TRUE;
+}
+
+static void _history_time_updater_stop(History *history)
+{
+	Evas *e = evas_object_evas_get(history->self);
+	Eina_Bool win_focused = evas_focus_state_get(e);
+	Eina_Bool obj_visible = evas_object_visible_get(history->self);
+
+	DBG("poller %p, win_focused=%hhu, obj_visible=%hhu",
+		history->updater, win_focused, obj_visible);
+	if (!history->updater)
+		return;
+	if (win_focused && obj_visible)
+		return;
+
+	DBG("delete poller %p", history->updater);
+	ecore_poller_del(history->updater);
+	history->updater = NULL;
+}
+
+static void _history_time_updater_start(History *history)
+{
+	Evas *e = evas_object_evas_get(history->self);
+	Eina_Bool win_focused = evas_focus_state_get(e);
+	Eina_Bool obj_visible = evas_object_visible_get(history->self);
+
+	DBG("poller %p, win_focused=%hhu, obj_visible=%hhu",
+		history->updater, win_focused, obj_visible);
+	if (history->updater)
+		return;
+	if ((!win_focused) || (!obj_visible))
+		return;
+
+	DBG("start poller");
+	/* ECORE_POLLER_CORE is 1/8th of second. */
+	history->updater = ecore_poller_add(ECORE_POLLER_CORE, 8 * 60,
+						_history_time_updater,
+						history);
+	_history_time_updater(history);
 }
 
 static Call_Info *_history_call_info_search(const History *history,
@@ -293,7 +339,8 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	History *history = data;
 	Call_Info *call_info;
 
-	ecore_poller_del(history->updater);
+	if (history->updater)
+		ecore_poller_del(history->updater);
 
 	if (history->calls->dirty)
 		_history_call_log_save(history);
@@ -311,6 +358,38 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	free(history);
 	ecore_file_shutdown();
 	eet_shutdown();
+}
+
+static void _on_hide(void *data, Evas *e __UNUSED__,
+			Evas_Object *obj __UNUSED__, void *event __UNUSED__)
+{
+	History *history = data;
+	DBG("history became hidden");
+	_history_time_updater_stop(history);
+}
+
+static void _on_show(void *data, Evas *e __UNUSED__,
+			Evas_Object *obj __UNUSED__, void *event __UNUSED__)
+{
+	History *history = data;
+	DBG("history became visible");
+	_history_time_updater_start(history);
+}
+
+static void _on_win_focus_out(void *data, Evas *e __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	History *history = data;
+	DBG("window is unfocused");
+	_history_time_updater_stop(history);
+}
+
+static void _on_win_focus_in(void *data, Evas *e __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	History *history = data;
+	DBG("window is focused");
+	_history_time_updater_start(history);
 }
 
 static void _history_call_info_descriptor_init(Eet_Data_Descriptor **edd,
@@ -487,6 +566,7 @@ Evas_Object *history_add(Evas_Object *parent)
 {
 	int r;
 	History *history;
+	Evas *e;
 	const char *config_path;
 	char *path, base_dir[PATH_MAX];
 	Elm_Genlist_Item_Class *itc;
@@ -497,7 +577,7 @@ Evas_Object *history_add(Evas_Object *parent)
 	history = calloc(1, sizeof(History));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history, NULL);
 
-	obj = gui_layout_add(parent, "history_bg");
+	history->self = obj = gui_layout_add(parent, "history_bg");
 	EINA_SAFETY_ON_NULL_GOTO(obj, err_layout);
 
 	genlist_all = elm_genlist_add(obj);
@@ -548,15 +628,22 @@ Evas_Object *history_add(Evas_Object *parent)
 	EINA_SAFETY_ON_NULL_GOTO(history->calls, err_log_read);
 	evas_object_event_callback_add(obj, EVAS_CALLBACK_DEL, _on_del,
 					history);
+	evas_object_event_callback_add(obj, EVAS_CALLBACK_HIDE, _on_hide,
+					history);
+	evas_object_event_callback_add(obj, EVAS_CALLBACK_SHOW, _on_show,
+					history);
+
+	e = evas_object_evas_get(obj);
+	evas_event_callback_add(e, EVAS_CALLBACK_CANVAS_FOCUS_OUT,
+				_on_win_focus_out, history);
+	evas_event_callback_add(e, EVAS_CALLBACK_CANVAS_FOCUS_IN,
+				_on_win_focus_in, history);
+
 	callback_node_call_changed =
 		ofono_call_changed_cb_add(_history_call_changed, history);
 	callback_node_call_removed =
 		ofono_call_removed_cb_add(_history_call_removed, history);
 
-	/* ECORE_POLLER_CORE is 1/8th of second. */
-	history->updater = ecore_poller_add(ECORE_POLLER_CORE, 8 * 60,
-						_history_time_updater,
-						history);
 	return obj;
 
 err_log_read:
