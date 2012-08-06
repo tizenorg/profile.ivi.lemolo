@@ -7,8 +7,8 @@ group {
          type: RECT;
          description {
             state: "default" 0.0;
-            min: 56 56;
-            max: 56 56;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
             color: 0 0 0 0;
          }
       }
@@ -101,7 +101,7 @@ group {
             state: "default" 0.0;
             color: 255 255 255 0;
             color_class: "action";
-            min: 240 120;
+            min: ACTION_WIDTH LIST_ITEM_HEIGHT;
          }
          description {
             state: "selected" 0.0;
@@ -120,17 +120,17 @@ group {
             color_class: "action";
             rel1 {
                relative: 0.0 0.0;
-               offset: 40 26;
+               offset: BORDER_PADDING ITEM_PADDING;
             }
             rel2 {
                to_x: "call.swallow.more";
                relative: 0.0 0.5;
-               offset: -16 -1;
+               offset: -ITEM_PADDING -1;
             }
             text {
-               font: "Verdana";
-               size: 45;
-               size_range: 40 45;
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_SMALL SIZE_MEDIUM;
                fit: 1 1;
                align: 0.0 1.0;
                ellipsis: 1.0;
@@ -159,16 +159,16 @@ group {
             color_class: "action";
             rel1 {
                relative: 0.0 0.5;
-               offset: 40 0;
+               offset: BORDER_PADDING 0;
             }
             rel2 {
                relative: 0.5 1.0;
-               offset: -41 -27;
+               offset: (-BORDER_PADDING - 1) (-ITEM_PADDING - 1);
             }
             text {
-               font: "Verdana";
-               size: 30;
-               size_range: 25 30;
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               size_range: SIZE_TINY SIZE_SMALL;
                fit: 1 1;
                align: 0.0 0.0;
                ellipsis: 1.0;
@@ -202,12 +202,12 @@ group {
             rel2 {
                to_x: "call.swallow.more";
                relative: 0.0 1.0;
-               offset: -16 -27;
+               offset: -ITEM_PADDING (-ITEM_PADDING - 1);
             }
             text {
-               font: "Verdana";
-               size: 30;
-               size_range: 25 30;
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               size_range: SIZE_TINY SIZE_SMALL;
                fit: 1 1;
                align: 0.0 0.0;
                ellipsis: 1.0;
@@ -256,15 +256,17 @@ group {
          mouse_events: 1;
          description {
             state: "default" 0.0;
-            min: 56 56;
-            max: 56 56;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 1.0 0.5;
+            fixed: 1 1;
             rel1 {
                relative: 1.0 0.0;
-               offset: -96 0;
+               offset: -BORDER_PADDING 0;
             }
             rel2 {
                relative: 1.0 1.0;
-               offset: -41 -1;
+               offset: -BORDER_PADDING -1;
             }
          }
       }

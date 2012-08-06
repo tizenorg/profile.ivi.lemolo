@@ -1,0 +1,26 @@
+#define WIDTH 360
+#define HEIGHT 640
+
+#define ACTION_WIDTH 120
+#define ACTION_HEIGHT 85
+
+#define BORDER_PADDING 23
+#define ITEM_PADDING 8
+
+#define SEPARATOR_HEIGHT 4
+
+#define SCROLLBAR_WIDTH 8
+#define SCROLLBAR_HEIGHT 8
+
+#define LIST_ICON_SIZE 28
+#define LIST_ITEM_HEIGHT 60
+
+#define FONT_NORMAL "Verdana"
+#define FONT_BOLD "Verdana:style=Bold"
+#define SIZE_HUGE 42
+#define SIZE_LARGE 24
+#define SIZE_MEDIUM 18
+#define SIZE_SMALL 10
+#define SIZE_TINY 8
+
+#include "default.edc"

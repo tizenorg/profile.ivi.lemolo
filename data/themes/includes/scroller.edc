@@ -75,7 +75,7 @@ group {
             state: "default" 0.0;
             fixed: 1 1;
             visible: 0;
-            min: 16 16;
+            min: SCROLLBAR_WIDTH SCROLLBAR_HEIGHT;
             align: 1.0 0.0;
             rel1 {
                relative: 1.0 0.0;
@@ -103,8 +103,8 @@ group {
             color: 255 255 255 255;
             color_class: "light";
             fixed: 1 1;
-            min: 16 16;
-            max: 16 99999;
+            min: SCROLLBAR_WIDTH SCROLLBAR_HEIGHT;
+            max: SCROLLBAR_WIDTH 99999;
             rel1 {
                relative: 0.5 0.5;
                offset: 0 0;

@@ -8,20 +8,6 @@ group {
 
    parts {
       part {
-         name: "hangup.area";
-         type: RECT;
-         mouse_events: 0;
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            rel2 {
-               relative: 0.0 1.0;
-               offset: 101 -1;
-            }
-         }
-      }
-
-      part {
          name: "hangup.ico";
          type: IMAGE;
          mouse_events: 1;
@@ -29,13 +15,13 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: 56 56;
-            max: 56 56;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
             align: 0.0 0.5;
-            rel1.offset: 46 0;
+            rel1.offset: BORDER_PADDING 0;
             rel2 {
                relative: 0.0 1.0;
-               offset: 101 -1;
+               offset: (LIST_ICON_SIZE + BORDER_PADDING - 1) -1;
             }
             image.normal: "bt_multiparty_hangup.png";
          }
@@ -87,29 +73,6 @@ group {
       }
 
       part {
-         name: "private.area";
-         type: RECT;
-         mouse_events: 0;
-         clip_to: "private.clipper";
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            rel1 {
-               relative: 1.0 0.0;
-               offset: -102 0;
-            }
-         }
-         description {
-            state: "confirm" 0.0;
-            inherit: "default" 0.0;
-            rel1 {
-               relative: 1.0 0.0;
-               offset: -128 0;
-            }
-         }
-      }
-
-      part {
          name: "private.ico";
          type: IMAGE;
          mouse_events: 1;
@@ -118,16 +81,16 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: 56 56;
-            max: 56 56;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
             align: 0.0 0.5;
             rel1 {
                relative: 1.0 0.0;
-               offset: -102 0;
+               offset: (-LIST_ICON_SIZE -BORDER_PADDING - 1) 0;
             }
             rel2 {
                relative: 1.0 1.0;
-               offset: -47 -1;
+               offset: (-BORDER_PADDING - 1) -1;
             }
             image.normal: "bt_multiparty_private.png";
          }
@@ -161,8 +124,8 @@ group {
             }
             text {
                text: "PRIVATE";
-               font: "Verdana";
-               size: 24;
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
                min: 1 1;
                align: 0.5 0.0;
             }
@@ -226,20 +189,20 @@ group {
             color: 255 255 255 255;
             color_class: "action";
             rel1 {
-               to_x: "hangup.area";
+               to_x: "hangup.ico";
                relative: 1.0 0.0;
-               offset: 16 16;
+               offset: ITEM_PADDING ITEM_PADDING;
             }
             rel2 {
-               to_x: "private.area";
+               to_x: "private.ico";
                relative: 0.0 0.5;
-               offset: -17 0;
+               offset: (-ITEM_PADDING - 1) 0;
             }
             text {
                text: "Name Here";
-               font: "Verdana";
-               size: 58;
-               size_range: 30 58;
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               size_range: SIZE_SMALL SIZE_LARGE;
                ellipsis: 0.0;
                min: 0 1;
                fit: 1 0;
@@ -265,20 +228,20 @@ group {
             color: 255 255 255 255;
             color_class: "light";
             rel1 {
-               to_x: "hangup.area";
+               to_x: "hangup.ico";
                relative: 1.0 0.5;
-               offset: 16 0;
+               offset: ITEM_PADDING 0;
             }
             rel2 {
-               to_x: "private.area";
+               to_x: "private.ico";
                relative: 0.0 1.0;
-               offset: -17 -17;
+               offset: (-ITEM_PADDING - 1) (-ITEM_PADDING - 1);
             }
             text {
                text: "3333-4444";
-               font: "Verdana";
-               size: 43;
-               size_range: 30 43;
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_SMALL SIZE_MEDIUM;
                ellipsis: 1.0;
                min: 0 1;
                fit: 1 0;
@@ -290,20 +253,20 @@ group {
             inherit: "default" 0.0;
             color_class: "action";
             rel1 {
-               to_x: "hangup.area";
+               to_x: "hangup.ico";
                relative: 1.0 0.0;
-               offset: 16 16;
+               offset: ITEM_PADDING ITEM_PADDING;
             }
             rel2 {
-               to_x: "private.area";
+               to_x: "private.ico";
                relative: 0.0 1.0;
-               offset: -17 -17;
+               offset: (-ITEM_PADDING - 1) (-ITEM_PADDING - 1);
             }
             text {
                text: "3333-4444";
-               font: "Verdana";
-               size: 58;
-               size_range: 30 58;
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               size_range: SIZE_SMALL SIZE_LARGE;
                ellipsis: 1.0;
                min: 0 1;
                fit: 1 0;

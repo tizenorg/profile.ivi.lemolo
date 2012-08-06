@@ -57,16 +57,16 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: 720 170;
+            min: WIDTH ACTION_HEIGHT;
             rel2 {
                relative: 1.0 0.0;
-               offset: -1.0 169;
+               offset: -1.0 (ACTION_HEIGHT - 1);
             }
             text {
                text: "+1 (12) 3456-7890";
-               font: "Verdana";
-               size: 99;
-               size_range: 16 99;
+               font: FONT_NORMAL;
+               size: SIZE_HUGE;
+               size_range: SIZE_TINY SIZE_HUGE;
                fit: 1 1;
                align: 0.5 0.5;
                ellipsis: 1.0;
@@ -81,8 +81,8 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: 720 0;
-            max: 720 720; /* keep it tight centered */
+            min: WIDTH 0;
+            max: WIDTH WIDTH; /* keep it tight centered */
             rel1 {
                relative: 0.0 1.0;
                to_y: "elm.text.display";
@@ -101,11 +101,11 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: 720 170;
-            max: 720 99999; /* keep it tight centered */
+            min: WIDTH ACTION_HEIGHT;
+            max: WIDTH 99999; /* keep it tight centered */
             rel1 {
                relative: 0.0 1.0;
-               offset: 0 -170;
+               offset: 0 -ACTION_HEIGHT;
             }
          }
       }
@@ -126,7 +126,7 @@ group {
             }                                                           \
             rel2 {                                                      \
                relative: 1.0 rely;                                      \
-               offset: -1 (offy + 4);                                   \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
                to_y: relto;                                             \
             }                                                           \
          }                                                              \
@@ -141,19 +141,19 @@ group {
             color_class: "bg";                                          \
             rel1 {                                                      \
                relative: 0.0 rely;                                      \
-               offset: 0 (offy + 4);                                    \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
                to_y: relto;                                             \
             }                                                           \
             rel2 {                                                      \
                relative: 1.0 rely;                                      \
-               offset: -1 (offy + 8);                                   \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
                to_y: relto;                                             \
             }                                                           \
          }                                                              \
       }
 
       SEPARATOR("number", 1.0, 0, "elm.text.display");
-      SEPARATOR("actions", 0.0, -8, "bg.actions");
+      SEPARATOR("actions", 0.0, -SEPARATOR_HEIGHT, "bg.actions");
 #undef SEPARATOR
 
 
@@ -197,8 +197,8 @@ group {
             }                                                           \
             text {                                                      \
                text: label;                                             \
-               font: "Verdana";                                         \
-               size: 99;                                                \
+               font: FONT_NORMAL;                                         \
+               size: SIZE_HUGE;                                                \
                align: 0.5 0.5;                                          \
             }                                                           \
          }                                                              \
@@ -224,8 +224,8 @@ group {
             rel2.to: "button."##id;                                     \
             text {                                                      \
                text: sub;                                               \
-               font: "Verdana:style=Bold";                              \
-               size: 16;                                                \
+               font: FONT_BOLD;                              \
+               size: SIZE_TINY;                                                \
                align: 0.5 0.5;                                          \
             }                                                           \
          }                                                              \
@@ -329,8 +329,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
             color_class: "action";                                      \
-            min: 240 170;                                               \
-            max: 240 170;                                               \
+            min: ACTION_WIDTH ACTION_HEIGHT;				\
+            max: ACTION_WIDTH ACTION_HEIGHT;                            \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \

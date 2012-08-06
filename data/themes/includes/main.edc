@@ -92,7 +92,7 @@ group {
                relative: 0.0 1.0;
                offset: 0 0;
             }
-            rel2.offset: -1 -171;
+	 rel2.offset: -1 (-ACTION_HEIGHT - 1);
          }
          description {
             state: "hidden" 0.0;
@@ -111,7 +111,7 @@ group {
                relative: 0.0 1.0;
                offset: 0 0;
             }
-            rel2.offset: -1 -171;
+	 rel2.offset: -1 (-ACTION_HEIGHT - 1);
          }
          description {
             state: "hidden" 0.0;
@@ -130,7 +130,7 @@ group {
                relative: 0.0 1.0;
                offset: 0 0;
             }
-            rel2.offset: -1 -171;
+	 rel2.offset: -1 (-ACTION_HEIGHT - 1);
          }
          description {
             state: "hidden" 0.0;
@@ -146,12 +146,12 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: 720 170;
-            max: 720 99999; /* keep it tight centered */
+            min: WIDTH ACTION_HEIGHT;
+            max: WIDTH 99999; /* keep it tight centered */
             fixed: 1 1;
             rel1 {
                relative: 0.0 1.0;
-               offset: 0 -170;
+               offset: 0 -ACTION_HEIGHT;
             }
          }
       }
@@ -166,8 +166,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
             color_class: "action";                                      \
-            min: 240 170;                                               \
-            max: 240 170;                                               \
+            min: ACTION_WIDTH ACTION_HEIGHT;                            \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \

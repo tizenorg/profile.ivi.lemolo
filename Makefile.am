@@ -51,7 +51,9 @@ EDJE_FLAGS_VERBOSE_1 = -v
 EDJE_FLAGS = $(EDJE_FLAGS_VERBOSE_$(V)) -id $(top_srcdir)/data/themes/images -fd $(top_srcdir)/data/fonts
 
 filesdir = $(pkgdatadir)/themes
-files_DATA = data/themes/default.edj
+files_DATA = \
+data/themes/default.edj \
+data/themes/default-sd.edj
 
 AM_V_EDJ = $(am__v_EDJ_$(V))
 am__v_EDJ_ = $(am__v_EDJ_$(AM_DEFAULT_VERBOSITY))
@@ -101,14 +103,25 @@ data/themes/includes/multiparty-list.edc \
 data/themes/includes/scroller.edc
 
 
-EXTRA_DIST = data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+EXTRA_DIST = \
+data/themes/default-hd.edc \
+data/themes/default-sd.edc \
+data/themes/default.edc \
+$(THEME_INCLUDES) $(THEME_IMAGES)
 
 
-data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(top_srcdir)/data/themes/default-hd.edc $(THEME_INCLUDES) $(THEME_IMAGES)
 	$(MKDIR_P) $(top_builddir)/data/themes
 	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
-	$(top_srcdir)/data/themes/default.edc \
+	$(top_srcdir)/data/themes/default-hd.edc \
 	$(top_builddir)/data/themes/default.edj
+
+data/themes/default-sd.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(top_srcdir)/data/themes/default-sd.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+	$(MKDIR_P) $(top_builddir)/data/themes
+	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
+	$(top_srcdir)/data/themes/default-sd.edc \
+	$(top_builddir)/data/themes/default-sd.edj
 
 clean-local:
 	rm -f $(top_builddir)/data/themes/default.edj
+	rm -f $(top_builddir)/data/themes/default-sd.edj
