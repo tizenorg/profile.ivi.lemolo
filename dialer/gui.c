@@ -149,9 +149,10 @@ static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 		_gui_show(history);
 }
 
-Eina_Bool gui_init(void)
+Eina_Bool gui_init(const char *theme)
 {
 	Evas_Object *lay, *obj;
+	Evas_Coord w, h;
 
 	/* dialer should never, ever quit */
 	elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_NONE);
@@ -164,7 +165,22 @@ Eina_Bool gui_init(void)
 			elm_app_data_dir_get());
 
 	elm_theme_extension_add(NULL, def_theme);
-	elm_theme_overlay_add(NULL, def_theme);
+	if (!theme)
+		elm_theme_overlay_add(NULL, def_theme);
+	else {
+		char tmp[PATH_MAX];
+		if (theme[0] != '/') {
+			if (eina_str_has_suffix(theme, ".edj")) {
+				snprintf(tmp, sizeof(tmp), "%s/themes/%s",
+						elm_app_data_dir_get(), theme);
+			} else {
+				snprintf(tmp, sizeof(tmp), "%s/themes/%s.edj",
+						elm_app_data_dir_get(), theme);
+			}
+			theme = tmp;
+		}
+		elm_theme_overlay_add(NULL, theme);
+	}
 
 	win = elm_win_util_standard_add("ofono-dialer", "oFono Dialer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
@@ -213,7 +229,13 @@ Eina_Bool gui_init(void)
 	evas_object_show(obj);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
-	evas_object_resize(win, 720, 1280);
+	obj = elm_layout_edje_get(lay);
+	edje_object_size_min_get(obj, &w, &h);
+	if ((w == 0) || (h == 0))
+		edje_object_size_min_restricted_calc(obj, &w, &h, w, h);
+	if ((w == 0) || (h == 0))
+		edje_object_parts_extends_calc(obj, NULL, NULL, &w, &h);
+	evas_object_resize(win, w, h);
 
 	/* do not show it yet, RC will check if it should be visible or not */
 	return EINA_TRUE;

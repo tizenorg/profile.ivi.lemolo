@@ -13,7 +13,7 @@ void gui_activecall_set(Evas_Object *o);
 void gui_call_enter(void);
 void gui_call_exit(void);
 
-Eina_Bool gui_init(void);
+Eina_Bool gui_init(const char *theme);
 void gui_shutdown(void);
 
 #endif

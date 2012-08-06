@@ -1,6 +1,8 @@
 group {
    name: "elm/layout/dialer/main";
 
+   min: WIDTH HEIGHT;
+
    /*
     * Represents the dialer main layout with actions and swallows.
     *

@@ -32,7 +32,8 @@ static const Ecore_Getopt options = {
 	"GPL-2" /* TODO: check license with Intel */,
 	"Phone Dialer using oFono and EFL.",
 	EINA_FALSE,
-	{ECORE_GETOPT_STORE_STR('m', "modem", "Modem object path in oFono."),
+	{ECORE_GETOPT_STORE_STR('H', "theme", "path to theme EDJ file."),
+	 ECORE_GETOPT_STORE_STR('m', "modem", "Modem object path in oFono."),
 	 ECORE_GETOPT_STORE_STR('a', "api", "oFono modem APIs to use, comma "
 				"separated. Example: "
 				"SimManager,VoiceCallManager. See --list-api"),
@@ -58,10 +59,12 @@ EAPI int elm_main(int argc, char **argv)
 	char *modem_path = NULL;
 	char *modem_api = NULL;
 	char *modem_type = NULL;
+	char *theme = NULL;
 	Eina_Bool list_api = EINA_FALSE;
 	Eina_Bool list_type = EINA_FALSE;
 	Eina_Bool quit_option = EINA_FALSE;
 	Ecore_Getopt_Value values[] = {
+		ECORE_GETOPT_VALUE_STR(theme),
 		ECORE_GETOPT_VALUE_STR(modem_path),
 		ECORE_GETOPT_VALUE_STR(modem_api),
 		ECORE_GETOPT_VALUE_BOOL(list_api),
@@ -148,7 +151,7 @@ EAPI int elm_main(int argc, char **argv)
 		ofono_modem_type_require(def_modem_type);
 	}
 
-	if (!gui_init()) {
+	if (!gui_init(theme)) {
 		CRITICAL("Could not setup graphical user interface");
 		_app_exit_code = EXIT_FAILURE;
 		goto end_ofono;
