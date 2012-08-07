@@ -56,26 +56,60 @@ static Eina_Bool _history_time_updater(void *data)
 {
 	History *ctx = data;
 	Elm_Object_Item *it;
-	long long update_threshold = time(NULL) - WEEK - DAY;
 	double now = ecore_loop_time_get();
+	const double interval_threshold = 30.0;
+	const long long update_threshold = time(NULL) - WEEK - DAY;
 
-	if (now - ctx->last_update < 1.0)
+	/*
+	 * NOTE ABOUT CONSTANTS:
+	 *
+	 * - interval_threshold: to avoid updating too often (window
+	 *   lost and gained focus, object hidden or shown), we limit
+	 *   updates to this minimum interval. The poller should run
+	 *   every 60 seconds.
+	 *
+	 * - update_threshold: since we format strings over a week as
+	 *   fixed string (often day-month-year, not relative to
+	 *   today), we can stop flagging list items as updated. We
+	 *   give it a day of slack so we can be sure to update every
+	 *   item (for held and conferences, you may have items that
+	 *   are close in time but slightly out of order as items are
+	 *   prepended as the calls are removed from ofono, then
+	 *   history is not strictly in 'time' order). We must
+	 *   stop iterating after update_threshold so users that never
+	 *   deleted history and have thousand items will not
+	 *   uselessly update all the thousand items.
+	 */
+
+	if (now - ctx->last_update < interval_threshold)
 		return EINA_TRUE;
 	ctx->last_update = now;
 
 	it = elm_genlist_first_item_get(ctx->genlist_all);
 	for (; it != NULL; it = elm_genlist_item_next_get(it)) {
 		const Call_Info *call_info = elm_object_item_data_get(it);
-		if (call_info->start_time < update_threshold)
-			continue;
+		long long t = call_info->end_time;
+		if (EINA_UNLIKELY(t == 0)) {
+			t = call_info->start_time;
+			if (EINA_UNLIKELY(t == 0))
+				t = call_info->creation_time;
+		}
+		if (EINA_UNLIKELY(t < update_threshold))
+			break;
 		elm_genlist_item_update(it);
 	}
 
 	it = elm_genlist_first_item_get(ctx->genlist_missed);
 	for (; it != NULL; it = elm_genlist_item_next_get(it)) {
 		const Call_Info *call_info = elm_object_item_data_get(it);
-		if (call_info->start_time < update_threshold)
-			continue;
+		long long t = call_info->end_time;
+		if (EINA_UNLIKELY(t == 0)) {
+			t = call_info->start_time;
+			if (EINA_UNLIKELY(t == 0))
+				t = call_info->creation_time;
+		}
+		if (EINA_UNLIKELY(t < update_threshold))
+			break;
 		elm_genlist_item_update(it);
 	}
 
@@ -231,6 +265,8 @@ static void _history_call_changed(void *data, OFono_Call *call)
 	call_info->call = call;
 	call_info->start_time = ofono_call_full_start_time_get(call);
 	call_info->creation_time = time(NULL);
+	if (call_info->start_time == 0)
+		call_info->start_time = call_info->creation_time;
 	call_info->line_id = eina_stringshare_add(line_id);
 	call_info->name = eina_stringshare_add(ofono_call_name_get(call));
 	history->calls->list =
