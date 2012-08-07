@@ -31,6 +31,7 @@ typedef struct _History {
 	Call_Info_List *calls;
 	Elm_Genlist_Item_Class *itc;
 	Evas_Object *self;
+	Evas_Object *clear_popup;
 	Evas_Object *genlist_all, *genlist_missed;
 	Ecore_Poller *updater;
 	double last_update;
@@ -45,6 +46,7 @@ typedef struct _Call_Info {
 	Eina_Bool completed;
 	Eina_Bool incoming;
 	const OFono_Call *call; /* not in edd */
+	History *history;
 	Elm_Object_Item *it_all; /*not in edd */
 	Elm_Object_Item *it_missed; /*not in edd */
 } Call_Info;
@@ -80,6 +82,11 @@ static Eina_Bool _history_time_updater(void *data)
 	 *   deleted history and have thousand items will not
 	 *   uselessly update all the thousand items.
 	 */
+
+	if (!ctx->calls->list) {
+		ctx->updater = NULL;
+		return EINA_FALSE;
+	}
 
 	if (now - ctx->last_update < interval_threshold)
 		return EINA_TRUE;
@@ -143,6 +150,8 @@ static void _history_time_updater_start(History *history)
 	DBG("poller %p, win_focused=%hhu, obj_visible=%hhu",
 		history->updater, win_focused, obj_visible);
 	if (history->updater)
+		return;
+	if (!history->calls->list)
 		return;
 	if ((!win_focused) || (!obj_visible))
 		return;
@@ -341,6 +350,8 @@ static void _history_call_removed(void *data, OFono_Call *call)
 				elm_genlist_item_show
 					(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
 				call_info->it_missed = it;
+				call_info->history = history;
+				_history_time_updater_start(history);
 			}
 		}
 	}
@@ -359,6 +370,8 @@ static void _history_call_removed(void *data, OFono_Call *call)
 						call_info->line_id);
 		elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_IN);
 		call_info->it_all = it;
+		call_info->history = history;
+		_history_time_updater_start(history);
 	}
 }
 
@@ -495,6 +508,7 @@ static void _history_call_log_read(History *history)
 						_on_item_clicked,
 						call_info->line_id);
 		call_info->it_all = it;
+		call_info->history = history;
 
 		if (call_info->completed)
 			continue;
@@ -505,6 +519,7 @@ static void _history_call_log_read(History *history)
 						_on_item_clicked,
 						call_info->line_id);
 		call_info->it_missed = it;
+		call_info->history = history;
 	}
 
 	it = elm_genlist_first_item_get(history->genlist_all);
@@ -514,6 +529,95 @@ static void _history_call_log_read(History *history)
 	it = elm_genlist_first_item_get(history->genlist_missed);
 	if (it)
 		elm_genlist_item_show(it, ELM_GENLIST_ITEM_SCROLLTO_TOP);
+}
+
+static void _history_call_info_del(Call_Info *call_info)
+{
+	History *ctx = call_info->history;
+
+	EINA_SAFETY_ON_NULL_RETURN(ctx);
+
+	call_info->call = NULL;
+	if (call_info->it_all)
+		elm_object_item_del(call_info->it_all);
+	if (call_info->it_missed)
+		elm_object_item_del(call_info->it_missed);
+
+	ctx->calls->list = eina_list_remove(ctx->calls->list, call_info);
+	ctx->calls->dirty = EINA_TRUE;
+	_history_call_log_save(ctx);
+
+	if ((!ctx->calls->list) && (ctx->updater)) {
+		ecore_poller_del(ctx->updater);
+		ctx->updater = NULL;
+	}
+
+	_call_info_free(call_info);
+}
+
+static void _history_clear_do(void *data, Evas_Object *obj __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	History *ctx = data;
+	Call_Info *call_info;
+
+	DBG("ctx=%p, deleting %u entries",
+		ctx, eina_list_count(ctx->calls->list));
+
+	evas_object_del(ctx->clear_popup);
+	ctx->clear_popup = NULL;
+
+	elm_genlist_clear(ctx->genlist_all);
+	elm_genlist_clear(ctx->genlist_missed);
+
+	EINA_LIST_FREE(ctx->calls->list, call_info)
+		_call_info_free(call_info);
+
+	ctx->calls->dirty = EINA_TRUE;
+	_history_call_log_save(ctx);
+
+	if (ctx->updater) {
+		ecore_poller_del(ctx->updater);
+		ctx->updater = NULL;
+	}
+
+	elm_object_signal_emit(ctx->self, "toggle,off,edit", "gui");
+}
+
+static void _history_clear_cancel(void *data, Evas_Object *obj __UNUSED__,
+					void *event_info __UNUSED__)
+{
+	History *ctx = data;
+
+	DBG("ctx=%p", ctx);
+
+	evas_object_del(ctx->clear_popup);
+	ctx->clear_popup = NULL;
+}
+
+static void _history_clear(History *ctx)
+{
+	Evas_Object *p, *bt;
+
+	EINA_SAFETY_ON_TRUE_RETURN(ctx->clear_popup != NULL);
+
+	ctx->clear_popup = p = elm_popup_add(ctx->self);
+	evas_object_size_hint_weight_set(p, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+	elm_object_part_text_set(p, "title,text", "Clear History");
+	elm_object_text_set(p, "Do you want to clear all history entries?");
+
+	bt = elm_button_add(p);
+	elm_object_text_set(bt, "No");
+	elm_object_part_content_set(p, "button1", bt);
+	evas_object_smart_callback_add(bt, "clicked",
+					_history_clear_cancel, ctx);
+
+	bt = elm_button_add(p);
+	elm_object_text_set(bt, "Yes, Clear");
+	elm_object_part_content_set(p, "button2", bt);
+	evas_object_smart_callback_add(bt, "clicked", _history_clear_do, ctx);
+
+	evas_object_show(p);
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
@@ -565,16 +669,31 @@ static Eina_Bool _item_state_get(void *data, Evas_Object *obj __UNUSED__,
 	return EINA_FALSE;
 }
 
-static void _on_clicked(void *data __UNUSED__, Evas_Object *obj __UNUSED__,
+static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
+	History *ctx = data;
+
 	EINA_SAFETY_ON_NULL_RETURN(emission);
 	emission += strlen("clicked,");
 
+	DBG("ctx=%p, signal: %s", ctx, emission);
+
 	if (!strcmp(emission, "all"))
 		elm_object_signal_emit(obj, "show,all", "gui");
-	else
+	else if (!strcmp(emission, "missed"))
 		elm_object_signal_emit(obj, "show,missed", "gui");
+	else if (!strcmp(emission, "clear"))
+		_history_clear(ctx);
+	else if (!strcmp(emission, "edit")) {
+		elm_object_signal_emit(obj, "toggle,on,edit", "gui");
+		elm_genlist_decorate_mode_set(ctx->genlist_all, EINA_TRUE);
+		elm_genlist_decorate_mode_set(ctx->genlist_missed, EINA_TRUE);
+	} else if (!strcmp(emission, "edit,done")) {
+		elm_object_signal_emit(obj, "toggle,off,edit", "gui");
+		elm_genlist_decorate_mode_set(ctx->genlist_all, EINA_FALSE);
+		elm_genlist_decorate_mode_set(ctx->genlist_missed, EINA_FALSE);
+	}
 }
 
 static void _on_more_clicked(void *data __UNUSED__, Evas_Object *obj __UNUSED__,
@@ -584,18 +703,63 @@ static void _on_more_clicked(void *data __UNUSED__, Evas_Object *obj __UNUSED__,
 	DBG("TODO");
 }
 
-static Evas_Object *_item_content_get(void *data __UNUSED__, Evas_Object *obj,
-					const char *part __UNUSED__)
+static void _on_del_clicked(void *data, Evas_Object *obj __UNUSED__,
+				void *event_info __UNUSED__)
 {
-	Evas_Object *btn;
+	Call_Info *call_info = data;
+	DBG("call_info=%p, items all=%p missed=%p",
+		call_info, call_info->it_all, call_info->it_missed);
+	_history_call_info_del(call_info);
+}
 
-	btn = gui_layout_add(obj, "history/img");
-	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
-	elm_object_signal_callback_add(btn, "clicked,more", "gui",
-					_on_more_clicked, NULL);
-	evas_object_propagate_events_set(btn, EINA_FALSE);
+static Evas_Object *_item_content_get(void *data, Evas_Object *obj,
+					const char *part)
+{
+	Evas_Object *btn = NULL;
+
+	if (strcmp(part, "call.swallow.more") == 0) {
+		btn = gui_layout_add(obj, "history/img");
+		EINA_SAFETY_ON_NULL_RETURN_VAL(btn, NULL);
+		elm_object_signal_callback_add(btn, "clicked,more", "gui",
+						_on_more_clicked, NULL);
+		evas_object_propagate_events_set(btn, EINA_FALSE);
+	} else if (strcmp(part, "call.swallow.delete") == 0) {
+		btn = elm_button_add(obj);
+		EINA_SAFETY_ON_NULL_RETURN_VAL(btn, NULL);
+		elm_object_style_set(btn, "history-delete");
+		elm_object_text_set(btn, "delete");
+		evas_object_smart_callback_add(btn, "clicked", _on_del_clicked,
+						data);
+		evas_object_propagate_events_set(btn, EINA_FALSE);
+	} else
+		ERR("unknown content part '%s'", part);
 
 	return btn;
+}
+
+static void _on_list_slide_enter(void *data __UNUSED__,
+					Evas_Object *obj,
+					void *event_info)
+{
+	Elm_Object_Item *it = elm_genlist_decorated_item_get(obj);
+	DBG("cancel decorated item=%p", it);
+	if (it)
+		elm_genlist_item_decorate_mode_set(it, "slide", EINA_FALSE);
+
+	it = event_info;
+	EINA_SAFETY_ON_NULL_RETURN(it);
+	DBG("it=%p", it);
+	elm_genlist_item_decorate_mode_set(it, "slide", EINA_TRUE);
+}
+
+static void _on_list_slide_cancel(void *data __UNUSED__,
+					Evas_Object *obj,
+					void *event_info __UNUSED__)
+{
+	Elm_Object_Item *it = elm_genlist_decorated_item_get(obj);
+	DBG("it=%p", it);
+	if (it)
+		elm_genlist_item_decorate_mode_set(it, "slide", EINA_FALSE);
 }
 
 Evas_Object *history_add(Evas_Object *parent)
@@ -620,9 +784,28 @@ Evas_Object *history_add(Evas_Object *parent)
 	EINA_SAFETY_ON_NULL_GOTO(genlist_all, err_object_new);
 	elm_object_style_set(genlist_all, "history");
 
+	/* TODO: */
+	evas_object_smart_callback_add(genlist_all, "drag,start,right",
+					_on_list_slide_enter, history);
+	evas_object_smart_callback_add(genlist_all, "drag,start,left",
+					_on_list_slide_cancel, history);
+	evas_object_smart_callback_add(genlist_all, "drag,start,down",
+					_on_list_slide_cancel, history);
+	evas_object_smart_callback_add(genlist_all, "drag,start,up",
+					_on_list_slide_cancel, history);
+
 	genlist_missed = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_missed, err_object_new);
 	elm_object_style_set(genlist_missed, "history");
+
+	evas_object_smart_callback_add(genlist_missed, "drag,start,right",
+					_on_list_slide_enter, history);
+	evas_object_smart_callback_add(genlist_missed, "drag,start,left",
+					_on_list_slide_cancel, history);
+	evas_object_smart_callback_add(genlist_missed, "drag,start,down",
+					_on_list_slide_cancel, history);
+	evas_object_smart_callback_add(genlist_missed, "drag,start,up",
+					_on_list_slide_cancel, history);
 
 	itc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_object_new);
@@ -631,6 +814,8 @@ Evas_Object *history_add(Evas_Object *parent)
 	itc->func.content_get = _item_content_get;
 	itc->func.state_get = _item_state_get;
 	itc->func.del = NULL;
+	itc->decorate_all_item_style = "history-delete";
+	itc->decorate_item_style = "history-delete";
 	history->genlist_all = genlist_all;
 	history->genlist_missed = genlist_missed;
 	history->itc = itc;
@@ -639,7 +824,7 @@ Evas_Object *history_add(Evas_Object *parent)
 	elm_object_part_content_set(obj, "elm.swallow.missed", genlist_missed);
 	elm_object_signal_emit(obj, "show,all", "gui");
 	elm_object_signal_callback_add(obj, "clicked,*", "gui",
-					_on_clicked, NULL);
+					_on_clicked, history);
 
 	config_path = efreet_config_home_get();
 	snprintf(base_dir, sizeof(base_dir), "%s/%s", config_path,

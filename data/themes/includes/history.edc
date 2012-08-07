@@ -89,7 +89,10 @@ group {
       }
    }
 
-   images.image: "bt_arrow_right.png" COMP;
+   images {
+      image: "bt_arrow_right.png" COMP;
+      image: "bt_del.png" COMP;
+   }
 
    parts{
       part {
@@ -202,7 +205,7 @@ group {
             rel2 {
                to_x: "call.swallow.more";
                relative: 0.0 1.0;
-               offset: -ITEM_PADDING (-ITEM_PADDING - 1);
+               offset: (-ITEM_PADDING - ITEM_PADDING) (-ITEM_PADDING - 1);
             }
             text {
                font: FONT_NORMAL;
@@ -359,6 +362,192 @@ group {
          target: "text.call.time";
          target: "text.call.type";
          target: "call.img.more";
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item/history-delete/default";
+   alias: "elm/genlist/item_odd/history-delete/default";
+
+   data {
+      item: "contents" "call.swallow.delete";
+      item: "mode_part" "elm.swallow.decorate.content";
+   }
+
+   parts {
+      part {
+         name: "content.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            rel2 {
+               offset: (-BORDER_PADDING - LIST_ICON_SIZE - ITEM_PADDING - 1) -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.decorate.content";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         clip_to: "content.clipper";
+         description {
+            state: "default" 0.0;
+         }
+      }
+
+      part {
+         name: "call.swallow.delete";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            fixed: 1 0;
+            align: 0.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+            }
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            align: 1.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: -BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -1;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "animate_decorated";
+            signal: "elm,state,decorate,enabled,effect";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            after: "animate_decorated2";
+         }
+         program {
+            name: "animate_decorated2";
+            action: STATE_SET "decorated" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "call.swallow.delete";
+         }
+
+         program {
+            name: "animate_default";
+            signal: "elm,state,decorate,disabled,effect";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "call.swallow.delete";
+            after: "animate_default2";
+         }
+         program {
+            name: "animate_default2";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+         }
+
+         program {
+            signal: "elm,state,decorate,enabled";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            target: "call.swallow.delete";
+         }
+         program {
+            signal: "elm,state,decorate,disabled";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+            target: "call.swallow.delete";
+         }
+
+         program {
+            signal: "elm,state,slide,active";
+            source: "elm";
+            after: "animate_decorated";
+         }
+         program {
+            signal: "elm,state,slide,passive";
+            source: "elm";
+            after: "animate_default";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/button/base/history-delete";
+
+   parts {
+      part {
+         name: "area";
+         type: IMAGE;
+         description {
+            state: "default" 0.0;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            color: 255 255 255 255;
+            color_class: "caution";
+            image {
+               normal: "bt_del.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 128;
+         }
+      }
+   }
+   programs {
+      program {
+         signal: "mouse,down,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,press" "";
+      }
+      program {
+         signal: "mouse,up,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,unpress" "";
+      }
+      program {
+         signal: "mouse,clicked,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,click" "";
+      }
+
+      program {
+         signal: "mouse,up,1";
+         source: "area";
+         action: STATE_SET "default" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "area";
+      }
+
+      program {
+         signal: "mouse,down,1";
+         source: "area";
+         action: STATE_SET "pressed" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "area";
       }
    }
 }

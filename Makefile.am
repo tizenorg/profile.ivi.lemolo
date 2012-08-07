@@ -73,6 +73,8 @@ data/themes/images/bt_call_pressed.png \
 data/themes/images/bt_call_released.png \
 data/themes/images/bt_contacts_pressed.png \
 data/themes/images/bt_contacts_released.png \
+data/themes/images/bt_del.png \
+data/themes/images/bt_edit.png \
 data/themes/images/bt_history_pressed.png \
 data/themes/images/bt_history_released.png \
 data/themes/images/bt_keypad_pressed.png \
