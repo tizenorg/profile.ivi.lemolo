@@ -23,4 +23,8 @@
 #define SIZE_SMALL 10
 #define SIZE_TINY 8
 
+#define CONTACT_PHOTO_SIZE 128
+#define CONTACT_HALF_PHOTO 64
+#define LIST_CONTACT_HEIGHT (CONTACT_PHOTO_SIZE + 30)
+
 #include "default.edc"

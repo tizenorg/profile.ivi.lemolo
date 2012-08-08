@@ -2,7 +2,8 @@ group {
    name: "elm/genlist/item/contacts/default";
 
    data {
-      item: "texts" "text.contacts.name";
+      item: "texts" "text.contacts.name text.contacts.last";
+      item: "contents" "swallow.photo";
    }
 
    parts{
@@ -14,12 +15,32 @@ group {
             state: "default" 0.0;
             color: 255 255 255 0;
             color_class: "action";
-            min: ACTION_WIDTH LIST_ITEM_HEIGHT;
+            min: WIDTH LIST_CONTACT_HEIGHT;
          }
          description {
             state: "selected" 0.0;
             inherit: "default" 0.0;
             color: 255 255 255 255;
+         }
+      }
+
+      part {
+         name: "swallow.photo";
+         type: SWALLOW;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            min: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
+            max: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               relative: 0.0 0.0;
+               offset: (BORDER_PADDING+CONTACT_PHOTO_SIZE) (CONTACT_PHOTO_SIZE+ITEM_PADDING);
+            }
          }
       }
 
@@ -33,13 +54,19 @@ group {
             color: 255 255 255 255;
             color_class: "action";
             rel1 {
-               relative: 0.0 0.0;
-               offset: BORDER_PADDING 0;
+               to: "swallow.photo";
+               relative: 1.0 0.0;
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to_y: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -CONTACT_HALF_PHOTO;
             }
             text {
                font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-	       size_range: SIZE_SMALL SIZE_MEDIUM;
+               size: SIZE_HUGE;
+               size_range: SIZE_TINY SIZE_HUGE;
                fit: 1 1;
                align: 0.0 0.5;
                ellipsis: 0.0;
@@ -51,24 +78,62 @@ group {
             color_class: "bg";
          }
       }
-   }
 
-   programs {
-
-      program {
-         signal: "elm,state,selected";
-         source: "elm";
-         action: STATE_SET "selected" 0.0;
-         target: "bg";
-         target: "text.contacts.name";
+      part {
+         name: "text.contacts.last";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               to: "text.contacts.name";
+               relative: 0.0 1.0;
+               offset: 0 ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "text.contacts.name";
+               to_y: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: 0 -1;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_SMALL SIZE_MEDIUM;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+	    }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
       }
 
-      program {
-         signal: "elm,state,unselected";
-         source: "elm";
-         action: STATE_SET "default" 0.0;
-         target: "bg";
-         target: "text.contacts.name";
+      programs {
+
+         program {
+            signal: "elm,state,selected";
+            source: "elm";
+            action: STATE_SET "selected" 0.0;
+            target: "bg";
+            target: "text.contacts.name";
+            target: "text.contacts.last";
+         }
+
+         program {
+            signal: "elm,state,unselected";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            target: "bg";
+            target: "text.contacts.name";
+            target: "text.contacts.last";
+         }
       }
    }
 }
@@ -77,6 +142,26 @@ group {
    name: "elm/layout/dialer/contacts_details";
 
    parts {
+
+      part {
+         name: "swallow.photo";
+         type: SWALLOW;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            min: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
+            max: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 0.0 0.0;
+               offset: (BORDER_PADDING+CONTACT_PHOTO_SIZE) (CONTACT_PHOTO_SIZE+ITEM_PADDING);
+            }
+         }
+      }
 
       part {
          name: "text.name";
@@ -88,14 +173,14 @@ group {
             color: 255 255 255 255;
             color_class: "action";
             rel1 {
-               to: "img.photo";
+               to: "swallow.photo";
                relative: 1.0 0.0;
-               offset: 16 0;
+               offset: ITEM_PADDING 0;
             }
             rel2 {
-               to_y: "img.photo";
+               to_y: "swallow.photo";
                relative: 1.0 1.0;
-               offset: -47 -1;
+               offset: -BORDER_PADDING -CONTACT_HALF_PHOTO;
             }
             text {
                font: FONT_NORMAL;
@@ -109,22 +194,33 @@ group {
       }
 
       part {
-         name: "img.photo";
-         type: SWALLOW;
+         name: "text.last.name";
+         type: TEXT;
          scale: 1;
          mouse_events: 0;
          description {
             state: "default" 0.0;
-            min: 170 170;
-            max: 170 170;
-            rel1{
-               relative: 0.0 0.0;
-               offset: 46 0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               to: "text.name";
+               relative: 0.0 1.0;
+               offset: 0 ITEM_PADDING;
             }
-            rel2 {
-               relative: 0.0 0.0;
-               offset: 216 170;
+             rel2 {
+               to_x: "text.name";
+               to_y: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: 0 -1;
             }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_SMALL SIZE_MEDIUM;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+           }
          }
       }
 #define SEPARATOR(id, rely, offy, relto)                                \
@@ -184,9 +280,9 @@ group {
                padding: 0 ITEM_PADDING;
             }
             rel1 {
-	       to_y: "text.name";
+	       to_y: "swallow.photo";
                relative: 0.0 1.0;
-               offset: BORDER_PADDING ITEM_PADDING;
+               offset: BORDER_PADDING (ITEM_PADDING+ACTION_HEIGHT);
             }
             rel2 {
                to_y: "bg.buttons";
