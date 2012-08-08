@@ -6,7 +6,6 @@
 #include "log.h"
 #include "gui.h"
 #include "keypad.h"
-#include "contacts.h"
 #include "history.h"
 #include "callscreen.h"
 
@@ -22,6 +21,11 @@ static char def_theme[PATH_MAX] = "";
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
 static Eina_Bool in_flip_anim = EINA_FALSE;
+
+Contact_Info *gui_contact_search(const char *number, const char **type)
+{
+	return contact_search(contacts, number, type);
+}
 
 Evas_Object *gui_layout_add(Evas_Object *parent, const char *style)
 {

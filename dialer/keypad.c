@@ -24,19 +24,27 @@ typedef struct _Keypad
 	Ecore_Timer *rep_timeout;
 } Keypad;
 
-/* TODO: when contacts are integrated, look up the contact for that number
- * and display it as elm.text.contact. Also send "contact,show/hide".
- */
 static void _number_display(Keypad *ctx)
 {
-	char *s = phone_format(eina_strbuf_string_get(ctx->number));
+	const char *number = eina_strbuf_string_get(ctx->number);
+	char *s = phone_format(number);
+	const char *type;
 	if (!s) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
 		elm_object_signal_emit(ctx->self, "disable,save", "keypad");
 		elm_object_signal_emit(ctx->self, "disable,backspace",
 					"keypad");
+		elm_object_signal_emit(ctx->self, "hide,contact", "keypad");
 		return;
 	}
+
+	Contact_Info *info = gui_contact_search(number, &type);
+	if (info) {
+		elm_object_part_text_set(ctx->self, "elm.text.contact", contact_info_name_get(info));
+		elm_object_part_text_set(ctx->self, "elm.text.phone.type", type);
+		elm_object_signal_emit(ctx->self, "show,contact", "keypad");
+	} else
+		elm_object_signal_emit(ctx->self, "hide,contact", "keypad");
 
 	elm_object_part_text_set(ctx->self, "elm.text.display", s);
 	free(s);
@@ -437,6 +445,7 @@ Evas_Object *keypad_add(Evas_Object *parent)
 					_on_clicked, ctx);
 
 	elm_object_part_text_set(obj, "elm.text.display", "");
+	elm_object_signal_emit(obj, "hide,contact", "keypad");
 	elm_object_signal_emit(obj, "disable,save", "keypad");
 	elm_object_signal_emit(obj, "disable,backspace", "keypad");
 

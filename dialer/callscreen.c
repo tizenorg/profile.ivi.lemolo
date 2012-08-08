@@ -53,6 +53,9 @@ static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
 static OFono_Callback_List_Call_Disconnected_Node
 *callback_node_call_disconnected = NULL;
 
+static char *_call_name_or_id(const OFono_Call *call);
+static char *_call_type_get(const OFono_Call *call);
+
 static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
 				const char *emission __UNUSED__,
 				const char *source __UNUSED__)
@@ -129,10 +132,10 @@ repopulate:
 	}
 
 	EINA_LIST_FOREACH(new, n1, c) {
-		const char *name;
-		char *number;
+		char *name, *number, *type;
 
-		name = ofono_call_name_get(c);
+		name = _call_name_or_id(c);
+		type = _call_type_get(c);
 		number = phone_format(ofono_call_line_id_get(c));
 
 		it = gui_layout_add(ctx->multiparty.bx, "multiparty-details");
@@ -142,8 +145,9 @@ repopulate:
 
 		elm_object_part_text_set(it, "elm.text.name", name);
 		elm_object_part_text_set(it, "elm.text.number", number);
+		elm_object_part_text_set(it, "elm.text.type", type);
 
-		if ((!name) || (*name == '\0'))
+		if (strcmp(name, number) == 0)
 			elm_object_signal_emit(it, "hide,name", "call");
 		else
 			elm_object_signal_emit(it, "show,name", "call");
@@ -158,7 +162,9 @@ repopulate:
 		evas_object_data_set(it, "callscreen.ctx", ctx);
 		elm_box_pack_end(ctx->multiparty.bx, it);
 
+		free(name);
 		free(number);
+		free(type);
 	}
 	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
 }
@@ -634,9 +640,13 @@ stop:
 
 static char *_call_name_or_id(const OFono_Call *call)
 {
-	const char *s = ofono_call_name_get(call);
-	if ((s) && (s[0] != '\0'))
-		return strdup(s);
+	const char *s = ofono_call_line_id_get(call);
+	Contact_Info *info = gui_contact_search(s, NULL);
+
+	if (info) {
+		return strdup(contact_info_name_get(info));
+	}
+
 	return phone_format(ofono_call_line_id_get(call));
 }
 
@@ -649,13 +659,26 @@ static char *_call_name_get(const Callscreen *ctx __UNUSED__,
 	return strdup("Conference");
 }
 
+static char *_call_type_get(const OFono_Call *call)
+{
+	const char *type;
+	const char *s = ofono_call_line_id_get(call);
+	Contact_Info *info = gui_contact_search(s, &type);
+
+	if (info) {
+		return strdup(type);
+	}
+
+	return NULL;
+}
+
 static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
 	OFono_Call_State state;
 	Eina_Bool was_waiting, was_held, is_held;
 	const char *status, *sig = "hide,answer";
-	char *contact;
+	char *contact, *type;
 
 	DBG("ctx=%p, active=%p, held=%p, waiting=%p, changed=%p",
 		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
@@ -694,6 +717,7 @@ static void _call_changed(void *data, OFono_Call *c)
 		return;
 
 	contact = _call_name_get(ctx, c);
+	type = _call_type_get(c);
 
 	state = ofono_call_state_get(c);
 	switch (state) {
@@ -731,12 +755,17 @@ static void _call_changed(void *data, OFono_Call *c)
 		gui_activecall_set(ctx->gui_activecall);
 	}
 	elm_object_part_text_set(ctx->gui_activecall, "elm.text.name", contact);
+	if (type)
+		elm_object_part_text_set(ctx->gui_activecall,
+						"elm.text.phone.type", type);
 	elm_object_part_text_set(ctx->gui_activecall, "elm.text.status",
 					status);
 
 
 	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
+	elm_object_part_text_set(ctx->self, "elm.text.phone.type", type);
 	free(contact);
+	free(type);
 
 	elm_object_part_text_set(ctx->self, "elm.text.status", status);
 	elm_object_signal_emit(ctx->self, sig, "call");

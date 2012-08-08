@@ -9,6 +9,7 @@
 #include "gui.h"
 #include "ofono.h"
 #include "contacts.h"
+#include "util.h"
 
 #ifndef EET_COMPRESSION_DEFAULT
 #define EET_COMPRESSION_DEFAULT 1
@@ -28,6 +29,73 @@ typedef struct _Contacts {
 	Evas_Object *genlist, *layout, *details;
 	Contacts_List *c_list;
 } Contacts;
+
+struct _Contact_Info {
+	const char *name;
+	const char *mobile;
+	const char *home;
+	const char *work;
+	const char *picture;
+};
+
+Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **type)
+{
+	Contact_Info *c_info;
+	Eina_List *l;
+	Contacts *contacts;
+	char *found_type;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(number, NULL);
+	contacts = evas_object_data_get(obj, "contacts.ctx");
+	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
+
+	EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
+		if (!c_info)
+			continue;
+
+		if (strcmp(number, c_info->mobile) == 0) {
+			found_type = "Mobile";
+			goto found;
+		}
+		else if (strcmp(number, c_info->work) == 0) {
+			found_type = "Work";
+			goto found;
+		}
+		else if (strcmp(number, c_info->home) == 0) {
+			found_type = "Home";
+			goto found;
+		}
+	}
+
+	return NULL;
+found:
+	if (type)
+		*type = found_type;
+	return c_info;
+}
+
+const char *contact_info_name_get(const Contact_Info *c)
+{
+	return c->name;
+}
+
+const char *contact_info_picture_get(const Contact_Info *c)
+{
+	return c->picture;
+}
+
+const char *contact_info_detail_get(const Contact_Info *c, const char *type)
+{
+	if (strcmp(type, "Mobile") == 0)
+		return c->mobile;
+	else if (strcmp(type, "Work") == 0)
+		return c->work;
+	else if (strcmp(type, "Home") == 0)
+		return c->home;
+	else
+		return NULL;
+}
 
 static void _contacts_info_descriptor_init(Eet_Data_Descriptor **edd,
 						Eet_Data_Descriptor **edd_list)
@@ -96,6 +164,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	Evas_Object *details, *btn;
 	char buf[1024];
 	Contact_Info *c_info;
+	char *phone;
 
 	details = contacts->details;
 	c_info = elm_object_item_data_get(item);
@@ -107,7 +176,9 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	snprintf(buf, sizeof(buf), "Mobile: %s", c_info->mobile);
+	phone = phone_format(c_info->mobile);
+	snprintf(buf, sizeof(buf), "Mobile: %s", phone);
+	free(phone);
 	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
@@ -119,7 +190,9 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	snprintf(buf, sizeof(buf), "Home: %s", c_info->home);
+	phone = phone_format(c_info->home);
+	snprintf(buf, sizeof(buf), "Home: %s", phone);
+	free(phone);
 	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
@@ -131,7 +204,9 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	snprintf(buf, sizeof(buf), "Work: %s", c_info->work);
+	phone = phone_format(c_info->work);
+	snprintf(buf, sizeof(buf), "Work: %s", phone);
+	free(phone);
 	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
@@ -268,6 +343,8 @@ Evas_Object *contacts_add(Evas_Object *parent)
 
 	evas_object_event_callback_add(obj, EVAS_CALLBACK_DEL, _on_del,
 					contacts);
+
+	evas_object_data_set(obj, "contacts.ctx", contacts);
 	return obj;
 
 err_read:

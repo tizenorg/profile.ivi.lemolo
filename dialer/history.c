@@ -631,9 +631,10 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	part += strlen("text.call.");
 
 	if (!strcmp(part, "name")) {
-		if (!call_info->name || call_info->name[0] == '\0')
-			return phone_format(call_info->line_id);
-		return strdup(call_info->name);
+		Contact_Info *info = gui_contact_search(call_info->line_id, NULL);
+		if(!info)
+			return strdup(call_info->line_id);
+		return strdup(contact_info_name_get(info));
 	}
 
 	if (!strcmp(part, "time")) {
@@ -642,9 +643,13 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 		return date_format(call_info->start_time);
 	}
 
-	/* TODO: Fetch phone type from contacts information*/
-	if (!strcmp(part, "type"))
-		return strdup("TODO:TELEPHONE TYPE");
+	if (!strcmp(part, "type")) {
+		const char *type;
+		Contact_Info *info = gui_contact_search(call_info->line_id, &type);
+		if (!info)
+			return strdup("Unknown");
+		return strdup(type);
+	}
 
 	ERR("Unexpected text part: %s", part);
 	return NULL;

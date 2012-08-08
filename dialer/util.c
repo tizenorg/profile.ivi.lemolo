@@ -4,6 +4,8 @@
 
 #include <Eina.h>
 #include <time.h>
+#include <Evas.h>
+#include <Elementary.h>
 
 #include "util.h"
 
@@ -99,4 +101,21 @@ char *date_format(time_t date)
 
 err_gmtime:
 	return strdup("");
+}
+
+Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)
+{
+	Evas_Object *icon = elm_icon_add(parent);
+
+	if (!picture || *picture == '\0')
+		elm_icon_standard_set(icon, "no-picture");
+	else {
+		char path[PATH_MAX];
+		const char *prefix;
+		prefix = efreet_config_home_get();
+		snprintf(path, sizeof(path), "%s/%s/%s", prefix, PACKAGE_NAME,
+				picture);
+		elm_image_file_set(icon, path, NULL);
+	}
+	return icon;
 }

@@ -75,6 +75,80 @@ group {
       }
 
       part {
+         name: "elm.text.contact";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            visible: 0;
+            max: (WIDTH/2) SIZE_MEDIUM;
+            rel1 {
+               to: "elm.text.display";
+               relative: 0.0 1.0;
+               offset: (-WIDTH/2 + BORDER_PADDING) 0;
+            }
+            rel2 {
+               to: "elm.text.display";
+               relative: 1.0 1.0;
+               offset: 0 SIZE_MEDIUM;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_HUGE;
+               fit: 1 1;
+               align: 0.0 0.0;
+               ellipsis: 0.0;
+            }
+         }
+         description {
+            state: "show" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "elm.text.phone.type";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            visible: 0;
+            max: (WIDTH/2) SIZE_MEDIUM;
+            rel1 {
+               to: "elm.text.contact";
+               relative: 1.0 0.0;
+               offset:  0 0;
+            }
+            rel2 {
+               to: "elm.text.contact";
+               relative: 1.0 1.0;
+               offset: (WIDTH/2 - BORDER_PADDING) 0;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_HUGE;
+               fit: 1 1;
+               align: 1.0 0.0;
+               ellipsis: 0.0;
+            }
+         }
+         description {
+            state: "show" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
          name: "bg.buttons";
          type: RECT;
          mouse_events: 0;
@@ -85,7 +159,7 @@ group {
             max: WIDTH WIDTH; /* keep it tight centered */
             rel1 {
                relative: 0.0 1.0;
-               to_y: "elm.text.display";
+               to_y: "elm.text.contact";
             }
             rel2 {
                relative: 1.0 0.0;
@@ -152,7 +226,7 @@ group {
          }                                                              \
       }
 
-      SEPARATOR("number", 1.0, 0, "elm.text.display");
+      SEPARATOR("number", 1.0, 0, "elm.text.contact");
       SEPARATOR("actions", 0.0, -SEPARATOR_HEIGHT, "bg.actions");
 #undef SEPARATOR
 
@@ -445,5 +519,23 @@ group {
       ACTION_BUTTON("call",      "call",        0.333333333, 0.666666666);
       ACTION_BUTTON("backspace", "backspace",   0.666666666, 1.000000000);
 #undef ACTION_BUTTON
+   }
+
+   programs {
+      program {
+         signal: "show,contact";
+         source: "keypad";
+         action: STATE_SET "show" 0.0;
+         target: "elm.text.contact";
+         target: "elm.text.phone.type";
+      }
+
+      program {
+         signal: "hide,contact";
+         source: "keypad";
+         action: STATE_SET "default" 0.0;
+         target: "elm.text.contact";
+         target: "elm.text.phone.type";
+      }
    }
 }
