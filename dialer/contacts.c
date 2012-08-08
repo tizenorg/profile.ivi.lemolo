@@ -162,7 +162,6 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	Contacts *contacts = data;
 	Elm_Object_Item *item = event_inf;
 	Evas_Object *details, *btn;
-	char buf[1024];
 	Contact_Info *c_info;
 	char *phone;
 
@@ -176,10 +175,11 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
+	elm_object_style_set(btn, "contacts-btn");
 	phone = phone_format(c_info->mobile);
-	snprintf(buf, sizeof(buf), "Mobile: %s", phone);
+	elm_object_part_text_set(btn, "elm.text.type", "Mobile");
+	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
-	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -190,10 +190,11 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
+	elm_object_style_set(btn, "contacts-btn");
 	phone = phone_format(c_info->home);
-	snprintf(buf, sizeof(buf), "Home: %s", phone);
+	elm_object_part_text_set(btn, "elm.text.type", "Home");
+	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
-	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -204,10 +205,11 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
+	elm_object_style_set(btn, "contacts-btn");
 	phone = phone_format(c_info->work);
-	snprintf(buf, sizeof(buf), "Work: %s", phone);
+	elm_object_part_text_set(btn, "elm.text.type", "Work");
+	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
-	elm_object_part_text_set(btn, NULL, buf);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
