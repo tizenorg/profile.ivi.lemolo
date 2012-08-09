@@ -2,6 +2,7 @@
 #define _EFL_OFONO_CONTACTS_H__ 1
 
 typedef struct _Contact_Info Contact_Info;
+
 Evas_Object *contacts_add(Evas_Object *parent);
 
 Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **type);

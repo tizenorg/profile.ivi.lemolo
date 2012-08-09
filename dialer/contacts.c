@@ -36,6 +36,7 @@ struct _Contact_Info {
 	const char *home;
 	const char *work;
 	const char *picture;
+	const char *last_name;
 };
 
 Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **type)
@@ -77,7 +78,9 @@ found:
 
 const char *contact_info_name_get(const Contact_Info *c)
 {
-	return c->name;
+	char buf[PATH_MAX];
+	snprintf(buf, sizeof(buf), "%s %s", c->name, c->last_name);
+	return strdup(buf);
 }
 
 const char *contact_info_picture_get(const Contact_Info *c)
@@ -118,6 +121,8 @@ static void _contacts_info_descriptor_init(Eet_Data_Descriptor **edd,
 					"mobile", mobile, EET_T_STRING);
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Contact_Info,
 					"name", name, EET_T_STRING);
+	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Contact_Info,
+					"last_name", last_name, EET_T_STRING);
 
 	EET_DATA_DESCRIPTOR_ADD_LIST(*edd_list, Contacts_List, "list", list,
 					*edd);
@@ -130,6 +135,7 @@ static void _contacts_info_free(Contact_Info *c_info)
 	eina_stringshare_del(c_info->home);
 	eina_stringshare_del(c_info->work);
 	eina_stringshare_del(c_info->picture);
+	eina_stringshare_del(c_info->last_name);
 	free(c_info);
 }
 
@@ -161,7 +167,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 {
 	Contacts *contacts = data;
 	Elm_Object_Item *item = event_inf;
-	Evas_Object *details, *btn;
+	Evas_Object *details, *btn, *photo;
 	Contact_Info *c_info;
 	char *phone;
 
@@ -170,8 +176,11 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	elm_genlist_item_selected_set(item, EINA_FALSE);
 	elm_layout_box_remove_all(details, "box.phones", EINA_TRUE);
 
-	/* TODO SET IMAGE AS WELL */
 	elm_object_part_text_set(details, "text.name", c_info->name);
+	elm_object_part_text_set(details, "text.last.name", c_info->last_name);
+
+	photo = picture_icon_get(details, c_info->picture);
+	elm_object_part_content_set(details, "swallow.photo", photo);
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
@@ -272,9 +281,33 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 
 	if (strcmp(part, "name") == 0)
 		return strdup(c_info->name);
+	else if (strcmp(part, "last") == 0)
+		return strdup(c_info->last_name);
 
 	ERR("Unexpected part name: %s", part);
 	return NULL;
+}
+
+
+static Evas_Object *_item_content_get(void *data,
+					Evas_Object *obj,
+					const char *part)
+{
+	Contact_Info *c_info = data;
+	Evas_Object *photo;
+
+	if (strncmp(part, "swallow.", strlen("swallow.")))
+		return NULL;
+
+	part += strlen("swallow.");
+
+	if (strcmp(part, "photo") != 0) {
+		ERR("Unexpected part name: %s", part);
+		return NULL;
+	}
+
+	photo = picture_icon_get(obj, c_info->picture);
+	return photo;
 }
 
 static void _on_back_clicked(void *data, Evas_Object *obj __UNUSED__,
@@ -313,7 +346,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_genlist);
 	itc->item_style = "contacts";
 	itc->func.text_get =  _item_label_get;
-	itc->func.content_get = NULL;
+	itc->func.content_get = _item_content_get;
 	itc->func.state_get = NULL;
 	itc->func.del = NULL;
 	contacts->genlist = genlist;
@@ -338,7 +371,6 @@ Evas_Object *contacts_add(Evas_Object *parent)
 		goto err_path;
 
 	contacts->path = path;
-
 	_contacts_info_descriptor_init(&contacts->edd, &contacts->edd_list);
 	_contacts_read(contacts);
 	EINA_SAFETY_ON_NULL_GOTO(contacts->c_list, err_read);
@@ -350,9 +382,9 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	return obj;
 
 err_read:
-	free(contacts->path);
 	eet_data_descriptor_free(contacts->edd);
 	eet_data_descriptor_free(contacts->edd_list);
+	free(path);
 err_path:
 	elm_genlist_item_class_free(itc);
 err_genlist:

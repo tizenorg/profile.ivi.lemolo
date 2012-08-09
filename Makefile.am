@@ -92,7 +92,8 @@ data/themes/images/bt_mute_released.png \
 data/themes/images/bt_speaker_pressed.png \
 data/themes/images/bt_speaker_released.png \
 data/themes/images/bt_swap_pressed.png \
-data/themes/images/bt_swap_released.png
+data/themes/images/bt_swap_released.png \
+data/themes/images/person.png
 
 THEME_INCLUDES = \
 data/themes/includes/button.edc \
