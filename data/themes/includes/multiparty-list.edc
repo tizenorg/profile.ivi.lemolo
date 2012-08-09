@@ -230,7 +230,7 @@ group {
             rel1 {
                to_x: "hangup.ico";
                relative: 1.0 0.5;
-               offset: ITEM_PADDING 0;
+               offset: ITEM_PADDING ITEM_PADDING;
             }
             rel2 {
                to_x: "private.ico";
