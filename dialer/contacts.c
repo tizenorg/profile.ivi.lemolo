@@ -676,6 +676,8 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 		return strdup(c_info->first_name);
 	else if (strcmp(part, "last") == 0)
 		return strdup(c_info->last_name);
+	else if (strcmp(part, "full") == 0)
+		return strdup(contact_info_full_name_get(c_info));
 
 	ERR("Unexpected part name: %s", part);
 	return NULL;
