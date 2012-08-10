@@ -130,3 +130,13 @@ data/themes/default-sd.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/d
 clean-local:
 	rm -f $(top_builddir)/data/themes/default.edj
 	rm -f $(top_builddir)/data/themes/default-sd.edj
+
+examplesdir = $(pkgdatadir)/examples
+examples_DATA = \
+data/examples/contacts.csv
+
+scriptsdir = $(pkgdatadir)/scripts
+scripts_SCRIPTS = \
+data/scripts/ofono-efl-contacts-db-create.py
+
+EXTRA_DIST += $(examples_DATA) $(scripts_SCRIPTS)
