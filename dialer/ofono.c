@@ -451,26 +451,13 @@ static OFono_Call_State _call_state_parse(const char *str)
 
 static time_t _ofono_time_parse(const char *str)
 {
-	const char *end;
 	struct tm tm;
-	time_t zonediff = 0;
+	time_t zonediff;
 
 	memset(&tm, 0, sizeof(tm));
 
-	/* strptime() does not use %z, we must use it */
-	end = strptime(str, "%Y-%m-%dT%H:%M:%S", &tm);
-	if (end) {
-                int direction, hour, minute, info = atoi(end);
-                if (info > 0)
-                        direction = 1;
-                else {
-                        direction = -1;
-                        info = -info;
-                }
-                hour = info / 100;
-                minute = info % 100;
-                zonediff = direction * (hour * 3600 + minute * 60);
-	}
+	strptime(str, "%Y-%m-%dT%H:%M:%S%z", &tm);
+	zonediff = tm.tm_gmtoff; /* mktime resets it */
 
         return mktime(&tm) - zonediff - timezone;
 }
