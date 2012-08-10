@@ -667,7 +667,7 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 {
 	Contact_Info *c_info = data;
 
-	if (strncmp(part, "text.contacts", strlen("text.contacts")))
+	if (strncmp(part, "text.contacts.", strlen("text.contacts.")))
 		return NULL;
 
 	part += strlen("text.contacts.");
