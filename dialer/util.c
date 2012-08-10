@@ -42,9 +42,11 @@ char *phone_format(const char *number)
 
 	d = eina_strbuf_new();
 	eina_strbuf_append_length(d, number, slen);
-	eina_strbuf_insert_char(d, '-', slen - 4);
+	if ((slen > 4) && (number[slen - 5] != '+'))
+		eina_strbuf_insert_char(d, '-', slen - 4);
 	if (slen > 7) {
-		eina_strbuf_insert_char(d, '-', slen - 7);
+		if ((slen > 7) && (number[slen - 8] != '+'))
+			eina_strbuf_insert_char(d, '-', slen - 7);
 		if ((slen > 10) && (number[slen - 11] != '+'))
 			eina_strbuf_insert_char(d, '-', slen - 10);
 	}
