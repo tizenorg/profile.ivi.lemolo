@@ -40,7 +40,7 @@ static void _number_display(Keypad *ctx)
 
 	Contact_Info *info = gui_contact_search(number, &type);
 	if (info) {
-		elm_object_part_text_set(ctx->self, "elm.text.contact", contact_info_name_get(info));
+		elm_object_part_text_set(ctx->self, "elm.text.contact", contact_info_full_name_get(info));
 		elm_object_part_text_set(ctx->self, "elm.text.phone.type", type);
 		elm_object_signal_emit(ctx->self, "show,contact", "keypad");
 	} else

@@ -643,9 +643,8 @@ static char *_call_name_or_id(const OFono_Call *call)
 	const char *s = ofono_call_line_id_get(call);
 	Contact_Info *info = gui_contact_search(s, NULL);
 
-	if (info) {
-		return strdup(contact_info_name_get(info));
-	}
+	if (info)
+		return strdup(contact_info_full_name_get(info));
 
 	return phone_format(ofono_call_line_id_get(call));
 }

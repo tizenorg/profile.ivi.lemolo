@@ -9,7 +9,9 @@ Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **
 
 const char *contact_info_picture_get(const Contact_Info *c);
 
-const char *contact_info_name_get(const Contact_Info *c);
+const char *contact_info_full_name_get(const Contact_Info *c);
+const char *contact_info_first_name_get(const Contact_Info *c);
+const char *contact_info_last_name_get(const Contact_Info *c);
 
 const char *contact_info_detail_get(const Contact_Info *c, const char *type);
 

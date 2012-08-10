@@ -695,7 +695,7 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	if (!strcmp(part, "name")) {
 		if (!call_info->contact)
 			return strdup(call_info->line_id);
-		return contact_info_name_get(call_info->contact);
+		return strdup(contact_info_full_name_get(call_info->contact));
 	}
 
 	if (!strcmp(part, "time")) {

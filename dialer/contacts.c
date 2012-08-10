@@ -34,12 +34,13 @@ typedef struct _Contacts {
 } Contacts;
 
 struct _Contact_Info {
-	const char *name;
+	const char *first_name;
+	const char *last_name;
+	const char *full_name; /* not in edd */
 	const char *mobile;
 	const char *home;
 	const char *work;
 	const char *picture;
-	const char *last_name;
 
 	Contacts *contacts; /* not in edd */
 	Elm_Object_Item *it; /* not in edd */
@@ -95,12 +96,31 @@ Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **
 	return NULL;
 }
 
-const char *contact_info_name_get(const Contact_Info *c)
+const char *contact_info_full_name_get(const Contact_Info *c)
+{
+	Contact_Info *c2;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+
+	if (c->full_name)
+		return c->full_name;
+
+	c2 = (Contact_Info *)c;
+	c2->full_name = eina_stringshare_printf("%s %s",
+						c->first_name, c->last_name);
+	return c->full_name;
+}
+
+const char *contact_info_first_name_get(const Contact_Info *c)
 {
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
-	char buf[PATH_MAX];
-	snprintf(buf, sizeof(buf), "%s %s", c->name, c->last_name);
-	return strdup(buf);
+	return c->first_name;
+}
+
+const char *contact_info_last_name_get(const Contact_Info *c)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+	return c->last_name;
 }
 
 const char *contact_info_picture_get(const Contact_Info *c)
@@ -227,10 +247,12 @@ Eina_Bool contact_info_first_name_set(Contact_Info *c, const char *name)
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(name, EINA_FALSE);
 
-	DBG("c=%p, was=%s, new=%s", c, c->name, name);
+	DBG("c=%p, was=%s, new=%s", c, c->first_name, name);
 
-	if (eina_stringshare_replace(&(c->name), name))
+	if (eina_stringshare_replace(&(c->first_name), name)) {
+		eina_stringshare_replace(&(c->full_name), NULL);
 		_contact_info_changed(c);
+	}
 
 	return EINA_TRUE;
 }
@@ -242,8 +264,10 @@ Eina_Bool contact_info_last_name_set(Contact_Info *c, const char *name)
 
 	DBG("c=%p, was=%s, new=%s", c, c->last_name, name);
 
-	if (eina_stringshare_replace(&(c->last_name), name))
+	if (eina_stringshare_replace(&(c->last_name), name)) {
+		eina_stringshare_replace(&(c->full_name), NULL);
 		_contact_info_changed(c);
+	}
 
 	return EINA_TRUE;
 }
@@ -422,7 +446,7 @@ static void _contacts_info_descriptor_init(Eet_Data_Descriptor **edd,
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Contact_Info,
 					"mobile", mobile, EET_T_STRING);
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Contact_Info,
-					"name", name, EET_T_STRING);
+					"first_name", first_name, EET_T_STRING);
 	EET_DATA_DESCRIPTOR_ADD_BASIC(*edd, Contact_Info,
 					"last_name", last_name, EET_T_STRING);
 
@@ -436,7 +460,7 @@ static void _contact_info_free(Contact_Info *c_info)
 
 	if (c_info->on_changed_cbs.deleted) {
 		ERR("contact still have changed deleted listeners: %p %s %s",
-			c_info, c_info->name, c_info->last_name);
+			c_info, c_info->first_name, c_info->last_name);
 		eina_list_free(c_info->on_changed_cbs.deleted);
 	}
 
@@ -457,12 +481,13 @@ static void _contact_info_free(Contact_Info *c_info)
 	if (c_info->changed_idler)
 		ecore_idler_del(c_info->changed_idler);
 
-	eina_stringshare_del(c_info->name);
+	eina_stringshare_del(c_info->first_name);
+	eina_stringshare_del(c_info->last_name);
+	eina_stringshare_del(c_info->full_name);
 	eina_stringshare_del(c_info->mobile);
 	eina_stringshare_del(c_info->home);
 	eina_stringshare_del(c_info->work);
 	eina_stringshare_del(c_info->picture);
-	eina_stringshare_del(c_info->last_name);
 	free(c_info);
 }
 
@@ -513,7 +538,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	elm_genlist_item_selected_set(item, EINA_FALSE);
 	elm_layout_box_remove_all(details, "box.phones", EINA_TRUE);
 
-	elm_object_part_text_set(details, "text.name", c_info->name);
+	elm_object_part_text_set(details, "text.name", c_info->first_name);
 	elm_object_part_text_set(details, "text.last.name", c_info->last_name);
 
 	photo = picture_icon_get(details, c_info->picture);
@@ -569,13 +594,19 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 static int _sort_by_name_cb(const void *v1, const void *v2)
 {
 	const Contact_Info *c1, *c2;
+	int r;
+
 	c1 = v1;
 	c2 = v2;
 
 	if (!c1) return 1;
 	if (!c2) return -1;
 
-	return strcmp(c1->name, c2->name);
+	r = strcmp(c1->first_name, c2->first_name);
+	if (r == 0)
+		return strcmp(c1->last_name, c2->last_name);
+
+	return r;
 }
 
 static void _contacts_read(Contacts *contacts)
@@ -612,8 +643,8 @@ static void _contacts_read(Contacts *contacts)
 	EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
 		if (!c_info)
 			continue;
-		if (group != c_info->name[0]) {
-			group = c_info->name[0];
+		if (group != c_info->first_name[0]) {
+			group = c_info->first_name[0];
 			it = elm_genlist_item_append(contacts->genlist,
 							contacts->group,
 							c_info, NULL,
@@ -642,7 +673,7 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	part += strlen("text.contacts.");
 
 	if (strcmp(part, "name") == 0)
-		return strdup(c_info->name);
+		return strdup(c_info->first_name);
 	else if (strcmp(part, "last") == 0)
 		return strdup(c_info->last_name);
 
@@ -655,7 +686,7 @@ static char *_group_label_get(void *data, Evas_Object *obj __UNUSED__,
 {
 	Contact_Info *c_info = data;
 	char buf[2];
-	snprintf(buf, sizeof(buf), "%c", c_info->name[0]);
+	snprintf(buf, sizeof(buf), "%c", c_info->first_name[0]);
 	return strdup(buf);
 }
 

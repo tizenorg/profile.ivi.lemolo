@@ -43,7 +43,7 @@ for row in reader:
             value "work" string: "%(work)s";
             value "home" string: "%(home)s";
             value "mobile" string: "%(mobile)s";
-            value "name" string: "%(first)s";
+            value "first_name" string: "%(first)s";
             value "last_name" string: "%(last)s";
         }
 """ % {"first": first, "last": last,
