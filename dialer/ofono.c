@@ -449,6 +449,32 @@ static OFono_Call_State _call_state_parse(const char *str)
 	return OFONO_CALL_STATE_DISCONNECTED;
 }
 
+static time_t _ofono_time_parse(const char *str)
+{
+	const char *end;
+	struct tm tm;
+	time_t zonediff = 0;
+
+	memset(&tm, 0, sizeof(tm));
+
+	/* strptime() does not use %z, we must use it */
+	end = strptime(str, "%Y-%m-%dT%H:%M:%S", &tm);
+	if (end) {
+                int direction, hour, minute, info = atoi(end);
+                if (info > 0)
+                        direction = 1;
+                else {
+                        direction = -1;
+                        info = -info;
+                }
+                hour = info / 100;
+                minute = info % 100;
+                zonediff = direction * (hour * 3600 + minute * 60);
+	}
+
+        return mktime(&tm) - zonediff - timezone;
+}
+
 static void _call_property_update(OFono_Call *c, const char *key,
 					DBusMessageIter *value)
 {
@@ -491,22 +517,17 @@ static void _call_property_update(OFono_Call *c, const char *key,
 		DBG("%s Emergency %d", c->base.path, v);
 		c->emergency = v;
 	} else if (strcmp(key, "StartTime") == 0) {
-		const char *end, *ts = NULL;
-		struct tm tm;
+		const char *ts = NULL;
+		time_t st, ut;
+		double lt;
 		dbus_message_iter_get_basic(value, &ts);
-		memset(&tm, 0, sizeof(tm));
-		end = strptime(ts, "%Y-%m-%dT%H:%M:%S%z", &tm);
-		if ((end) && (*end != '\0'))
-			ERR("Failed to parse StartTime=%s", ts);
-		else {
-			time_t st = mktime(&tm);
-			time_t ut = time(NULL);
-			double lt = ecore_loop_time_get();
-			c->start_time = st - ut + lt;
-			c->full_start_time = st;
-			DBG("%s StartTime %f (%s)", c->base.path, c->start_time,
-				ts);
-		}
+
+		st = _ofono_time_parse(ts);
+		ut = time(NULL);
+		lt = ecore_loop_time_get();
+		c->start_time = st - ut + lt;
+		c->full_start_time = st;
+		DBG("%s StartTime %f (%s)", c->base.path, c->start_time, ts);
 	} else
 		DBG("%s %s (unused property)", c->base.path, key);
 }
@@ -2054,6 +2075,8 @@ void ofono_modem_path_wanted_set(const char *path)
 
 Eina_Bool ofono_init(void)
 {
+	tzset();
+
 	if (!elm_need_e_dbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
