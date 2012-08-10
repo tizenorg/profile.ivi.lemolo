@@ -78,7 +78,7 @@ group {
       }
 
       part {
-         name: "elm.text.contact";
+         name: "elm.text.contact-and-type";
          type: TEXT;
          mouse_events: 0;
          scale: 1;
@@ -95,86 +95,13 @@ group {
             }
             rel2 {
                to: "elm.text.display";
-               relative: 0.5 1.0;
-               offset: -ITEM_PADDING -1;
-            }
-            text {
-               font: FONT_BOLD;
-               size: SIZE_SMALL;
-               align: 1.0 0.0;
-               ellipsis: 0.0;
-               min: 0 1;
-            }
-         }
-         description {
-            state: "show" 0.0;
-            inherit: "default" 0.0;
-            visible: 1;
-         }
-      }
-
-      part {
-         name: "text.separator";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "light";
-            visible: 0;
-            fixed: 1 1;
-            rel1 {
-               to: "elm.text.contact";
-               relative: 1.0 0.0;
-               offset:  0 0;
-            }
-            rel2 {
-               to: "elm.text.phone.type";
-               relative: 0.0 1.0;
-               offset: -1 -1;
-            }
-            text {
-               font: FONT_BOLD;
-               size: SIZE_SMALL;
-               align: 0.5 0.0;
-               min: 0 1;
-               text: "-";
-            }
-         }
-         description {
-            state: "show" 0.0;
-            inherit: "default" 0.0;
-            visible: 1;
-         }
-      }
-
-      part {
-         name: "elm.text.phone.type";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "light";
-            visible: 0;
-            fixed: 1 1;
-            rel1 {
-               to: "elm.text.display";
-               relative: 0.5 1.0;
-               offset:  ITEM_PADDING 0;
-            }
-            rel2 {
-               to: "elm.text.display";
                relative: 1.0 1.0;
                offset: -1 -1;
             }
             text {
                font: FONT_BOLD;
                size: SIZE_SMALL;
-               align: 0.0 0.0;
-               ellipsis: 0.0;
+               align: 0.5 0.0;
                min: 0 1;
             }
          }
@@ -196,7 +123,7 @@ group {
             max: WIDTH WIDTH; /* keep it tight centered */
             rel1 {
                relative: 0.0 1.0;
-               to_y: "elm.text.contact";
+               to_y: "elm.text.contact-and-type";
             }
             rel2 {
                relative: 1.0 0.0;
@@ -263,7 +190,7 @@ group {
          }                                                              \
       }
 
-      SEPARATOR("number", 1.0, 0, "elm.text.contact");
+      SEPARATOR("number", 1.0, 0, "elm.text.contact-and-type");
       SEPARATOR("actions", 0.0, -SEPARATOR_HEIGHT, "bg.actions");
 #undef SEPARATOR
 
@@ -563,18 +490,14 @@ group {
          signal: "show,contact";
          source: "keypad";
          action: STATE_SET "show" 0.0;
-         target: "elm.text.contact";
-         target: "elm.text.phone.type";
-         target: "text.separator";
+         target: "elm.text.contact-and-type";
       }
 
       program {
          signal: "hide,contact";
          source: "keypad";
          action: STATE_SET "default" 0.0;
-         target: "elm.text.contact";
-         target: "elm.text.phone.type";
-         target: "text.separator";
+         target: "elm.text.contact-and-type";
       }
    }
 }

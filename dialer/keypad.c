@@ -31,6 +31,10 @@ static void _number_display(Keypad *ctx)
 	const char *type;
 	if (!s) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
+		elm_object_part_text_set(ctx->self, "elm.text.contact-and-type",
+						"");
+		elm_object_part_text_set(ctx->self, "elm.text.contact", "");
+		elm_object_part_text_set(ctx->self, "elm.text.phone.type", "");
 		elm_object_signal_emit(ctx->self, "disable,save", "keypad");
 		elm_object_signal_emit(ctx->self, "disable,backspace",
 					"keypad");
@@ -40,11 +44,23 @@ static void _number_display(Keypad *ctx)
 
 	Contact_Info *info = gui_contact_search(number, &type);
 	if (info) {
-		elm_object_part_text_set(ctx->self, "elm.text.contact", contact_info_full_name_get(info));
+		const char *name = contact_info_full_name_get(info);
+		char buf[1024];
+
+		snprintf(buf, sizeof(buf), "%s - %s", name, type);
+
+		elm_object_part_text_set(ctx->self, "elm.text.contact-and-type",
+						buf);
+		elm_object_part_text_set(ctx->self, "elm.text.contact", name);
 		elm_object_part_text_set(ctx->self, "elm.text.phone.type", type);
 		elm_object_signal_emit(ctx->self, "show,contact", "keypad");
-	} else
+	} else {
 		elm_object_signal_emit(ctx->self, "hide,contact", "keypad");
+		elm_object_part_text_set(ctx->self, "elm.text.contact-and-type",
+						"");
+		elm_object_part_text_set(ctx->self, "elm.text.contact", "");
+		elm_object_part_text_set(ctx->self, "elm.text.phone.type", "");
+	}
 
 	elm_object_part_text_set(ctx->self, "elm.text.display", s);
 	free(s);
@@ -445,6 +461,9 @@ Evas_Object *keypad_add(Evas_Object *parent)
 					_on_clicked, ctx);
 
 	elm_object_part_text_set(obj, "elm.text.display", "");
+	elm_object_part_text_set(ctx->self, "elm.text.contact-and-type", "");
+	elm_object_part_text_set(ctx->self, "elm.text.contact", "");
+	elm_object_part_text_set(ctx->self, "elm.text.phone.type", "");
 	elm_object_signal_emit(obj, "hide,contact", "keypad");
 	elm_object_signal_emit(obj, "disable,save", "keypad");
 	elm_object_signal_emit(obj, "disable,backspace", "keypad");
