@@ -25,6 +25,60 @@ group {
       }
 
       part {
+         name: "img.border";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "swallow.photo";
+               relative: 0.0 0.0;
+               offset: -1 -1;
+            }
+            rel2 {
+               to: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: 0 0;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "img.bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            rel1 {
+               to: "swallow.photo";
+               relative: 0.0 0.0;
+               offset: 0 0;
+            }
+            rel2 {
+               to: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
          name: "swallow.photo";
          type: SWALLOW;
          scale: 1;
@@ -33,18 +87,20 @@ group {
             state: "default" 0.0;
             min: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
             max: CONTACT_PHOTO_SIZE CONTACT_PHOTO_SIZE;
+            align: 0.0 0.5;
+            fixed: 1 1;
             rel1 {
                relative: 0.0 0.0;
-               offset: BORDER_PADDING ITEM_PADDING;
+               offset: BORDER_PADDING 0;
             }
             rel2 {
-               relative: 0.0 0.0;
-               offset: (BORDER_PADDING+CONTACT_PHOTO_SIZE) (CONTACT_PHOTO_SIZE+ITEM_PADDING);
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING -1;
             }
          }
       }
 
-      part {
+       part {
          name: "text.contacts.name";
          type: TEXT;
          scale: 1;
@@ -60,15 +116,13 @@ group {
             }
             rel2 {
                to_y: "swallow.photo";
-               relative: 1.0 1.0;
-               offset: -BORDER_PADDING -CONTACT_HALF_PHOTO;
+               relative: 1.0 0.7;
+               offset: (-BORDER_PADDING -1) -1;
             }
             text {
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
-               size_range: SIZE_TINY SIZE_HUGE;
-               fit: 1 1;
-               align: 0.0 0.5;
+               size: SIZE_LARGE;
+               align: 0.0 0.0;
                ellipsis: 0.0;
             }
          }
@@ -79,41 +133,38 @@ group {
          }
       }
 
-      part {
+       part {
          name: "text.contacts.last";
          type: TEXT;
          scale: 1;
          mouse_events: 0;
          description {
             state: "default" 0.0;
-            color: 255 255 255 128;
-            color_class: "action";
+            color: 255 255 255 255;
+            color_class: "light";
             rel1 {
-               to: "text.contacts.name";
-               relative: 0.0 1.0;
-               offset: 0 ITEM_PADDING;
+               to: "swallow.photo";
+               relative: 1.0 0.7;
+               offset: ITEM_PADDING 0;
             }
             rel2 {
-               to_x: "text.contacts.name";
                to_y: "swallow.photo";
                relative: 1.0 1.0;
-               offset: 0 -1;
+               offset: (-BORDER_PADDING -1) -1;
             }
-            text {
+	    text {
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
-               size_range: SIZE_SMALL SIZE_MEDIUM;
-               fit: 1 1;
                align: 0.0 0.5;
                ellipsis: 0.0;
-	    }
+           }
          }
          description {
             state: "selected" 0.0;
             inherit: "default" 0.0;
             color_class: "bg";
          }
-      }
+       }
 
       programs {
 
@@ -124,6 +175,7 @@ group {
             target: "bg";
             target: "text.contacts.name";
             target: "text.contacts.last";
+            target: "img.border";
          }
 
          program {
@@ -133,6 +185,55 @@ group {
             target: "bg";
             target: "text.contacts.name";
             target: "text.contacts.last";
+            target: "img.border";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item/group_contacts/default";
+
+   data {
+      item: "texts" "text.group";
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: (BORDER_PADDING + CONTACT_PHOTO_SIZE) GROUP_HEIGHT;
+            max: (BORDER_PADDING + CONTACT_PHOTO_SIZE) GROUP_HEIGHT;
+            align: 0.0 0.5;
+         }
+      }
+
+      part {
+         name: "text.group";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "bg";
+            rel2 {
+               to: "bg";
+               offset: -ITEM_PADDING -1;
+            }
+            text {
+               font: FONT_BOLD;
+               size: SIZE_SMALL;
+               fit: 1 1;
+               align: 1.0 0.5;
+               ellipsis: 0.0;
+            }
          }
       }
    }
@@ -142,6 +243,60 @@ group {
    name: "elm/layout/dialer/contacts_details";
 
    parts {
+
+      part {
+         name: "img.border";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "swallow.photo";
+               relative: 0.0 0.0;
+               offset: -1 -1;
+            }
+            rel2 {
+               to: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: 0 0;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "img.bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            rel1 {
+               to: "swallow.photo";
+               relative: 0.0 0.0;
+               offset: 0 0;
+            }
+            rel2 {
+               to: "swallow.photo";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
 
       part {
          name: "swallow.photo";
@@ -175,21 +330,20 @@ group {
             rel1 {
                to: "swallow.photo";
                relative: 1.0 0.0;
-               offset: ITEM_PADDING 0;
+               offset: ITEM_PADDING ITEM_PADDING;
             }
             rel2 {
                to_y: "swallow.photo";
-               relative: 1.0 1.0;
-               offset: -BORDER_PADDING -CONTACT_HALF_PHOTO;
+               relative: 1.0 0.5;
+               offset: -BORDER_PADDING -ITEM_PADDING;
             }
             text {
                font: FONT_NORMAL;
                size: SIZE_HUGE;
-               size_range: SIZE_LARGE SIZE_HUGE;
-               fit: 1 1;
+               fit: 0 0;
                align: 0.0 0.5;
                ellipsis: 0.0;
-            }
+           }
          }
       }
 
@@ -202,71 +356,26 @@ group {
             state: "default" 0.0;
             color: 255 255 255 128;
             color_class: "action";
-            rel1 {
+             rel1 {
                to: "text.name";
                relative: 0.0 1.0;
-               offset: 0 ITEM_PADDING;
+                offset: 0 ITEM_PADDING;
             }
-             rel2 {
+            rel2 {
                to_x: "text.name";
                to_y: "swallow.photo";
                relative: 1.0 1.0;
-               offset: 0 -1;
+               offset: 0 ITEM_PADDING;
             }
             text {
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
-               size_range: SIZE_SMALL SIZE_MEDIUM;
-               fit: 1 1;
-               align: 0.0 0.5;
+               fit: 0 1;
+               align: 0.0 0.0;
                ellipsis: 0.0;
            }
          }
       }
-#define SEPARATOR(id, rely, offy, relto)                                \
-      part {                                                            \
-         name: "separator.dark."##id;                                   \
-         type: RECT;                                                    \
-         mouse_events: 0;                                               \
-         description {                                                  \
-            state: "default" 0.0;                                       \
-            color: 255 255 255 255;                                     \
-            color_class: "dark";                                        \
-            rel1 {                                                      \
-               relative: 0.0 rely;                                      \
-               offset: 0 offy;                                          \
-               to_y: relto;                                             \
-            }                                                           \
-            rel2 {                                                      \
-               relative: 1.0 rely;                                      \
-               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
-               to_y: relto;                                             \
-            }                                                           \
-         }                                                              \
-      }                                                                 \
-      part {                                                            \
-         name: "separator.bg."##id;                                     \
-         type: RECT;                                                    \
-         mouse_events: 0;                                               \
-         description {                                                  \
-            state: "default" 0.0;                                       \
-            color: 255 255 255 255;                                     \
-            color_class: "bg";                                          \
-            rel1 {                                                      \
-               relative: 0.0 rely;                                      \
-               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
-               to_y: relto;                                             \
-            }                                                           \
-            rel2 {                                                      \
-               relative: 1.0 rely;                                      \
-               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
-               to_y: relto;                                             \
-            }                                                           \
-         }                                                              \
-      }
-
-      SEPARATOR("btn", 0.0, -SEPARATOR_HEIGHT, "bg.buttons");
-#undef SEPARATOR
 
       part {
          name: "box.phones";
@@ -277,17 +386,16 @@ group {
             state: "default" 0.0;
             box {
                layout: "vertical_homogeneous";
-               padding: 0 ITEM_PADDING;
             }
             rel1 {
 	       to_y: "swallow.photo";
                relative: 0.0 1.0;
-               offset: BORDER_PADDING (ITEM_PADDING+ACTION_HEIGHT);
+               offset: 0 (ITEM_PADDING+ACTION_HEIGHT);
             }
             rel2 {
                to_y: "bg.buttons";
                relative: 1.0 0.0;
-               offset: (-BORDER_PADDING-1) (-SEPARATOR_HEIGHT - 1);
+               offset: -1 0;
             }
          }
       }
@@ -400,6 +508,7 @@ group {
 }
 
 group {
+
    name: "elm/icon/no-picture/default";
 
    images{
@@ -416,6 +525,167 @@ group {
             aspect_preference: BOTH;
             image.normal: "person.png";
          }
+      }
+   }
+}
+group {
+
+   name: "elm/button/base/contacts";
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+
+      part {
+         name: "elm.text.phone";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+	    rel1 {
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               to_y: "elm.text.type";
+               relative: 1.0 0.0;
+               offset: (-BORDER_PADDING -1) ITEM_PADDING;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_HUGE;
+               size_range: SIZE_SMALL SIZE_HUGE;
+               fit: 1 1;
+               align: 0.5 0.5;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 16 16 16 255;
+         }
+      }
+
+      part {
+         name: "elm.text.type";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            align: 0.5 1.0;
+            fixed: 1 1;
+            rel1 {
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING (-ITEM_PADDING - 1);
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: (-BORDER_PADDING -1) (-ITEM_PADDING - 1);
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 0 1;
+               align: 0.5 1.0;
+               ellipsis: 0.0;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 16 16 16 255;
+         }
+      }
+
+#define SEPARATOR(id, rely, offy, relto)                                \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("bottom", 1.0, -SEPARATOR_HEIGHT, "");
+#undef SEPARATOR
+   }
+
+   programs {
+
+      program {
+         signal: "mouse,clicked,1";
+         source: "bg";
+         action: SIGNAL_EMIT "elm,action,click" "";
+      }
+
+      program {
+         signal: "mouse,down,1";
+         source: "bg";
+         transition: ACCELERATE 0.3;
+         action: STATE_SET "pressed" 0.0;
+         target: "bg";
+         target: "elm.text.phone";
+         target: "elm.text.type";
+      }
+
+      program {
+         signal: "mouse,up,1";
+         source: "bg";
+         transition: DECELERATE 0.3;
+         action: STATE_SET "default" 0.0;
+         target: "bg";
+         target: "elm.text.phone";
+         target: "elm.text.type";
       }
    }
 }

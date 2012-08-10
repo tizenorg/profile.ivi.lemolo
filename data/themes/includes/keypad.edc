@@ -57,10 +57,13 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            min: WIDTH ACTION_HEIGHT;
+            min: (WIDTH - BORDER_PADDING*2) ACTION_HEIGHT;
+            rel1 {
+               offset: BORDER_PADDING 0;
+            }
             rel2 {
                relative: 1.0 0.0;
-               offset: -1.0 (ACTION_HEIGHT - 1);
+               offset: (-BORDER_PADDING -1) (ACTION_HEIGHT - 1);
             }
             text {
                text: "+1 (12) 3456-7890";
@@ -82,26 +85,61 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "action";
+            color_class: "light";
             visible: 0;
-            max: (WIDTH/2) SIZE_MEDIUM;
+            fixed: 1 1;
             rel1 {
                to: "elm.text.display";
                relative: 0.0 1.0;
-               offset: (-WIDTH/2 + BORDER_PADDING) 0;
+               offset: 0 0;
             }
             rel2 {
                to: "elm.text.display";
-               relative: 1.0 1.0;
-               offset: 0 SIZE_MEDIUM;
+               relative: 0.5 1.0;
+               offset: -ITEM_PADDING -1;
             }
             text {
-               font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-               size_range: SIZE_TINY SIZE_HUGE;
-               fit: 1 1;
-               align: 0.0 0.0;
+               font: FONT_BOLD;
+               size: SIZE_SMALL;
+               align: 1.0 0.0;
                ellipsis: 0.0;
+               min: 0 1;
+            }
+         }
+         description {
+            state: "show" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "text.separator";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            visible: 0;
+            fixed: 1 1;
+            rel1 {
+               to: "elm.text.contact";
+               relative: 1.0 0.0;
+               offset:  0 0;
+            }
+            rel2 {
+               to: "elm.text.phone.type";
+               relative: 0.0 1.0;
+               offset: -1 -1;
+            }
+            text {
+               font: FONT_BOLD;
+               size: SIZE_SMALL;
+               align: 0.5 0.0;
+               min: 0 1;
+               text: "-";
             }
          }
          description {
@@ -119,26 +157,25 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "action";
+            color_class: "light";
             visible: 0;
-            max: (WIDTH/2) SIZE_MEDIUM;
+            fixed: 1 1;
             rel1 {
-               to: "elm.text.contact";
-               relative: 1.0 0.0;
-               offset:  0 0;
+               to: "elm.text.display";
+               relative: 0.5 1.0;
+               offset:  ITEM_PADDING 0;
             }
             rel2 {
-               to: "elm.text.contact";
+               to: "elm.text.display";
                relative: 1.0 1.0;
-               offset: (WIDTH/2 - BORDER_PADDING) 0;
+               offset: -1 -1;
             }
             text {
-               font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-               size_range: SIZE_TINY SIZE_HUGE;
-               fit: 1 1;
-               align: 1.0 0.0;
+               font: FONT_BOLD;
+               size: SIZE_SMALL;
+               align: 0.0 0.0;
                ellipsis: 0.0;
+               min: 0 1;
             }
          }
          description {
@@ -528,6 +565,7 @@ group {
          action: STATE_SET "show" 0.0;
          target: "elm.text.contact";
          target: "elm.text.phone.type";
+         target: "text.separator";
       }
 
       program {
@@ -536,6 +574,7 @@ group {
          action: STATE_SET "default" 0.0;
          target: "elm.text.contact";
          target: "elm.text.phone.type";
+         target: "text.separator";
       }
    }
 }

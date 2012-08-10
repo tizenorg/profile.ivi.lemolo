@@ -96,7 +96,6 @@ data/themes/images/bt_swap_released.png \
 data/themes/images/person.png
 
 THEME_INCLUDES = \
-data/themes/includes/button.edc \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
 data/themes/includes/contacts-bg.edc \

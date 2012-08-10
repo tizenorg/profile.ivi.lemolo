@@ -25,6 +25,8 @@
 
 #define CONTACT_PHOTO_SIZE 128
 #define CONTACT_HALF_PHOTO 64
-#define LIST_CONTACT_HEIGHT (CONTACT_PHOTO_SIZE + 60)
+#define LIST_CONTACT_HEIGHT 170
+
+#define GROUP_HEIGHT 30
 
 #include "default.edc"

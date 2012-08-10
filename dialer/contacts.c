@@ -25,7 +25,7 @@ typedef struct _Contacts {
 	char *path;
 	Eet_Data_Descriptor *edd;
 	Eet_Data_Descriptor *edd_list;
-	Elm_Genlist_Item_Class *itc;
+	Elm_Genlist_Item_Class *itc, *group;
 	Evas_Object *genlist, *layout, *details;
 	Contacts_List *c_list;
 } Contacts;
@@ -150,6 +150,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 		_contacts_info_free(c_info);
 	free(contacts->c_list);
 	elm_genlist_item_class_free(contacts->itc);
+	elm_genlist_item_class_free(contacts->group);
 	free(contacts->path);
 	free(contacts);
 	eet_shutdown();
@@ -184,7 +185,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	elm_object_style_set(btn, "contacts-btn");
+	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->mobile);
 	elm_object_part_text_set(btn, "elm.text.type", "Mobile");
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
@@ -199,7 +200,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	elm_object_style_set(btn, "contacts-btn");
+	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->home);
 	elm_object_part_text_set(btn, "elm.text.type", "Home");
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
@@ -214,7 +215,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 
 	btn = elm_button_add(details);
 	EINA_SAFETY_ON_NULL_RETURN(btn);
-	elm_object_style_set(btn, "contacts-btn");
+	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->work);
 	elm_object_part_text_set(btn, "elm.text.type", "Work");
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
@@ -246,7 +247,8 @@ static void _contacts_read(Contacts *contacts)
 	Contact_Info *c_info;
 	Eina_List *l;
 	Eet_File *efile;
-
+	Elm_Object_Item *it = NULL;
+	char group;
 	efile = eet_open(contacts->path, EET_FILE_MODE_READ);
 
 	if (efile) {
@@ -259,13 +261,24 @@ static void _contacts_read(Contacts *contacts)
 	EINA_SAFETY_ON_NULL_RETURN(contacts->c_list);
 	contacts->c_list->list = eina_list_sort(contacts->c_list->list, 0,
 						_sort_by_name_cb);
-
+	group = '\0';
 	EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
 		if (!c_info)
 			continue;
-		elm_genlist_item_append(contacts->genlist,contacts->itc, c_info,
-					NULL,ELM_GENLIST_ITEM_NONE,
-					_on_item_click, contacts);
+		if (group != c_info->name[0]) {
+			group = c_info->name[0];
+			it = elm_genlist_item_append(contacts->genlist,
+							contacts->group,
+							c_info, NULL,
+							ELM_GENLIST_ITEM_GROUP,
+							NULL,
+							NULL);
+			elm_genlist_item_select_mode_set(it, ELM_OBJECT_SELECT_MODE_DISPLAY_ONLY);
+		}
+		elm_genlist_item_append(contacts->genlist,contacts->itc,
+						c_info, it,
+						ELM_GENLIST_ITEM_NONE,
+						_on_item_click, contacts);
 	}
 }
 
@@ -288,6 +301,15 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	return NULL;
 }
 
+static char *_group_label_get(void *data, Evas_Object *obj __UNUSED__,
+				const char *part __UNUSED__)
+{
+	Contact_Info *c_info = data;
+	char buf[2];
+	snprintf(buf, sizeof(buf), "%c", c_info->name[0]);
+	return strdup(buf);
+}
+
 
 static Evas_Object *_item_content_get(void *data,
 					Evas_Object *obj,
@@ -307,6 +329,7 @@ static Evas_Object *_item_content_get(void *data,
 	}
 
 	photo = picture_icon_get(obj, c_info->picture);
+
 	return photo;
 }
 
@@ -325,7 +348,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	char base_dir[PATH_MAX], *path;
 	Contacts *contacts;
 	Evas_Object *obj, *genlist, *details;
-	Elm_Genlist_Item_Class *itc;
+	Elm_Genlist_Item_Class *itc, *group;
 
 	eet_init();
 	contacts = calloc(1, sizeof(Contacts));
@@ -349,6 +372,15 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	itc->func.content_get = _item_content_get;
 	itc->func.state_get = NULL;
 	itc->func.del = NULL;
+
+	group = elm_genlist_item_class_new();
+	EINA_SAFETY_ON_NULL_GOTO(group, err_group);
+	group->item_style = "group_contacts";
+	group->func.text_get = _group_label_get;
+	group->func.content_get = NULL;
+	group->func.state_get = NULL;
+	group->func.del = NULL;
+	contacts->group = group;
 	contacts->genlist = genlist;
 	contacts->itc = itc;
 	contacts->layout = obj;
@@ -386,6 +418,8 @@ err_read:
 	eet_data_descriptor_free(contacts->edd_list);
 	free(path);
 err_path:
+	elm_genlist_item_class_free(group);
+err_group:
 	elm_genlist_item_class_free(itc);
 err_genlist:
 	free(obj);

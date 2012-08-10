@@ -10,6 +10,5 @@ collections {
 #include "includes/history.edc"
 #include "includes/history-bg.edc"
 #include "includes/scroller.edc"
-#include "includes/button.edc"
 
 }

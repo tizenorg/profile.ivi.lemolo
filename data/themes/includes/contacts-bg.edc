@@ -51,7 +51,7 @@ group {
             visible: 1;
             rel1 {
                relative: 0.0 0.0;
-               offset: 0 BORDER_PADDING;
+               offset: 0 0;
             }
 	 }
          description {
