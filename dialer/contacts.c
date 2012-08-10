@@ -78,6 +78,7 @@ found:
 
 const char *contact_info_name_get(const Contact_Info *c)
 {
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 	char buf[PATH_MAX];
 	snprintf(buf, sizeof(buf), "%s %s", c->name, c->last_name);
 	return strdup(buf);
@@ -85,11 +86,14 @@ const char *contact_info_name_get(const Contact_Info *c)
 
 const char *contact_info_picture_get(const Contact_Info *c)
 {
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 	return c->picture;
 }
 
 const char *contact_info_detail_get(const Contact_Info *c, const char *type)
 {
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(type, NULL);
 	if (strcmp(type, "Mobile") == 0)
 		return c->mobile;
 	else if (strcmp(type, "Work") == 0)
