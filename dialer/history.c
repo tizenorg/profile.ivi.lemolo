@@ -49,6 +49,10 @@ typedef struct _Call_Info {
 	History *history;
 	Elm_Object_Item *it_all; /*not in edd */
 	Elm_Object_Item *it_missed; /*not in edd */
+	const Contact_Info *contact; /* not in edd */
+	const char *contact_type; /* not in edd */
+	double contact_last; /* not in edd, last time it was searched */
+#define CONTACT_LAST_THRESHOLD 1.0
 } Call_Info;
 
 static OFono_Callback_List_Call_Node *callback_node_call_removed = NULL;
@@ -375,8 +379,47 @@ static void _history_call_removed(void *data, OFono_Call *call)
 	}
 }
 
+static void _on_contact_del(void *data, const Contact_Info *contact __UNUSED__)
+{
+	Call_Info *call_info = data;
+	call_info->contact = NULL;
+	call_info->contact_type = NULL;
+	call_info->contact_last = 0.0;
+}
+
+static void _on_contact_changed(void *data, Contact_Info *contact)
+{
+	Call_Info *call_info = data;
+
+	if (contact_info_number_check(contact, call_info->line_id))
+		goto update;
+
+	contact_info_on_del_callback_del(contact, _on_contact_del, call_info);
+	contact_info_on_changed_callback_del(contact, _on_contact_changed,
+						call_info);
+
+	call_info->contact = NULL;
+	call_info->contact_type = NULL;
+	call_info->contact_last = 0.0;
+
+update:
+	if (call_info->it_all)
+		elm_genlist_item_update(call_info->it_all);
+	if (call_info->it_missed)
+		elm_genlist_item_update(call_info->it_missed);
+}
+
 static void _call_info_free(Call_Info *call_info)
 {
+	if (call_info->contact) {
+		Contact_Info *contact = (Contact_Info *)call_info->contact;
+		contact_info_on_del_callback_del(contact, _on_contact_del,
+							call_info);
+		contact_info_on_changed_callback_del(contact,
+							_on_contact_changed,
+							call_info);
+	}
+
 	eina_stringshare_del(call_info->line_id);
 	eina_stringshare_del(call_info->name);
 	free(call_info);
@@ -630,11 +673,29 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 
 	part += strlen("text.call.");
 
+	if (!call_info->contact) {
+		double now = ecore_loop_time_get();
+		double diff = now - call_info->contact_last;
+		if (diff > CONTACT_LAST_THRESHOLD) {
+			Contact_Info *contact = gui_contact_search(
+				call_info->line_id, &(call_info->contact_type));
+
+			call_info->contact_last = now;
+			call_info->contact = contact;
+			if (contact) {
+				contact_info_on_del_callback_add(
+					contact, _on_contact_del, call_info);
+				contact_info_on_changed_callback_add(
+					contact, _on_contact_changed,
+					call_info);
+			}
+		}
+	}
+
 	if (!strcmp(part, "name")) {
-		Contact_Info *info = gui_contact_search(call_info->line_id, NULL);
-		if(!info)
+		if (!call_info->contact)
 			return strdup(call_info->line_id);
-		return strdup(contact_info_name_get(info));
+		return contact_info_name_get(call_info->contact);
 	}
 
 	if (!strcmp(part, "time")) {
@@ -644,11 +705,9 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (!strcmp(part, "type")) {
-		const char *type;
-		Contact_Info *info = gui_contact_search(call_info->line_id, &type);
-		if (!info)
+		if (!call_info->contact_type)
 			return strdup("Unknown");
-		return strdup(type);
+		return strdup(call_info->contact_type);
 	}
 
 	ERR("Unexpected text part: %s", part);
