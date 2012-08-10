@@ -134,7 +134,7 @@ group {
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
                align: 0.0 1.0;
-               ellipsis: 1.0;
+               ellipsis: 0.0;
             }
          }
          description {
