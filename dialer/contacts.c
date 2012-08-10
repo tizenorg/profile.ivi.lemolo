@@ -19,10 +19,13 @@
 
 typedef struct _Contacts_List {
 	Eina_List *list;
+	Eina_Bool dirty;
+	Ecore_Poller *save_poller;
 } Contacts_List;
 
 typedef struct _Contacts {
 	char *path;
+	char *bkp;
 	Eet_Data_Descriptor *edd;
 	Eet_Data_Descriptor *edd_list;
 	Elm_Genlist_Item_Class *itc, *group;
@@ -37,14 +40,36 @@ struct _Contact_Info {
 	const char *work;
 	const char *picture;
 	const char *last_name;
+
+	Contacts *contacts; /* not in edd */
+	Elm_Object_Item *it; /* not in edd */
+	Eina_Inlist *on_del_cbs; /* not in edd */
+	Ecore_Idler *changed_idler; /* not in edd */
+	struct {
+		Eina_Inlist *listeners;
+		Eina_List *deleted;
+		int walking;
+	} on_changed_cbs; /* not in edd */
 };
+
+typedef struct _Contact_Info_On_Del_Ctx {
+	EINA_INLIST;
+	void (*cb)(void *, const Contact_Info *);
+	const void *data;
+} Contact_Info_On_Del_Ctx;
+
+typedef struct _Contact_Info_On_Changed_Ctx {
+	EINA_INLIST;
+	void (*cb)(void *, Contact_Info *);
+	const void *data;
+	Eina_Bool deleted;
+} Contact_Info_On_Changed_Ctx;
 
 Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **type)
 {
 	Contact_Info *c_info;
 	Eina_List *l;
 	Contacts *contacts;
-	char *found_type;
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(number, NULL);
@@ -52,28 +77,22 @@ Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **
 	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
 
 	EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
-		if (!c_info)
-			continue;
-
 		if (strcmp(number, c_info->mobile) == 0) {
-			found_type = "Mobile";
-			goto found;
-		}
-		else if (strcmp(number, c_info->work) == 0) {
-			found_type = "Work";
-			goto found;
-		}
-		else if (strcmp(number, c_info->home) == 0) {
-			found_type = "Home";
-			goto found;
+			if (type)
+				*type = "Mobile";
+			return c_info;
+		} else if (strcmp(number, c_info->work) == 0) {
+			if (type)
+				*type = "Work";
+			return c_info;
+		} else if (strcmp(number, c_info->home) == 0) {
+			if (type)
+				*type = "Home";
+			return c_info;
 		}
 	}
 
 	return NULL;
-found:
-	if (type)
-		*type = found_type;
-	return c_info;
 }
 
 const char *contact_info_name_get(const Contact_Info *c)
@@ -104,6 +123,285 @@ const char *contact_info_detail_get(const Contact_Info *c, const char *type)
 		return NULL;
 }
 
+const char *contact_info_number_check(const Contact_Info *c, const char *number)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(number, EINA_FALSE);
+
+	if (strcmp(number, c->mobile) == 0)
+		return "Mobile";
+	else if (strcmp(number, c->work) == 0)
+		return "Work";
+	else if (strcmp(number, c->home) == 0)
+		return "Home";
+
+	return NULL;
+}
+
+static Eina_Bool _contacts_save_do(void *data)
+{
+	Contacts *contacts = data;
+	Eet_File *efile;
+
+	contacts->c_list->save_poller = NULL;
+	contacts->c_list->dirty = EINA_FALSE;
+
+	ecore_file_unlink(contacts->bkp);
+	ecore_file_mv(contacts->path, contacts->bkp);
+	efile = eet_open(contacts->path, EET_FILE_MODE_WRITE);
+	EINA_SAFETY_ON_NULL_GOTO(efile, failed);
+	if (!(eet_data_write(efile,
+				contacts->edd_list, CONTACTS_ENTRY,
+				contacts->c_list, EET_COMPRESSION_DEFAULT)))
+		ERR("Could in the contacts database");
+
+	DBG("wrote %s", contacts->path);
+	eet_close(efile);
+	return EINA_FALSE;
+
+failed:
+	ecore_file_mv(contacts->bkp, contacts->path);
+	return EINA_FALSE;
+}
+
+static void _contacts_save(Contacts *contacts)
+{
+	if (contacts->c_list->save_poller)
+		return;
+
+	contacts->c_list->save_poller = ecore_poller_add
+		(ECORE_POLLER_CORE, 32, _contacts_save_do, contacts);
+}
+
+static Eina_Bool _contact_info_changed_idler(void *data)
+{
+	Contact_Info *c = data;
+	Contact_Info_On_Changed_Ctx *ctx;
+
+	c->changed_idler = NULL;
+
+	c->on_changed_cbs.walking++;
+	EINA_INLIST_FOREACH(c->on_changed_cbs.listeners, ctx) {
+		if (ctx->deleted)
+			continue;
+		ctx->cb((void *)ctx->data, c);
+	}
+	c->on_changed_cbs.walking--;
+
+	_contacts_save(c->contacts);
+
+	if (c->on_changed_cbs.walking > 0)
+		return EINA_FALSE;
+
+	EINA_LIST_FREE(c->on_changed_cbs.deleted, ctx) {
+		c->on_changed_cbs.listeners = eina_inlist_remove(
+			c->on_changed_cbs.listeners, EINA_INLIST_GET(ctx));
+		free(ctx);
+	}
+
+	return EINA_FALSE;
+}
+
+static void _contact_info_changed(Contact_Info *c)
+{
+	if (c->changed_idler)
+		return;
+	c->changed_idler = ecore_idler_add(_contact_info_changed_idler, c);
+}
+
+Eina_Bool contact_info_picture_set(Contact_Info *c, const char *filename)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(filename, EINA_FALSE);
+
+	DBG("c=%p, was=%s, new=%s", c, c->picture, filename);
+
+	if (eina_stringshare_replace(&(c->picture), filename))
+		_contact_info_changed(c);
+
+	return EINA_TRUE;
+}
+
+Eina_Bool contact_info_first_name_set(Contact_Info *c, const char *name)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(name, EINA_FALSE);
+
+	DBG("c=%p, was=%s, new=%s", c, c->name, name);
+
+	if (eina_stringshare_replace(&(c->name), name))
+		_contact_info_changed(c);
+
+	return EINA_TRUE;
+}
+
+Eina_Bool contact_info_last_name_set(Contact_Info *c, const char *name)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(name, EINA_FALSE);
+
+	DBG("c=%p, was=%s, new=%s", c, c->last_name, name);
+
+	if (eina_stringshare_replace(&(c->last_name), name))
+		_contact_info_changed(c);
+
+	return EINA_TRUE;
+}
+
+Eina_Bool contact_info_detail_set(Contact_Info *c, const char *type, const char *number)
+{
+	Eina_Bool changed = EINA_FALSE;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(type, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(number, EINA_FALSE);
+
+	DBG("c=%p, type=%s, number=%s", c, type, number);
+
+	if (strcmp(type, "Mobile") == 0)
+		changed = eina_stringshare_replace(&(c->mobile), number);
+	else if (strcmp(type, "Work") == 0)
+		changed = eina_stringshare_replace(&(c->work), number);
+	else if (strcmp(type, "Home") == 0)
+		changed = eina_stringshare_replace(&(c->home), number);
+	else {
+		ERR("Unknown type: %s, number: %s", type, number);
+		return EINA_FALSE;
+	}
+
+	if (changed)
+		_contact_info_changed(c);
+
+	return EINA_TRUE;
+
+}
+
+void contact_info_on_changed_callback_add(Contact_Info *c,
+					void (*cb)(void *data, Contact_Info *c),
+					const void *data)
+{
+	Contact_Info_On_Changed_Ctx *ctx;
+
+	EINA_SAFETY_ON_NULL_RETURN(c);
+	EINA_SAFETY_ON_NULL_RETURN(cb);
+
+	ctx = calloc(1, sizeof(Contact_Info_On_Changed_Ctx));
+	EINA_SAFETY_ON_NULL_RETURN(ctx);
+	ctx->cb = cb;
+	ctx->data = data;
+
+	c->on_changed_cbs.listeners = eina_inlist_append(
+		c->on_changed_cbs.listeners, EINA_INLIST_GET(ctx));
+}
+
+void contact_info_on_changed_callback_del(Contact_Info *c,
+					void (*cb)(void *data, Contact_Info *c),
+					const void *data)
+{
+	Contact_Info_On_Changed_Ctx *ctx, *found = NULL;
+	EINA_SAFETY_ON_NULL_RETURN(c);
+	EINA_SAFETY_ON_NULL_RETURN(cb);
+
+	EINA_INLIST_FOREACH(c->on_changed_cbs.listeners, ctx) {
+		if (ctx->cb == cb && ctx->data == data) {
+			found = ctx;
+			break;
+		}
+	}
+
+	if (!found)
+		return;
+
+	if (c->on_changed_cbs.walking > 0) {
+		found->deleted = EINA_TRUE;
+		c->on_changed_cbs.deleted = eina_list_append(
+			c->on_changed_cbs.deleted, found);
+		return;
+	}
+
+	c->on_changed_cbs.listeners = eina_inlist_remove(
+		c->on_changed_cbs.listeners, EINA_INLIST_GET(found));
+	free(found);
+}
+
+
+void contact_info_on_del_callback_add(Contact_Info *c,
+					void (*cb)(void *data, const Contact_Info *c),
+					const void *data)
+{
+	Contact_Info_On_Del_Ctx *ctx;
+
+	EINA_SAFETY_ON_NULL_RETURN(c);
+	EINA_SAFETY_ON_NULL_RETURN(cb);
+
+	ctx = calloc(1, sizeof(Contact_Info_On_Del_Ctx));
+	EINA_SAFETY_ON_NULL_RETURN(ctx);
+	ctx->cb = cb;
+	ctx->data = data;
+
+	c->on_del_cbs = eina_inlist_append(c->on_del_cbs, EINA_INLIST_GET(ctx));
+}
+
+void contact_info_on_del_callback_del(Contact_Info *c,
+					void (*cb)(void *data, const Contact_Info *c),
+					const void *data)
+{
+	Contact_Info_On_Del_Ctx *ctx, *found = NULL;
+	EINA_SAFETY_ON_NULL_RETURN(c);
+	EINA_SAFETY_ON_NULL_RETURN(cb);
+
+	EINA_INLIST_FOREACH(c->on_del_cbs, ctx) {
+		if (ctx->cb == cb && ctx->data == data) {
+			found = ctx;
+			break;
+		}
+	}
+
+	if (!found)
+		return;
+
+	c->on_del_cbs = eina_inlist_remove(c->on_del_cbs,
+						EINA_INLIST_GET(found));
+
+	free(found);
+}
+
+static void _contact_info_on_del_dispatch(Contact_Info *c)
+{
+	Eina_Inlist *lst = c->on_del_cbs;
+	c->on_del_cbs = NULL; /* avoid contact_info_on_del_callback_del() */
+	while (lst) {
+		Contact_Info_On_Del_Ctx *ctx = EINA_INLIST_CONTAINER_GET
+			(lst, Contact_Info_On_Del_Ctx);
+
+		lst = eina_inlist_remove(lst, lst);
+
+		ctx->cb((void *)ctx->data, c);
+		free(ctx);
+	}
+}
+
+static void _contact_info_free(Contact_Info *c_info);
+
+void contact_info_del(Contact_Info *c)
+{
+	Contacts *contacts;
+
+	EINA_SAFETY_ON_NULL_RETURN(c);
+
+	_contact_info_on_del_dispatch(c);
+
+	if (c->it)
+		elm_object_item_del(c->it);
+
+	contacts = c->contacts;
+	contacts->c_list->list = eina_list_remove(contacts->c_list->list, c);
+	contacts->c_list->dirty = EINA_TRUE;
+	_contacts_save(contacts);
+
+	_contact_info_free(c);
+}
+
 static void _contacts_info_descriptor_init(Eet_Data_Descriptor **edd,
 						Eet_Data_Descriptor **edd_list)
 {
@@ -132,8 +430,33 @@ static void _contacts_info_descriptor_init(Eet_Data_Descriptor **edd,
 					*edd);
 }
 
-static void _contacts_info_free(Contact_Info *c_info)
+static void _contact_info_free(Contact_Info *c_info)
 {
+	EINA_SAFETY_ON_FALSE_RETURN(c_info->on_changed_cbs.walking == 0);
+
+	if (c_info->on_changed_cbs.deleted) {
+		ERR("contact still have changed deleted listeners: %p %s %s",
+			c_info, c_info->name, c_info->last_name);
+		eina_list_free(c_info->on_changed_cbs.deleted);
+	}
+
+	if (c_info->on_changed_cbs.listeners) {
+		while (c_info->on_changed_cbs.listeners) {
+			Contact_Info_On_Changed_Ctx *ctx;
+
+			ctx = EINA_INLIST_CONTAINER_GET(
+				c_info->on_changed_cbs.listeners,
+				Contact_Info_On_Changed_Ctx);
+			c_info->on_changed_cbs.listeners = eina_inlist_remove
+				(c_info->on_changed_cbs.listeners,
+					c_info->on_changed_cbs.listeners);
+			free(ctx);
+		}
+	}
+
+	if (c_info->changed_idler)
+		ecore_idler_del(c_info->changed_idler);
+
 	eina_stringshare_del(c_info->name);
 	eina_stringshare_del(c_info->mobile);
 	eina_stringshare_del(c_info->home);
@@ -148,14 +471,23 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 {
 	Contacts *contacts = data;
 	Contact_Info *c_info;
+
+	if (contacts->c_list->save_poller)
+		ecore_poller_del(contacts->c_list->save_poller);
+	if (contacts->c_list->dirty)
+		_contacts_save_do(contacts);
+
 	eet_data_descriptor_free(contacts->edd);
 	eet_data_descriptor_free(contacts->edd_list);
-	EINA_LIST_FREE(contacts->c_list->list, c_info)
-		_contacts_info_free(c_info);
+	EINA_LIST_FREE(contacts->c_list->list, c_info) {
+		_contact_info_on_del_dispatch(c_info);
+		_contact_info_free(c_info);
+	}
 	free(contacts->c_list);
 	elm_genlist_item_class_free(contacts->itc);
 	elm_genlist_item_class_free(contacts->group);
 	free(contacts->path);
+	free(contacts->bkp);
 	free(contacts);
 	eet_shutdown();
 }
@@ -259,7 +591,18 @@ static void _contacts_read(Contacts *contacts)
 		contacts->c_list = eet_data_read(efile, contacts->edd_list,
 							CONTACTS_ENTRY);
 		eet_close(efile);
-	} else
+	}
+
+	if (!contacts->c_list) {
+		efile = eet_open(contacts->bkp, EET_FILE_MODE_READ);
+		if (efile) {
+			contacts->c_list = eet_data_read(
+				efile, contacts->edd_list, CONTACTS_ENTRY);
+			eet_close(efile);
+		}
+	}
+
+	if (!contacts->c_list)
 		contacts->c_list = calloc(1, sizeof(Contacts_List));
 
 	EINA_SAFETY_ON_NULL_RETURN(contacts->c_list);
@@ -279,10 +622,12 @@ static void _contacts_read(Contacts *contacts)
 							NULL);
 			elm_genlist_item_select_mode_set(it, ELM_OBJECT_SELECT_MODE_DISPLAY_ONLY);
 		}
-		elm_genlist_item_append(contacts->genlist,contacts->itc,
+		it = elm_genlist_item_append(contacts->genlist,contacts->itc,
 						c_info, it,
 						ELM_GENLIST_ITEM_NONE,
 						_on_item_click, contacts);
+		c_info->it = it;
+		c_info->contacts = contacts;
 	}
 }
 
@@ -405,8 +750,15 @@ Evas_Object *contacts_add(Evas_Object *parent)
 
 	if (r < 0)
 		goto err_path;
-
 	contacts->path = path;
+
+	r = asprintf(&path,  "%s/%s/contacts.eet.bkp", config_path,
+			PACKAGE_NAME);
+
+	if (r < 0)
+		goto err_bkp;
+	contacts->bkp = path;
+
 	_contacts_info_descriptor_init(&contacts->edd, &contacts->edd_list);
 	_contacts_read(contacts);
 	EINA_SAFETY_ON_NULL_GOTO(contacts->c_list, err_read);
@@ -420,7 +772,9 @@ Evas_Object *contacts_add(Evas_Object *parent)
 err_read:
 	eet_data_descriptor_free(contacts->edd);
 	eet_data_descriptor_free(contacts->edd_list);
-	free(path);
+	free(contacts->bkp);
+err_bkp:
+	free(contacts->path);
 err_path:
 	elm_genlist_item_class_free(group);
 err_group:
