@@ -744,6 +744,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	genlist = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist, err_genlist);
 	elm_object_style_set(genlist, "contacts");
+	elm_genlist_homogeneous_set(genlist, EINA_TRUE);
 
 	itc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_genlist);

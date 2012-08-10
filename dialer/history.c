@@ -847,8 +847,8 @@ Evas_Object *history_add(Evas_Object *parent)
 	genlist_all = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_all, err_object_new);
 	elm_object_style_set(genlist_all, "history");
+	elm_genlist_homogeneous_set(genlist_all, EINA_TRUE);
 
-	/* TODO: */
 	evas_object_smart_callback_add(genlist_all, "drag,start,right",
 					_on_list_slide_enter, history);
 	evas_object_smart_callback_add(genlist_all, "drag,start,left",
@@ -861,6 +861,7 @@ Evas_Object *history_add(Evas_Object *parent)
 	genlist_missed = elm_genlist_add(obj);
 	EINA_SAFETY_ON_NULL_GOTO(genlist_missed, err_object_new);
 	elm_object_style_set(genlist_missed, "history");
+	elm_genlist_homogeneous_set(genlist_missed, EINA_TRUE);
 
 	evas_object_smart_callback_add(genlist_missed, "drag,start,right",
 					_on_list_slide_enter, history);

@@ -133,8 +133,6 @@ group {
             text {
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
-               size_range: SIZE_SMALL SIZE_MEDIUM;
-               fit: 1 1;
                align: 0.0 1.0;
                ellipsis: 1.0;
             }
@@ -171,8 +169,6 @@ group {
             text {
                font: FONT_NORMAL;
                size: SIZE_SMALL;
-               size_range: SIZE_TINY SIZE_SMALL;
-               fit: 1 1;
                align: 0.0 0.0;
                ellipsis: 1.0;
             }
@@ -210,8 +206,6 @@ group {
             text {
                font: FONT_NORMAL;
                size: SIZE_SMALL;
-               size_range: SIZE_TINY SIZE_SMALL;
-               fit: 1 1;
                align: 0.0 0.0;
                ellipsis: 1.0;
             }
