@@ -727,7 +727,7 @@ static void _call_changed(void *data, OFono_Call *c)
 		status = "Active";
 		break;
 	case OFONO_CALL_STATE_HELD:
-		status = "Held";
+		status = "On Hold";
 		break;
 	case OFONO_CALL_STATE_DIALING:
 		status = "Dialing...";
