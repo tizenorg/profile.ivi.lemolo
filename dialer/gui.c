@@ -99,6 +99,12 @@ void gui_activecall_set(Evas_Object *o)
 	}
 }
 
+void gui_contacts_show(void)
+{
+	_gui_show(contacts);
+	gui_call_exit();
+}
+
 void gui_call_enter(void)
 {
 	gui_activate();

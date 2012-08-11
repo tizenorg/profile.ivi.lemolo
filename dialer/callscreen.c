@@ -452,7 +452,7 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	} else if (strcmp(emission, "speaker") == 0) {
 		ERR("TODO - implement platform loudspeaker code");
 	} else if (strcmp(emission, "contacts") == 0) {
-		ERR("TODO - implement access to contacts");
+		gui_contacts_show();
 	} else if (strcmp(emission, "add-call") == 0) {
 		gui_call_exit();
 	} else if (strcmp(emission, "merge") == 0) {

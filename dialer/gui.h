@@ -12,6 +12,8 @@ void gui_number_set(const char *number, Eina_Bool auto_dial);
 
 void gui_activecall_set(Evas_Object *o);
 
+void gui_contacts_show(void);
+
 void gui_call_enter(void);
 void gui_call_exit(void);
 
