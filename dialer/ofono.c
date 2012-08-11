@@ -1929,6 +1929,11 @@ OFono_Pending *ofono_release_and_answer(OFono_Simple_Cb cb, const void *data)
 	return _ofono_simple_do(OFONO_API_VOICE, "ReleaseAndAnswer", cb, data);
 }
 
+OFono_Pending *ofono_release_and_swap(OFono_Simple_Cb cb, const void *data)
+{
+	return _ofono_simple_do(OFONO_API_VOICE, "ReleaseAndSwap", cb, data);
+}
+
 OFono_Pending *ofono_hold_and_answer(OFono_Simple_Cb cb, const void *data)
 {
 	return _ofono_simple_do(OFONO_API_VOICE, "HoldAndAnswer", cb, data);

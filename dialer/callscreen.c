@@ -260,31 +260,6 @@ static void _call_disconnected_done(Callscreen *ctx, const char *reason)
 			ctx->gui_activecall = NULL;
 		}
 		gui_call_exit();
-	} else {
-		if (strcmp(reason, "local") == 0) {
-			/* Bug #11 says this shouldn't be done.
-			 *
-			 * TODO: talk to ofono devs and see what to do,
-			 * maybe introuce ReleaseAndSwap()
-			 */
-#if 0
-			/* If there is a held call and active is
-			 * hangup we're left with held but no active,
-			 * which is strange.
-			 *
-			 * Just make the held active by calling
-			 * SwapCalls.
-			 */
-			if (ctx->calls.active == ctx->disconnected.call &&
-				ctx->calls.held != ctx->disconnected.call) {
-				INF("User disconnected and left held call. "
-					"Automatically activate it.");
-
-				/* TODO: sound to notify user */
-				ofono_swap_calls(NULL, NULL);
-			}
-#endif
-		}
 	}
 	ctx->disconnected.call = NULL;
 }
@@ -462,13 +437,8 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (strcmp(emission, "hangup") == 0) {
-		if (ctx->calls.active) {
-			OFono_Call *c = ctx->calls.active;
-			if (ofono_call_multiparty_get(c))
-				ofono_multiparty_hangup(NULL, NULL);
-			else
-				ofono_call_hangup(c, NULL, NULL);
-		}
+		if (ctx->calls.active)
+			ofono_release_and_swap(NULL, NULL);
 	} else if (strcmp(emission, "answer") == 0) {
 		if (ctx->calls.active)
 			ofono_call_answer(ctx->calls.active, NULL, NULL);
