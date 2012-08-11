@@ -16,6 +16,7 @@ typedef struct _Callscreen
 		Evas_Object *sc;
 		Evas_Object *bx;
 		Eina_List *calls;
+		double start;
 	} multiparty;
 	struct {
 		OFono_Call *active;
@@ -120,12 +121,16 @@ static void _multiparty_update(Callscreen *ctx)
 	return;
 
 repopulate:
+	if ((new) && (!ctx->multiparty.calls))
+		ctx->multiparty.start = ecore_loop_time_get();
+
 	eina_list_free(ctx->multiparty.calls);
 	ctx->multiparty.calls = new;
 
 	elm_box_clear(ctx->multiparty.bx);
 
 	if (!new) {
+		ctx->multiparty.start = -1.0;
 		elm_object_signal_emit(ctx->self, "hide,multiparty-details",
 					"call");
 		return;
@@ -567,7 +572,11 @@ static Eina_Bool _on_elapsed_updater(void *data)
 	if (!ctx->calls.active)
 		goto stop;
 
-	start = ofono_call_start_time_get(ctx->calls.active);
+	if (ofono_call_multiparty_get(ctx->calls.active))
+		start = ctx->multiparty.start;
+	else
+		start = ofono_call_start_time_get(ctx->calls.active);
+
 	if (start < 0) {
 		ERR("Unknown start time for call");
 		goto stop;
