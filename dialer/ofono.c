@@ -951,7 +951,8 @@ static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
 	} else if (strcmp(prop_name, "MicrophoneVolume") == 0) {
 		dbus_message_iter_get_basic(iter, &m->microphone_volume);
 		DBG("%s Microphone Volume %hhu", m->base.path, m->speaker_volume);
-	}
+	} else
+		DBG("%s %s (unused property)", m->base.path, prop_name);
 }
 
 static void _notify_ofono_callbacks_modem_list(Eina_Inlist *list)
@@ -1091,6 +1092,7 @@ static void _ofono_call_volume_properties_get_reply(void *data,
 	dbus_message_iter_init(msg, &iter);
 	dbus_message_iter_recurse(&iter, &prop);
 
+	DBG("m=%s", m->base.path);
 	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
 	     dbus_message_iter_next(&prop)) {
 		DBusMessageIter entry, value;
@@ -1112,8 +1114,8 @@ static void _ofono_call_volume_properties_get(OFono_Modem *m)
 						OFONO_PREFIX
 						OFONO_CALL_VOL_IFACE,
 						"GetProperties");
-	if (!msg)
-		return;
+	DBG("m=%s", m->base.path);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
 
 	_bus_object_message_send(&m->base, msg,
 				_ofono_call_volume_properties_get_reply, m);
