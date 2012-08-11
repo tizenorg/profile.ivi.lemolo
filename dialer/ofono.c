@@ -552,6 +552,7 @@ static void _call_disconnect_reason(void *data, DBusMessage *msg)
 	}
 
 	DBG("path=%s", c->base.path);
+	c->state = OFONO_CALL_STATE_DISCONNECTED;
 
 	dbus_error_init(&err);
 	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &reason,

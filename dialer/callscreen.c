@@ -246,7 +246,8 @@ static void _calls_update(Callscreen *ctx)
 	if (!ctx->calls.held)
 		ctx->calls.held = held;
 
-	gui_call_enter();
+	if (ctx->calls.active)
+		gui_call_enter();
 }
 
 static void _call_disconnected_done(Callscreen *ctx,
