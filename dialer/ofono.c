@@ -28,6 +28,7 @@ static E_DBus_Signal_Handler *sig_modem_prop_changed = NULL;
 static DBusPendingCall *pc_get_modems = NULL;
 
 static void _ofono_call_volume_properties_get(OFono_Modem *m);
+static void _ofono_msg_waiting_properties_get(OFono_Modem *m);
 
 struct _OFono_Callback_List_Modem_Node
 {
@@ -385,17 +386,20 @@ struct _OFono_Modem
 	OFono_Bus_Object base;
 	const char *name;
 	const char *serial;
+	const char *voicemail_number;
 	Eina_Hash *calls;
 	unsigned int interfaces;
 	unsigned char strength;
 	unsigned char data_strength;
 	unsigned char speaker_volume;
 	unsigned char microphone_volume;
+	unsigned char voicemail_count;
 	Eina_Bool ignored : 1;
 	Eina_Bool powered : 1;
 	Eina_Bool online : 1;
 	Eina_Bool roaming : 1;
 	Eina_Bool muted : 1;
+	Eina_Bool voicemail_waiting : 1;
 };
 
 static OFono_Call *_call_new(const char *path)
@@ -931,6 +935,7 @@ static void _modem_free(OFono_Modem *m)
 
 	eina_stringshare_del(m->name);
 	eina_stringshare_del(m->serial);
+	eina_stringshare_del(m->voicemail_number);
 
 	eina_hash_free(m->calls);
 
@@ -951,6 +956,28 @@ static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
 	} else if (strcmp(prop_name, "MicrophoneVolume") == 0) {
 		dbus_message_iter_get_basic(iter, &m->microphone_volume);
 		DBG("%s Microphone Volume %hhu", m->base.path, m->speaker_volume);
+	} else
+		DBG("%s %s (unused property)", m->base.path, prop_name);
+}
+
+static void _msg_waiting_property_update(OFono_Modem *m, const char *prop_name,
+						DBusMessageIter *iter)
+{
+
+	if (strcmp(prop_name, "VoicemailWaiting") == 0) {
+		m->voicemail_waiting = _dbus_bool_get(iter);
+		DBG("%s VoicemailWaiting %d",
+			m->base.path, m->voicemail_waiting);
+	} else if (strcmp(prop_name, "VoicemailMessageCount") == 0) {
+		dbus_message_iter_get_basic(iter, &m->voicemail_count);
+		DBG("%s VoicemailMessageCount %hhu",
+			m->base.path, m->voicemail_count);
+	} else if (strcmp(prop_name, "VoicemailMailboxNumber") == 0) {
+		const char *s;
+		dbus_message_iter_get_basic(iter, &s);
+		eina_stringshare_replace(&(m->voicemail_number), s);
+		DBG("%s VoicemailMailboxNumber %s",
+			m->base.path, m->voicemail_number);
 	} else
 		DBG("%s %s (unused property)", m->base.path, prop_name);
 }
@@ -978,6 +1005,25 @@ static void _call_volume_property_changed(void *data, DBusMessage *msg)
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &variant_iter);
 	_call_volume_property_update(m, prop_name, &variant_iter);
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
+}
+
+static void _msg_waiting_property_changed(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, variant_iter;
+	const char *prop_name;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	dbus_message_iter_get_basic(&iter, &prop_name);
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &variant_iter);
+	_msg_waiting_property_update(m, prop_name, &variant_iter);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
@@ -1023,6 +1069,10 @@ static void _modem_update_interfaces(OFono_Modem *m, unsigned int ifaces)
 	if (((m->interfaces & OFONO_API_CALL_VOL) == 0) &&
 		(ifaces & OFONO_API_CALL_VOL) == OFONO_API_CALL_VOL)
 		_ofono_call_volume_properties_get(m);
+
+	if (((m->interfaces & OFONO_API_MSG_WAITING) == 0) &&
+		(ifaces & OFONO_API_MSG_WAITING) == OFONO_API_MSG_WAITING)
+		_ofono_msg_waiting_properties_get(m);
 }
 
 static void _modem_property_update(OFono_Modem *m, const char *key,
@@ -1121,6 +1171,50 @@ static void _ofono_call_volume_properties_get(OFono_Modem *m)
 				_ofono_call_volume_properties_get_reply, m);
 }
 
+static void _ofono_msg_waiting_properties_get_reply(void *data,
+							DBusMessage *msg,
+							DBusError *err)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, prop;
+
+	if (dbus_error_is_set(err)) {
+		DBG("%s: %s", err->name, err->message);
+		return;
+	}
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &prop);
+
+	DBG("m=%s", m->base.path);
+	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
+	     dbus_message_iter_next(&prop)) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(&prop, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+		_msg_waiting_property_update(m, key, &value);
+	}
+}
+
+static void _ofono_msg_waiting_properties_get(OFono_Modem *m)
+{
+	DBusMessage *msg;
+	msg = dbus_message_new_method_call(bus_id, m->base.path,
+						OFONO_PREFIX
+						OFONO_MSG_WAITING_IFACE,
+						"GetProperties");
+	DBG("m=%s", m->base.path);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
+
+	_bus_object_message_send(&m->base, msg,
+				_ofono_msg_waiting_properties_get_reply, m);
+}
+
 static void _modem_add(const char *path, DBusMessageIter *prop)
 {
 	OFono_Modem *m;
@@ -1144,6 +1238,10 @@ static void _modem_add(const char *path, DBusMessageIter *prop)
 	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_CALL_VOL_IFACE,
 					"PropertyChanged",
 					_call_volume_property_changed, m);
+	_bus_object_signal_listen(&m->base,
+					OFONO_PREFIX OFONO_MSG_WAITING_IFACE,
+					"PropertyChanged",
+					_msg_waiting_property_changed, m);
 
 	/* TODO: do we need to listen to BarringActive or Forwarded? */
 
@@ -2215,6 +2313,27 @@ unsigned char ofono_volume_microphone_get(void)
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_RETURN_VAL(m, 0);
 	return m->microphone_volume;
+}
+
+Eina_Bool ofono_voicemail_waiting_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
+	return m->voicemail_waiting;
+}
+
+unsigned char ofono_voicemail_count_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, 0);
+	return m->voicemail_count;
+}
+
+const char *ofono_voicemail_number_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, NULL);
+	return m->voicemail_number;
 }
 
 OFono_Pending *ofono_tones_send(const char *tones,

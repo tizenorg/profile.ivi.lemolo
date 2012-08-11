@@ -148,6 +148,11 @@ unsigned char ofono_volume_speaker_get(void);
 OFono_Pending *ofono_volume_microphone_set(unsigned char volume, OFono_Simple_Cb cb, const void *data);
 unsigned char ofono_volume_microphone_get(void);
 
+/* Voicemail (Message Waiting) */
+Eina_Bool ofono_voicemail_waiting_get(void);
+unsigned char ofono_voicemail_count_get(void);
+const char *ofono_voicemail_number_get(void);
+
 /* Setup: */
 void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix);
 void ofono_modem_api_require(const char *spec);
