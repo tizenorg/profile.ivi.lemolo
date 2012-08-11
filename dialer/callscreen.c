@@ -437,8 +437,11 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (strcmp(emission, "hangup") == 0) {
-		if (ctx->calls.active)
+		OFono_Call *c = ctx->calls.active;
+		if ((c) && (ofono_call_state_get(c) == OFONO_CALL_STATE_ACTIVE))
 			ofono_release_and_swap(NULL, NULL);
+		else if (c)
+			ofono_call_hangup(c, NULL, NULL);
 	} else if (strcmp(emission, "answer") == 0) {
 		if (ctx->calls.active)
 			ofono_call_answer(ctx->calls.active, NULL, NULL);
