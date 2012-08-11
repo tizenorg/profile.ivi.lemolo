@@ -507,7 +507,7 @@ group {
                offset: -1.0 -1;
             }
             text {
-               text: "on hold";
+               text: "On Hold";
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
                min: 1 1;
