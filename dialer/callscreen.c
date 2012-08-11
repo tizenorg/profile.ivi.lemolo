@@ -249,7 +249,8 @@ static void _calls_update(Callscreen *ctx)
 	gui_call_enter();
 }
 
-static void _call_disconnected_done(Callscreen *ctx, const char *reason)
+static void _call_disconnected_done(Callscreen *ctx,
+					const char *reason __UNUSED__)
 {
 	_calls_update(ctx);
 
