@@ -30,3 +30,20 @@ To help debug, the following environment variables could be set:
 
 	EINA_LOG_BACKTRACE=2
 		make it produce backtraces whenever a log level is reached.
+
+
+CONTACT DATABASE FOR DESKTOP TESTING
+====================================
+
+For desktop we're providing a placeholder infrastructure for
+contacts. It does not provide GUI to edit, but can show the basic
+information and use it.
+
+However a manual database must be created. To aid this task, a script
+is provided in data/scripts/ofono-efl-contacts-db-create.py that can
+be executed with a comma-separated-value (CSV) file as parameter. A
+sample CSV is provided at data/examples/contacts.csv. Please excute
+the following command from git checkout:
+
+        ./data/scripts/ofono-efl-contacts-db-create.py \
+                ./data/examples/contacts.csv
