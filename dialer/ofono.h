@@ -62,8 +62,17 @@ typedef enum
 	OFONO_CALL_STATE_WAITING
 } OFono_Call_State;
 
+typedef enum
+{
+	OFONO_USSD_STATE_IDLE = 0,
+	OFONO_USSD_STATE_ACTIVE,
+	OFONO_USSD_STATE_USER_RESPONSE
+} OFono_USSD_State;
+
 typedef struct _OFono_Call OFono_Call;
 typedef struct _OFono_Pending OFono_Pending;
+
+typedef struct _OFono_Callback_List_USSD_Notify_Node OFono_Callback_List_USSD_Notify_Node;
 
 typedef struct _OFono_Callback_List_Modem_Node OFono_Callback_List_Modem_Node;
 typedef struct _OFono_Callback_List_Call_Node OFono_Callback_List_Call_Node;
@@ -103,11 +112,18 @@ OFono_Callback_List_Call_Disconnected_Node *ofono_call_disconnected_cb_add(
 	void (*cb)(void *data, OFono_Call *call, const char *reason),
 	const void *data);
 
+OFono_Callback_List_USSD_Notify_Node *ofono_ussd_notify_cb_add(
+	void (*cb)(void *data, Eina_Bool needs_reply, const char *msg),
+	const void *data);
+
 OFono_Pending *ofono_tones_send(const char *tones, OFono_Simple_Cb cb,
 				const void *data);
 
 void ofono_call_changed_cb_del(OFono_Callback_List_Call_Node *callback_node);
 void ofono_call_disconnected_cb_del(OFono_Callback_List_Call_Disconnected_Node *callback_node);
+void ofono_ussd_notify_cb_del(OFono_Callback_List_USSD_Notify_Node *callback_node);
+
+
 void ofono_call_added_cb_del(OFono_Callback_List_Call_Node *callback_node);
 void ofono_call_removed_cb_del(OFono_Callback_List_Call_Node *callback_node);
 
@@ -123,8 +139,6 @@ OFono_Pending *ofono_modem_change_pin(const char *what, const char *old, const c
 				OFono_Simple_Cb cb, const void *data);
 OFono_Pending *ofono_modem_reset_pin(const char *what, const char *puk, const char *new,
 				OFono_Simple_Cb cb, const void *data);
-
-OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const void *data);
 
 OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 				OFono_Call_Cb cb, const void *data);
@@ -152,6 +166,13 @@ unsigned char ofono_volume_microphone_get(void);
 Eina_Bool ofono_voicemail_waiting_get(void);
 unsigned char ofono_voicemail_count_get(void);
 const char *ofono_voicemail_number_get(void);
+
+/* Supplementary Services */
+OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const void *data);
+
+OFono_Pending *ofono_ussd_respond(const char *string, OFono_String_Cb cb, const void *data);
+OFono_Pending *ofono_ussd_cancel(OFono_Simple_Cb cb, const void *data);
+OFono_USSD_State ofono_ussd_state_get(void);
 
 /* Setup: */
 void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix);
