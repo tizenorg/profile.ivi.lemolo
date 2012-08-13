@@ -1262,6 +1262,8 @@ static void _ofono_call_volume_properties_get_reply(void *data,
 		dbus_message_iter_recurse(&entry, &value);
 		_call_volume_property_update(m, key, &value);
 	}
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _ofono_call_volume_properties_get(OFono_Modem *m)
@@ -1306,6 +1308,8 @@ static void _ofono_msg_waiting_properties_get_reply(void *data,
 		dbus_message_iter_recurse(&entry, &value);
 		_msg_waiting_property_update(m, key, &value);
 	}
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _ofono_msg_waiting_properties_get(OFono_Modem *m)
@@ -1350,6 +1354,8 @@ static void _ofono_suppl_serv_properties_get_reply(void *data,
 		dbus_message_iter_recurse(&entry, &value);
 		_suppl_serv_property_update(m, key, &value);
 	}
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _ofono_suppl_serv_properties_get(OFono_Modem *m)
