@@ -82,10 +82,8 @@ data/themes/images/bt_keypad_released.png \
 data/themes/images/bt_merge_pressed.png \
 data/themes/images/bt_merge_released.png \
 data/themes/images/bt_multiparty_hangup.png \
-data/themes/images/bt_multiparty_hangup_confirm.png \
 data/themes/images/bt_multiparty_pressed.png \
 data/themes/images/bt_multiparty_private.png \
-data/themes/images/bt_multiparty_private_confirm.png \
 data/themes/images/bt_multiparty_released.png \
 data/themes/images/bt_mute_pressed.png \
 data/themes/images/bt_mute_released.png \
