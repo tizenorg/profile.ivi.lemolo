@@ -73,13 +73,14 @@ data/themes/images/ico_edit.png \
 data/themes/images/ico_history.png \
 data/themes/images/ico_keypad.png \
 data/themes/images/ico_merge.png \
-data/themes/images/ico_multiparty_hangup.png \
 data/themes/images/ico_multiparty.png \
+data/themes/images/ico_multiparty_hangup.png \
 data/themes/images/ico_multiparty_private.png \
 data/themes/images/ico_mute.png \
+data/themes/images/ico_person.png \
 data/themes/images/ico_speaker.png \
 data/themes/images/ico_swap.png \
-data/themes/images/ico_person.png
+data/themes/images/ico_voicemail.png
 
 THEME_INCLUDES = \
 data/themes/includes/call.edc \

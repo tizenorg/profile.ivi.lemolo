@@ -29,6 +29,7 @@ group {
       image: "ico_keypad.png" COMP;
       image: "ico_contacts.png" COMP;
       image: "ico_history.png" COMP;
+      image: "ico_voicemail.png" COMP;
    }
 
    parts {
@@ -165,8 +166,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: (WIDTH / 4) ACTION_HEIGHT;                             \
+            max: (WIDTH / 4) ACTION_HEIGHT;                             \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \
@@ -230,8 +231,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: (WIDTH / 4) ACTION_HEIGHT;                             \
+            max: (WIDTH / 4) ACTION_HEIGHT;                             \
             fixed: 1 1;                                                 \
             visible: 0;                                                 \
             rel1 {                                                      \
@@ -348,10 +349,303 @@ group {
          }                                                              \
       }
 
-      ACTION_TOGGLE("keypad",   0.000000000, 0.333333333);
-      ACTION_TOGGLE("contacts", 0.333333333, 0.666666666);
-      ACTION_TOGGLE("history",  0.666666666, 1.000000000);
+      ACTION_TOGGLE("keypad",    0.00, 0.25);
+      ACTION_TOGGLE("contacts",  0.25, 0.50);
+      ACTION_TOGGLE("history",   0.50, 0.75);
 #undef ACTION_TOGGLE
+
+      part {
+         name: "clipper.disable.voicemail";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+         }
+         description {
+            state: "disabled" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 128;
+         }
+      }
+      part {
+         name: "button.voicemail";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.toggle.voicemail-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            min: (WIDTH / 4) ACTION_HEIGHT;
+            max: (WIDTH / 4) ACTION_HEIGHT;
+            fixed: 1 1;
+            rel1 {
+               to: "bg.actions";
+               relative: 0.75 0.0;
+            }
+            rel2 {
+               to: "bg.actions";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "button.ico.voicemail";
+         type: IMAGE;
+         mouse_events: 0;
+         clip_to: "clipper.toggle.voicemail-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: ACTION_HEIGHT ACTION_HEIGHT;
+            max: ACTION_HEIGHT ACTION_HEIGHT;
+            fixed: 1 1;
+            rel1.to: "button.voicemail";
+            rel2.to: "button.voicemail";
+            image.normal: "ico_voicemail.png";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      part {
+         name: "clipper.toggle.voicemail-hidden";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.disable.voicemail";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "on" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.toggle.voicemail-visible";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.disable.voicemail";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "on" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "button.toggle.voicemail";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.toggle.voicemail-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "caution";
+            min: (WIDTH / 4) ACTION_HEIGHT;
+            max: (WIDTH / 4) ACTION_HEIGHT;
+            fixed: 1 1;
+            rel1 {
+               to: "bg.actions";
+               relative: 0.75 0.0;
+            }
+            rel2 {
+               to: "bg.actions";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "button.toggle.ico.voicemail";
+         type: IMAGE;
+         mouse_events: 0;
+         clip_to: "clipper.toggle.voicemail-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "caution";
+            min: ACTION_HEIGHT ACTION_HEIGHT;
+            max: ACTION_HEIGHT ACTION_HEIGHT;
+            fixed: 1 1;
+            rel1.to: "button.toggle.voicemail";
+            rel2.to: "button.toggle.voicemail";
+            image.normal: "ico_voicemail.png";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      part {
+         name: "elm.text.voicemail";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.toggle.voicemail-visible";
+         description {
+            state: "default" 0.0;
+            color_class: "caution";
+            rel1 {
+               to: "button.voicemail";
+               offset: 0 (ITEM_PADDING / 2);
+            }
+            rel2.to: "button.voicemail";
+            align: 0.5 0.0;
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               max: 1 1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      part {
+         name: "blocker.voicemail";
+         type: RECT;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+         }
+         description {
+            state: "disabled" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.voicemail";
+            action: SIGNAL_EMIT "released,voicemail" "gui";
+            after: "show_up_voicemail";
+            api: id"_released" id" was released";
+         }
+         program {
+            name: "show_up_voicemail";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.voicemail";
+            target: "button.ico.voicemail";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.voicemail";
+            after: "show_down_voicemail";
+            action: SIGNAL_EMIT "pressed,voicemail" "gui";
+            api: id"_pressed" id" was pressed";
+         }
+         program {
+            name: "show_down_voicemail";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "button.voicemail";
+            target: "button.ico.voicemail";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.voicemail";
+            action: SIGNAL_EMIT "clicked,voicemail" "gui";
+            api: id"_clicked" id" was clicked";
+         }
+
+         program {
+            signal: "mouse,up,1";
+            source: "button.toggle.voicemail";
+            action: SIGNAL_EMIT "released,voicemail" "gui";
+            after: "show_up_toggle_voicemail";
+            api: id"_released" id" was released";
+         }
+         program {
+            name: "show_up_toggle_voicemail";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.toggle.voicemail";
+            target: "button.toggle.ico.voicemail";
+            target: "elm.text.voicemail";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.toggle.voicemail";
+            after: "show_down_toggle_voicemail";
+            action: SIGNAL_EMIT "pressed,voicemail" "gui";
+            api: id"_pressed" id" was pressed";
+         }
+         program {
+            name: "show_down_toggle_voicemail";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "button.toggle.voicemail";
+            target: "button.toggle.ico.voicemail";
+            target: "elm.text.voicemail";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.toggle.voicemail";
+            action: SIGNAL_EMIT "clicked,voicemail" "gui";
+            api: id"_clicked" id" was clicked";
+         }
+
+         program {
+            signal: "toggle,on,voicemail";
+            source: "gui";
+            action: STATE_SET "on" 0.0;
+            target: "clipper.toggle.voicemail-hidden";
+            target: "clipper.toggle.voicemail-visible";
+         }
+         program {
+            signal: "toggle,off,voicemail";
+            source: "gui";
+            action: STATE_SET "default" 0.0;
+            target: "clipper.toggle.voicemail-hidden";
+            target: "clipper.toggle.voicemail-visible";
+         }
+
+         program {
+            signal: "enable,voicemail";
+            source: "gui";
+            action: STATE_SET "default" 0.0;
+            target: "clipper.disable.voicemail";
+            target: "blocker.voicemail";
+         }
+         program {
+            signal: "disable,voicemail";
+            source: "gui";
+            action: STATE_SET "disabled" 0.0;
+            target: "clipper.disable.voicemail";
+            target: "blocker.voicemail";
+         }
+      }
 
       programs {
          program {

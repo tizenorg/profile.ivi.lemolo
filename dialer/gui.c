@@ -18,6 +18,8 @@ static Evas_Object *cs = NULL;
 static Evas_Object *flip = NULL;
 static char def_theme[PATH_MAX] = "";
 
+static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
+
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
 static Eina_Bool in_flip_anim = EINA_FALSE;
@@ -143,6 +145,27 @@ static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 	in_flip_anim = EINA_FALSE;
 }
 
+static void _dial_reply(void *data, OFono_Error err,
+			OFono_Call *call __UNUSED__)
+{
+	const char *number = data;
+
+	if (err != OFONO_ERROR_NONE) {
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "Could not call: %s", number);
+		gui_simple_popup("Error", buf);
+	}
+}
+
+static void _gui_voicemail(void)
+{
+	const char *number = ofono_voicemail_number_get();
+	EINA_SAFETY_ON_NULL_RETURN(number);
+	EINA_SAFETY_ON_FALSE_RETURN(*number != '\0');
+
+	ofono_dial(number, NULL, _dial_reply, number);
+}
+
 static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
@@ -157,6 +180,51 @@ static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 		_gui_show(contacts);
 	else if (strcmp(emission, "history") == 0)
 		_gui_show(history);
+	else if (strcmp(emission, "voicemail") == 0)
+		_gui_voicemail();
+}
+
+static void _ofono_changed(void *data __UNUSED__)
+{
+	const char *number;
+	Eina_Bool waiting;
+	unsigned char count;
+	char buf[32];
+
+	if ((ofono_modem_api_get() & OFONO_API_MSG_WAITING) == 0) {
+		elm_object_signal_emit(main_layout, "disable,voicemail", "gui");
+		elm_object_signal_emit(main_layout,
+					"toggle,off,voicemail", "gui");
+		elm_object_part_text_set(main_layout, "elm.text.voicemail", "");
+		return;
+	}
+
+	number = ofono_voicemail_number_get();
+	waiting = ofono_voicemail_waiting_get();
+	count = ofono_voicemail_count_get();
+
+	if (number)
+		elm_object_signal_emit(main_layout, "enable,voicemail", "gui");
+	else
+		elm_object_signal_emit(main_layout, "disable,voicemail", "gui");
+
+	if (waiting) {
+		if (count == 0)
+			snprintf(buf, sizeof(buf), "*");
+		else if (count < 255)
+			snprintf(buf, sizeof(buf), "%d", count);
+		else
+			snprintf(buf, sizeof(buf), "255+");
+
+		elm_object_signal_emit(main_layout,
+					"toggle,on,voicemail", "gui");
+	} else {
+		buf[0] = '\0';
+		elm_object_signal_emit(main_layout,
+					"toggle,off,voicemail", "gui");
+	}
+
+	elm_object_part_text_set(main_layout, "elm.text.voicemail", buf);
 }
 
 Eina_Bool gui_init(const char *theme)
@@ -237,6 +305,9 @@ Eina_Bool gui_init(const char *theme)
 	evas_object_size_hint_align_set(obj, EVAS_HINT_FILL, EVAS_HINT_FILL);
 	elm_object_part_content_set(flip, "back", obj);
 	evas_object_show(obj);
+
+	callback_node_modem_changed =
+		ofono_modem_changed_cb_add(_ofono_changed, NULL);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);
