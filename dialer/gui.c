@@ -11,6 +11,12 @@
 #include "ussd.h"
 #include "util.h"
 
+#ifdef HAVE_TIZEN
+#include <appcore-efl.h>
+#include <ui-gadget.h>
+#include <Ecore_X.h>
+#endif
+
 static Evas_Object *win = NULL;
 static Evas_Object *main_layout = NULL;
 static Evas_Object *keypad = NULL;
@@ -521,6 +527,11 @@ Eina_Bool gui_init(const char *theme)
 	win = elm_win_util_standard_add("ofono-dialer", "oFono Dialer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
 	elm_win_autodel_set(win, EINA_FALSE);
+
+#ifdef HAVE_TIZEN
+	appcore_set_i18n("ofono-efl", "en-US");
+	UG_INIT_EFL(win, UG_OPT_INDICATOR_PORTRAIT_ONLY);
+#endif
 
 	flip = elm_flip_add(win);
 	evas_object_size_hint_weight_set(flip,

@@ -4,7 +4,8 @@ AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\"$(pkgdatadir)/\" \
 	-DPACKAGE_BIN_DIR=\"$(bindir)\" \
 	-DPACKAGE_LIB_DIR=\"$(libdir)\" \
-	@EFL_CFLAGS@
+	@EFL_CFLAGS@ \
+	@TIZEN_CFLAGS@
 
 MAINTAINERCLEANFILES = \
 	aclocal.m4 \
@@ -22,7 +23,7 @@ MAINTAINERCLEANFILES = \
 
 bin_PROGRAMS = dialer/dialer
 
-dialer_dialer_LDADD = @EFL_LIBS@
+dialer_dialer_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
 dialer_dialer_SOURCES = \
 	dialer/main.c \
 	dialer/log.h \
@@ -34,7 +35,6 @@ dialer_dialer_SOURCES = \
 	dialer/gui.h \
 	dialer/keypad.c \
 	dialer/keypad.h \
-	dialer/contacts.c \
 	dialer/contacts.h \
 	dialer/history.c \
 	dialer/history.h \
@@ -44,6 +44,12 @@ dialer_dialer_SOURCES = \
 	dialer/ussd.h \
 	dialer/util.c \
 	dialer/util.h
+
+if HAVE_TIZEN
+dialer_dialer_SOURCES += dialer/contacts-tizen.c
+else
+dialer_dialer_SOURCES += dialer/contacts.c
+endif
 
 # Themes are compiled with edje_cc given by user (cross-compile)
 EDJE_CC = @edje_cc@

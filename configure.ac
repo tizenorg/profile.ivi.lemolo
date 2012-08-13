@@ -34,6 +34,34 @@ PKG_CHECK_MODULES([EFL],
 
 EFL_WITH_BIN([edje], [edje-cc], [edje_cc])
 
+want_tizen="auto"
+have_tizen="no"
+AC_ARG_ENABLE([tizen],
+   AC_HELP_STRING([--enable-tizen], [enable Tizen integration. @<:@default==auto@:>@]),
+   [want_tizen="yes"],
+   [want_tizen="no"])
+
+if test "$want_tizen" != "no"; then
+   PKG_CHECK_MODULES([TIZEN],
+                [
+                        ecore-x
+                        appcore-efl
+                        ui-gadget
+                        capi-social-contacts
+                ],
+                [have_tizen="yes"],
+                [have_tizen="no"])
+
+fi
+
+if test "$want_tizen" = "yes" -a "$have_tizen" = "no"; then
+   AC_MSG_ERROR([Want tizen, but not found])
+elif test "$have_tizen" = "yes"; then
+     AC_DEFINE([HAVE_TIZEN], 1, [Tizen support])
+fi
+
+AM_CONDITIONAL([HAVE_TIZEN], [test "$have_tizen" = "yes"])
+
 with_max_log_level="EINA_LOG_LEVEL_DBG"
 AC_ARG_WITH(maximum-log-level,
    [AC_HELP_STRING([--with-maximum-log-level=NUMBER],
