@@ -62,36 +62,24 @@ am__v_EDJ_0 = @echo "  EDJ   " $@;
 THEME_IMAGES = \
 data/themes/images/bg_call.jpg \
 data/themes/images/bg_keypad.jpg \
-data/themes/images/bt_add_call_pressed.png \
-data/themes/images/bt_add_call_released.png \
-data/themes/images/bt_add_contact_pressed.png \
-data/themes/images/bt_add_contact_released.png \
-data/themes/images/bt_arrow_right.png \
-data/themes/images/bt_backspace_pressed.png \
-data/themes/images/bt_backspace_released.png \
-data/themes/images/bt_call_pressed.png \
-data/themes/images/bt_call_released.png \
-data/themes/images/bt_contacts_pressed.png \
-data/themes/images/bt_contacts_released.png \
-data/themes/images/bt_del.png \
-data/themes/images/bt_edit.png \
-data/themes/images/bt_history_pressed.png \
-data/themes/images/bt_history_released.png \
-data/themes/images/bt_keypad_pressed.png \
-data/themes/images/bt_keypad_released.png \
-data/themes/images/bt_merge_pressed.png \
-data/themes/images/bt_merge_released.png \
-data/themes/images/bt_multiparty_hangup.png \
-data/themes/images/bt_multiparty_pressed.png \
-data/themes/images/bt_multiparty_private.png \
-data/themes/images/bt_multiparty_released.png \
-data/themes/images/bt_mute_pressed.png \
-data/themes/images/bt_mute_released.png \
-data/themes/images/bt_speaker_pressed.png \
-data/themes/images/bt_speaker_released.png \
-data/themes/images/bt_swap_pressed.png \
-data/themes/images/bt_swap_released.png \
-data/themes/images/person.png
+data/themes/images/ico_add_call.png \
+data/themes/images/ico_add_contact.png \
+data/themes/images/ico_arrow_right.png \
+data/themes/images/ico_backspace.png \
+data/themes/images/ico_call.png \
+data/themes/images/ico_contacts.png \
+data/themes/images/ico_del.png \
+data/themes/images/ico_edit.png \
+data/themes/images/ico_history.png \
+data/themes/images/ico_keypad.png \
+data/themes/images/ico_merge.png \
+data/themes/images/ico_multiparty_hangup.png \
+data/themes/images/ico_multiparty.png \
+data/themes/images/ico_multiparty_private.png \
+data/themes/images/ico_mute.png \
+data/themes/images/ico_speaker.png \
+data/themes/images/ico_swap.png \
+data/themes/images/ico_person.png
 
 THEME_INCLUDES = \
 data/themes/includes/call.edc \

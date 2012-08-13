@@ -22,12 +22,9 @@ group {
 
    images {
       image: "bg_keypad.jpg" COMP;
-      image: "bt_call_pressed.png" COMP;
-      image: "bt_call_released.png" COMP;
-      image: "bt_backspace_pressed.png" COMP;
-      image: "bt_backspace_released.png" COMP;
-      image: "bt_add_contact_released.png" COMP;
-      image: "bt_add_contact_pressed.png" COMP;
+      image: "ico_call.png" COMP;
+      image: "ico_backspace.png" COMP;
+      image: "ico_add_contact.png" COMP;
    }
 
    parts {
@@ -360,12 +357,12 @@ group {
       }									\
       part {                                                            \
          name: "button."##id;                                           \
-         type: IMAGE;                                                   \
+         type: RECT;                                                    \
          mouse_events: 1;                                               \
          clip_to: "clipper."##id;                                       \
          description {                                                  \
             state: "default" 0.0;                                       \
-            color: 255 255 255 255;                                     \
+            color: 255 255 255 0;                                       \
             color_class: "action";                                      \
             min: ACTION_WIDTH ACTION_HEIGHT;				\
             max: ACTION_WIDTH ACTION_HEIGHT;                            \
@@ -379,33 +376,33 @@ group {
                relative: x1 1.0;                                        \
                offset: -1 -1;                                           \
             }                                                           \
-            image.normal: "bt_"##img"_released.png";                    \
-         }                                                              \
-         description {                                                  \
-            state: "pressed" 0.0;                                       \
-            inherit: "default" 0.0;                                     \
-            color: 255 255 255 0;                                       \
-            visible: 0;                                                 \
-         }                                                              \
-      }                                                                 \
-      part {                                                            \
-         name: "button.over."##id;                                      \
-         type: IMAGE;                                                   \
-         clip_to: "clipper."##id;                                       \
-         description {                                                  \
-            state: "default" 0.0;                                       \
-            color: 255 255 255 0;                                       \
-            visible: 0;                                                 \
-            color_class: "action";                                      \
-            rel1.to: "button."##id;                                     \
-            rel2.to: "button."##id;                                     \
-            image.normal: "bt_"##img"_pressed.png";                     \
          }                                                              \
          description {                                                  \
             state: "pressed" 0.0;                                       \
             inherit: "default" 0.0;                                     \
             color: 255 255 255 255;                                     \
-            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.ico."##id;                                       \
+         type: IMAGE;                                                   \
+         mouse_events: 0;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;				\
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "ico_"##img".png";                            \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
          }                                                              \
       }                                                                 \
       part {                                                            \
@@ -439,7 +436,7 @@ group {
             action: STATE_SET "default" 0.0;                            \
             transition: DECELERATE 0.1;                                 \
             target: "button."##id;                                      \
-            target: "button.over."##id;                                 \
+            target: "button.ico."##id;                                  \
          }                                                              \
          program {                                                      \
             signal: "mouse,down,1";                                     \
@@ -453,7 +450,7 @@ group {
             action: STATE_SET "pressed" 0.0;                            \
             transition: ACCELERATE 0.1;                                 \
             target: "button."##id;                                      \
-            target: "button.over."##id;                                 \
+            target: "button.ico."##id;                                  \
          }                                                              \
          program {                                                      \
             signal: "mouse,clicked,1";                                  \

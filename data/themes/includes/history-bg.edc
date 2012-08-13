@@ -3,7 +3,7 @@ group {
 
    images {
       image: "bg_keypad.jpg" COMP;
-      image: "bt_edit.png" COMP;
+      image: "ico_edit.png" COMP;
    }
 
    parts {
@@ -330,7 +330,7 @@ group {
                offset: (-BORDER_PADDING - 1) -1;
             }
             image {
-               normal: "bt_edit.png";
+               normal: "ico_edit.png";
                scale_hint: STATIC;
             }
          }

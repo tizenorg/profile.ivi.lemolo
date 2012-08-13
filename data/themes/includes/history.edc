@@ -90,8 +90,8 @@ group {
    }
 
    images {
-      image: "bt_arrow_right.png" COMP;
-      image: "bt_del.png" COMP;
+      image: "ico_arrow_right.png" COMP;
+      image: "ico_del.png" COMP;
    }
 
    parts{
@@ -232,7 +232,7 @@ group {
             rel2.to: "call.swallow.more";
             color_class: "action";
             image {
-               normal: "bt_arrow_right.png";
+               normal: "ico_arrow_right.png";
                scale_hint: STATIC;
             }
          }
@@ -500,7 +500,7 @@ group {
             color: 255 255 255 255;
             color_class: "caution";
             image {
-               normal: "bt_del.png";
+               normal: "ico_del.png";
                scale_hint: STATIC;
             }
          }
