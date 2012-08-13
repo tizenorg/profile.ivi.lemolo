@@ -2409,6 +2409,13 @@ void ofono_modem_path_wanted_set(const char *path)
 		modem_selected = NULL;
 }
 
+unsigned int ofono_modem_api_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, 0);
+	return m->interfaces;
+}
+
 Eina_Bool ofono_init(void)
 {
 	tzset();
