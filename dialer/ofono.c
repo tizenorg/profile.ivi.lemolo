@@ -1232,8 +1232,6 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		}
 	} else
 		DBG("%s %s (unused property)", m->base.path, key);
-
-	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _ofono_call_volume_properties_get_reply(void *data,
@@ -1431,6 +1429,8 @@ update_properties:
 		_modem_property_update(m, key, &value);
 	}
 
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
+
 	if (m->interfaces & OFONO_API_VOICE)
 		_modem_calls_load(m);
 }
@@ -1545,6 +1545,8 @@ static void _modem_property_changed(void *data __UNUSED__, DBusMessage *msg)
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &value);
 	_modem_property_update(m, key, &value);
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _modems_load(void)
