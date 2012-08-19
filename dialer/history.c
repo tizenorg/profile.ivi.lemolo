@@ -640,27 +640,21 @@ static void _history_clear_cancel(void *data, Evas_Object *obj __UNUSED__,
 
 static void _history_clear(History *ctx)
 {
-	Evas_Object *p, *bt;
+	Evas_Object *p;
 
 	EINA_SAFETY_ON_TRUE_RETURN(ctx->clear_popup != NULL);
 
-	ctx->clear_popup = p = elm_popup_add(ctx->self);
-	evas_object_size_hint_weight_set(p, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-	elm_object_part_text_set(p, "title,text", "Clear History");
-	elm_object_text_set(p, "Do you want to clear all history entries?");
+	ctx->clear_popup = p = gui_simple_popup("Clear History",
+				"Do you want to clear all history entries?");
 
-	bt = elm_button_add(p);
-	elm_object_text_set(bt, "No");
-	elm_object_part_content_set(p, "button1", bt);
-	evas_object_smart_callback_add(bt, "clicked",
-					_history_clear_cancel, ctx);
-
-	bt = elm_button_add(p);
-	elm_object_text_set(bt, "Yes, Clear");
-	elm_object_part_content_set(p, "button2", bt);
-	evas_object_smart_callback_add(bt, "clicked", _history_clear_do, ctx);
-
-	evas_object_show(p);
+	gui_simple_popup_buttons_set(p,
+					"Dismiss",
+					"dialer",
+					_history_clear_cancel,
+					"Yes, Clear",
+					"dialer-caution",
+					_history_clear_do,
+					ctx);
 }
 
 static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,

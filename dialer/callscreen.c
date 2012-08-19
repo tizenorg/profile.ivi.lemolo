@@ -294,7 +294,7 @@ static void _popup_redial(void *data, Evas_Object *o __UNUSED__, void *event __U
 static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 					const char *reason)
 {
-	Evas_Object *p, *bt;
+	Evas_Object *p;
 	const char *number, *title;
 	char msg[1024];
 
@@ -346,24 +346,17 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 
 	eina_stringshare_replace(&ctx->disconnected.number, number);
 
-	ctx->disconnected.popup = p = elm_popup_add(ctx->self);
-	evas_object_size_hint_weight_set(p, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-	elm_object_part_text_set(p, "title,text", title);
-	elm_object_text_set(p, msg);
-
-	bt = elm_button_add(p);
-	elm_object_text_set(bt, "Close");
-	elm_object_part_content_set(p, "button1", bt);
-	evas_object_smart_callback_add(bt, "clicked", _popup_close, ctx);
-
-	bt = elm_button_add(p);
-	elm_object_text_set(bt, "Redial");
-	elm_object_part_content_set(p, "button2", bt);
-	evas_object_smart_callback_add(bt, "clicked", _popup_redial, ctx);
+	ctx->disconnected.popup = p = gui_simple_popup(title, msg);
+	gui_simple_popup_buttons_set(p,
+					"Dismiss",
+					"dialer",
+					_popup_close,
+					"Redial",
+					"dialer",
+					_popup_redial,
+					ctx);
 
 	/* TODO: sound to notify user */
-
-	evas_object_show(p);
 
 	return;
 done:

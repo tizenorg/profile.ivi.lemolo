@@ -80,9 +80,18 @@ data/themes/images/ico_mute.png \
 data/themes/images/ico_person.png \
 data/themes/images/ico_speaker.png \
 data/themes/images/ico_swap.png \
-data/themes/images/ico_voicemail.png
+data/themes/images/ico_voicemail.png \
+data/themes/images/loading_0.png \
+data/themes/images/loading_1.png \
+data/themes/images/loading_2.png \
+data/themes/images/loading_3.png \
+data/themes/images/loading_4.png \
+data/themes/images/loading_5.png \
+data/themes/images/loading_6.png \
+data/themes/images/loading_7.png
 
 THEME_INCLUDES = \
+data/themes/includes/buttons.edc \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
 data/themes/includes/contacts-bg.edc \
@@ -92,6 +101,7 @@ data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
 data/themes/includes/main.edc \
 data/themes/includes/multiparty-list.edc \
+data/themes/includes/popup.edc \
 data/themes/includes/scroller.edc
 
 

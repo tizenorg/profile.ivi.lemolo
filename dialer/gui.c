@@ -58,20 +58,138 @@ static void _popup_close(void *data, Evas_Object *bt __UNUSED__, void *event __U
 	evas_object_del(popup);
 }
 
-void gui_simple_popup(const char *title, const char *message)
+void gui_simple_popup_title_set(Evas_Object *p, const char *title)
 {
-	Evas_Object *p = elm_popup_add(win);
+	if (title) {
+		elm_object_part_text_set(p, "elm.text.title", title);
+		elm_object_signal_emit(p, "show,title", "gui");
+	} else {
+		elm_object_part_text_set(p, "elm.text.title", "");
+		elm_object_signal_emit(p, "hide,title", "gui");
+	}
+}
+
+/* HACK: force recalc from an idler to fix elm_entry problem */
+static Eina_Bool _gui_simple_popup_message_reeval(void *data)
+{
+	Evas_Object *en = data;
+	elm_entry_calc_force(en);
+	evas_object_data_del(en, "reeval_timer");
+	return EINA_FALSE;
+}
+
+static void _gui_simple_popup_message_reeval_del(void *data __UNUSED__,
+							Evas *e __UNUSED__,
+							Evas_Object *en,
+							void *einfo __UNUSED__)
+{
+	Ecore_Timer *timer = evas_object_data_del(en, "reeval_timer");
+	if (timer)
+		ecore_timer_del(timer);
+}
+
+void gui_simple_popup_message_set(Evas_Object *p, const char *msg)
+{
+	Evas_Object *en;
+	Ecore_Timer *timer;
+
+	if (!msg) {
+		elm_object_part_content_set(p, "elm.swallow.content", NULL);
+		elm_object_signal_emit(p, "hide,content", "gui");
+		return;
+	}
+
+	en = elm_entry_add(p);
+	elm_object_style_set(en, "dialer-popup");
+	elm_entry_editable_set(en, EINA_FALSE);
+	elm_entry_scrollable_set(en, EINA_TRUE);
+	elm_entry_scrollbar_policy_set(en, ELM_SCROLLER_POLICY_OFF,
+					ELM_SCROLLER_POLICY_AUTO);
+	elm_object_text_set(en, msg);
+	elm_object_part_content_set(p, "elm.swallow.content", en);
+	elm_object_signal_emit(p, "show,content", "gui");
+
+	/* HACK: elm_entry is not evaluating properly and the text is
+	 * not centered as it should be. Then we must force a
+	 * calculation from an timer.
+	 */
+	timer = ecore_timer_add(0.02, _gui_simple_popup_message_reeval, en);
+	evas_object_data_set(en, "reeval_timer", timer);
+	evas_object_event_callback_add(en, EVAS_CALLBACK_DEL,
+					_gui_simple_popup_message_reeval_del,
+					NULL);
+}
+
+void gui_simple_popup_button_dismiss_set(Evas_Object *p)
+{
+	Evas_Object *bt = elm_button_add(p);
+	elm_object_style_set(bt, "dialer");
+	elm_object_text_set(bt, "Dismiss");
+
+	elm_object_part_content_set(p, "elm.swallow.button1", bt);
+	elm_object_signal_emit(p, "buttons,1", "gui");
+	evas_object_smart_callback_add(bt, "clicked", _popup_close, p);
+}
+
+void gui_simple_popup_buttons_set(Evas_Object *p,
+					const char *b1_label,
+					const char *b1_class,
+					Evas_Smart_Cb b1_cb,
+					const char *b2_label,
+					const char *b2_class,
+					Evas_Smart_Cb b2_cb,
+					const void *data)
+{
 	Evas_Object *bt;
+	unsigned int count = 0;
+
+	if (b1_label) {
+		bt = elm_button_add(p);
+		elm_object_style_set(bt, b1_class ? b1_class : "dialer");
+		elm_object_text_set(bt, b1_label);
+		elm_object_part_content_set(p, "elm.swallow.button1", bt);
+		evas_object_smart_callback_add(bt, "clicked", b1_cb, data);
+		count++;
+	}
+
+	if (b2_label) {
+		const char *part;
+		bt = elm_button_add(p);
+		elm_object_style_set(bt, b2_class ? b2_class : "dialer");
+		elm_object_text_set(bt, b2_label);
+
+		if (count == 1)
+			part = "elm.swallow.button2";
+		else
+			part = "elm.swallow.button1";
+
+		elm_object_part_content_set(p, part, bt);
+		evas_object_smart_callback_add(bt, "clicked", b2_cb, data);
+		count++;
+	}
+
+	if (count == 2)
+		elm_object_signal_emit(p, "buttons,2", "gui");
+	else if (count == 1)
+		elm_object_signal_emit(p, "buttons,1", "gui");
+	else
+		elm_object_signal_emit(p, "buttons,0", "gui");
+}
+
+Evas_Object *gui_simple_popup(const char *title, const char *message)
+{
+	Evas_Object *p = gui_layout_add(win, "popup");
 
 	evas_object_size_hint_weight_set(p, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-	elm_object_text_set(p, message);
-	elm_object_part_text_set(p, "title,text", title);
+	elm_win_resize_object_add(win, p);
 
-	bt = elm_button_add(p);
-	elm_object_text_set(bt, "Close");
-	elm_object_part_content_set(p, "button1", bt);
-	evas_object_smart_callback_add(bt, "clicked", _popup_close, p);
+	gui_simple_popup_title_set(p, title);
+	gui_simple_popup_message_set(p, message);
+	gui_simple_popup_button_dismiss_set(p);
+
 	evas_object_show(p);
+
+	return p;
 }
 
 void gui_activate(void)

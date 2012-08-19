@@ -13,16 +13,19 @@ color_classes {
       name: "light";
       color: 55 88 84 255;
    }
+#define TEXTBLOCK_COLOR_LIGHT "#375854"
 
    color_class {
       name: "action";
       color: 123 184 155 255;
    }
+#define TEXTBLOCK_COLOR_ACTION "#7bb89b"
 
    color_class {
       name: "caution";
       color: 193 39 44 255;
    }
+#define TEXTBLOCK_COLOR_CAUTION "#c1272c"
 
    color_class {
       name: "disabled";

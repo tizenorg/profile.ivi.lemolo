@@ -29,4 +29,6 @@
 
 #define GROUP_HEIGHT 20
 
+#define LOADING_SIZE 64
+
 #include "default.edc"
