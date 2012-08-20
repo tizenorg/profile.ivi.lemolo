@@ -75,6 +75,7 @@ static Eina_Inlist *cbs_call_removed = NULL;
 #define OFONO_SERVICE			"org.ofono"
 
 #define OFONO_PREFIX			OFONO_SERVICE "."
+#define OFONO_PREFIX_ERROR		OFONO_SERVICE ".Error."
 #define OFONO_MODEM_IFACE		"Modem"
 #define OFONO_MANAGER_IFACE		"Manager"
 #define OFONO_SIM_IFACE			"SimManager"
@@ -167,14 +168,14 @@ static const struct Error_Map {
 
 static OFono_Error _ofono_error_parse(const char *name)
 {
-	size_t namelen, prefixlen = sizeof(OFONO_PREFIX) - 1;
+	size_t namelen, prefixlen = sizeof(OFONO_PREFIX_ERROR) - 1;
 	const struct Error_Map *itr;
 
 	/* whenever interfaces are not there due modem being offline */
 	if (strcmp(name, "org.freedesktop.DBus.Error.UnknownMethod") == 0)
 		return OFONO_ERROR_OFFLINE;
 
-	if (strncmp(name, OFONO_PREFIX, prefixlen) != 0)
+	if (strncmp(name, OFONO_PREFIX_ERROR, prefixlen) != 0)
 		return OFONO_ERROR_FAILED;
 
 	name += prefixlen;
