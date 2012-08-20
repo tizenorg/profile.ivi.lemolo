@@ -378,10 +378,14 @@ group {
       style {
          name: "entry_textblock_style";
          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=word valign=middle align=center";
+         tag:  "b" "+ font_weight=Bold";
+         tag: "br" "\n";
       }
       style {
          name: "entry_textblock_disabled_style";
          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=word valign=middle align=center";
+         tag:  "b" "+ font_weight=Bold";
+         tag: "br" "\n";
       }
    }
    parts {

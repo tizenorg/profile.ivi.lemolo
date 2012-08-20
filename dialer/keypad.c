@@ -8,6 +8,13 @@
 #include "ofono.h"
 #include "util.h"
 
+/* timeout before a popup is show for supplementary services.  It is
+ * not shown immediately as the call may fail as "not supported" in
+ * that case the dial will be done and we don't want a popup before
+ * it.
+ */
+#define SS_POPUP_SHOW_TIMEOUT (0.5)
+
 /* timeout to change keys into modified, like 0 -> + */
 #define MOD_TIMEOUT (1.0)
 
@@ -18,6 +25,9 @@
 typedef struct _Keypad
 {
 	Evas_Object *self;
+	Evas_Object *ss_popup;
+	Ecore_Timer *ss_popup_show_timeout;
+	OFono_Pending *ss_pending;
 	Eina_Strbuf *number;
 	const char *last;
 	Ecore_Timer *mod_timeout;
@@ -262,19 +272,69 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 {
 	Keypad *ctx = data;
 
-	DBG("e=%d, str=%s", err, str);
+	DBG("e=%d, str=%s, ss_popup_show_timeout=%p, ss_popup=%p",
+		err, str, ctx->ss_popup_show_timeout, ctx->ss_popup);
+
+	ctx->ss_pending = NULL;
+
+	if (ctx->ss_popup_show_timeout) {
+		ecore_timer_del(ctx->ss_popup_show_timeout);
+		ctx->ss_popup_show_timeout = NULL;
+	}
+
 	if ((err == OFONO_ERROR_NOT_RECOGNIZED) ||
-		(err == OFONO_ERROR_INVALID_FORMAT))
+		(err == OFONO_ERROR_INVALID_FORMAT)) {
 		_dial(ctx);
-	else if (err == OFONO_ERROR_OFFLINE)
-		gui_simple_popup("Offline", "System is offline!");
-	else if (err != OFONO_ERROR_NONE) {
+		evas_object_del(ctx->ss_popup);
+	} else if (err == OFONO_ERROR_OFFLINE) {
+		gui_simple_popup_title_set(ctx->ss_popup, "Offline");
+		gui_simple_popup_message_set(ctx->ss_popup,
+						"System is Offline");
+		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
+		evas_object_show(ctx->ss_popup);
+	} else if (err != OFONO_ERROR_NONE) {
 		char buf[256];
 		snprintf(buf, sizeof(buf), "Could not complete.<br>Error #%d",
 				err);
-		gui_simple_popup("Error", buf);
-	} else
-		gui_simple_popup(NULL, str);
+		gui_simple_popup_title_set(ctx->ss_popup, "Error");
+		gui_simple_popup_message_set(ctx->ss_popup, buf);
+		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
+		evas_object_show(ctx->ss_popup);
+	} else {
+		gui_simple_popup_message_set(ctx->ss_popup, str);
+		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
+		evas_object_show(ctx->ss_popup);
+	}
+}
+
+static Eina_Bool _on_ss_popup_show_timeout(void *data)
+{
+	Keypad *ctx = data;
+
+	if (ctx->ss_popup)
+		evas_object_show(ctx->ss_popup);
+
+	ctx->ss_popup_show_timeout = NULL;
+	return EINA_FALSE;
+}
+
+static void _on_ss_popup_del(void *data, Evas *e __UNUSED__,
+				Evas_Object *o __UNUSED__,
+				void *event_info __UNUSED__)
+{
+	Keypad *ctx = data;
+
+	ctx->ss_popup = NULL;
+
+	if (ctx->ss_popup_show_timeout) {
+		ecore_timer_del(ctx->ss_popup_show_timeout);
+		ctx->ss_popup_show_timeout = NULL;
+	}
+
+	if (ctx->ss_pending) {
+		ofono_pending_cancel(ctx->ss_pending);
+		ctx->ss_pending = NULL;
+	}
 }
 
 /* Procedure as ofono/doc/mmi-codes.txt:
@@ -288,10 +348,30 @@ static void _call(Keypad *ctx)
 
 	INF("calling %s...", number);
 
-	if ((len > 0) && (number[len - 1] == '#'))
-		ofono_ss_initiate(number, _ss_initiate_reply, ctx);
-	else
+	if (len < 1)
+		return;
+
+	if (number[len - 1] != '#') {
 		_dial(ctx);
+		return;
+	}
+
+	if (ctx->ss_popup)
+		evas_object_del(ctx->ss_popup);
+
+	if (ctx->ss_pending)
+		ofono_pending_cancel(ctx->ss_pending);
+
+	ctx->ss_popup = gui_simple_popup(NULL, NULL);
+	evas_object_event_callback_add(ctx->ss_popup, EVAS_CALLBACK_DEL,
+					_on_ss_popup_del, ctx);
+	evas_object_hide(ctx->ss_popup);
+	if (ctx->ss_popup_show_timeout)
+		ecore_timer_del(ctx->ss_popup_show_timeout);
+	ctx->ss_popup_show_timeout = ecore_timer_add(
+		SS_POPUP_SHOW_TIMEOUT, _on_ss_popup_show_timeout, ctx);
+
+	ctx->ss_pending = ofono_ss_initiate(number, _ss_initiate_reply, ctx);
 }
 
 static Eina_Bool _on_mod_timeout(void *data)
@@ -429,10 +509,15 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 {
 	Keypad *ctx = data;
 
+	if (ctx->ss_pending)
+		ofono_pending_cancel(ctx->ss_pending);
+
 	if (ctx->mod_timeout)
 		ecore_timer_del(ctx->mod_timeout);
 	if (ctx->rep_timeout)
 		ecore_timer_del(ctx->rep_timeout);
+	if (ctx->ss_popup_show_timeout)
+		ecore_timer_del(ctx->ss_popup_show_timeout);
 
 	eina_strbuf_free(ctx->number);
 	eina_stringshare_del(ctx->last);
