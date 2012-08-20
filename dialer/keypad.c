@@ -294,6 +294,11 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 		evas_object_show(ctx->ss_popup);
 	} else if (err != OFONO_ERROR_NONE) {
 		char buf[256];
+
+		/* no popup? then it was canceled */
+		if (!ctx->ss_popup)
+			return;
+
 		snprintf(buf, sizeof(buf), "Could not complete.<br>Error #%d",
 				err);
 		gui_simple_popup_title_set(ctx->ss_popup, "Error");
