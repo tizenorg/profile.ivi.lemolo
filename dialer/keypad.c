@@ -356,11 +356,6 @@ static void _call(Keypad *ctx)
 	if (len < 1)
 		return;
 
-	if (number[len - 1] != '#') {
-		_dial(ctx);
-		return;
-	}
-
 	if (ctx->ss_popup)
 		evas_object_del(ctx->ss_popup);
 
