@@ -8,6 +8,7 @@
 #include "keypad.h"
 #include "history.h"
 #include "callscreen.h"
+#include "ussd.h"
 
 static Evas_Object *win = NULL;
 static Evas_Object *main_layout = NULL;
@@ -19,6 +20,7 @@ static Evas_Object *flip = NULL;
 static char def_theme[PATH_MAX] = "";
 
 static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
+static OFono_Callback_List_USSD_Notify_Node *callback_node_ussd_notify = NULL;
 
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
@@ -487,6 +489,13 @@ static void _ofono_changed(void *data __UNUSED__)
 	elm_object_part_text_set(main_layout, "elm.text.voicemail", buf);
 }
 
+static void _ofono_ussd_notify(void *data __UNUSED__, Eina_Bool needs_reply,
+				const char *message)
+{
+	DBG("needs_reply=%d, message=%s", needs_reply, message);
+	ussd_start(message);
+}
+
 Eina_Bool gui_init(const char *theme)
 {
 	Evas_Object *lay, *obj;
@@ -568,6 +577,8 @@ Eina_Bool gui_init(const char *theme)
 
 	callback_node_modem_changed =
 		ofono_modem_changed_cb_add(_ofono_changed, NULL);
+	callback_node_ussd_notify =
+		ofono_ussd_notify_cb_add(_ofono_ussd_notify, NULL);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);

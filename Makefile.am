@@ -40,6 +40,8 @@ dialer_dialer_SOURCES = \
 	dialer/history.h \
 	dialer/callscreen.c \
 	dialer/callscreen.h \
+	dialer/ussd.c \
+	dialer/ussd.h \
 	dialer/util.c \
 	dialer/util.h
 

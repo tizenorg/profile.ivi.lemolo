@@ -6,6 +6,7 @@
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
+#include "ussd.h"
 #include "util.h"
 
 /* timeout before a popup is show for supplementary services.  It is
@@ -306,9 +307,11 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
 		evas_object_show(ctx->ss_popup);
 	} else {
-		gui_simple_popup_message_set(ctx->ss_popup, str);
-		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
-		evas_object_show(ctx->ss_popup);
+		evas_object_del(ctx->ss_popup);
+		eina_strbuf_reset(ctx->number);
+		_number_display(ctx);
+
+		ussd_start(str);
 	}
 }
 
