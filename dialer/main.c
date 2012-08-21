@@ -24,6 +24,9 @@ static const char def_modem_hfp_api[] =
 static const char def_modem_type[] =
 	"hardware";
 
+static const char def_rc_service[] = "org.tizen.dialer";
+
+
 static const Ecore_Getopt options = {
 	PACKAGE_NAME,
 	"%prog [options]",
@@ -42,6 +45,8 @@ static const Ecore_Getopt options = {
 					def_modem_type),
 	 ECORE_GETOPT_STORE_TRUE('T', "list-types",
 					"list all oFono modem types."),
+	 ECORE_GETOPT_STORE_STR('R', "rc-dbus-name",
+				"The DBus name to use for the remote control."),
 	 ECORE_GETOPT_VERSION('V', "version"),
 	 ECORE_GETOPT_COPYRIGHT('C', "copyright"),
 	 ECORE_GETOPT_LICENSE('L', "license"),
@@ -60,6 +65,7 @@ EAPI int elm_main(int argc, char **argv)
 	char *modem_api = NULL;
 	char *modem_type = NULL;
 	char *theme = NULL;
+	char *rc_service = NULL;
 	Eina_Bool list_api = EINA_FALSE;
 	Eina_Bool list_type = EINA_FALSE;
 	Eina_Bool quit_option = EINA_FALSE;
@@ -70,6 +76,7 @@ EAPI int elm_main(int argc, char **argv)
 		ECORE_GETOPT_VALUE_BOOL(list_api),
 		ECORE_GETOPT_VALUE_STR(modem_type),
 		ECORE_GETOPT_VALUE_BOOL(list_type),
+		ECORE_GETOPT_VALUE_STR(rc_service),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
 		ECORE_GETOPT_VALUE_BOOL(quit_option),
@@ -106,7 +113,15 @@ EAPI int elm_main(int argc, char **argv)
 	if (quit_option)
 		goto end;
 
-	if (!rc_init()) {
+	if (rc_service) {
+		INF("User-defined DBus remote control service name: %s",
+			rc_service);
+	} else {
+		INF("Using default DBus remote control service name: %s",
+			def_rc_service);
+	}
+
+	if (!rc_init(rc_service ? rc_service : def_rc_service)) {
 		CRITICAL("Could not setup remote control via DBus.");
 		_app_exit_code = EXIT_FAILURE;
 		goto end;

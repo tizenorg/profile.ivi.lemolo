@@ -10,9 +10,10 @@ static E_DBus_Connection *bus_conn = NULL;
 static E_DBus_Object *bus_obj = NULL;
 static E_DBus_Interface *bus_iface = NULL;
 
-#define RC_SERVICE "org.tizen.dialer"
 #define RC_IFACE "org.tizen.dialer.Control"
 #define RC_PATH "/"
+
+static const char *rc_service = NULL;
 
 static DBusMessage *
 _rc_activate(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
@@ -81,7 +82,7 @@ static void _rc_activate_existing_reply(void *data __UNUSED__,
 static void _rc_activate_existing(void)
 {
 	DBusMessage *msg = dbus_message_new_method_call(
-		RC_SERVICE, RC_PATH, RC_IFACE, "Activate");
+		rc_service, RC_PATH, RC_IFACE, "Activate");
 	e_dbus_message_send(bus_conn, msg,  _rc_activate_existing_reply,
 				-1, NULL);
 	dbus_message_unref(msg);
@@ -113,8 +114,10 @@ static void _rc_request_name_reply(void *data __UNUSED__, DBusMessage *msg,
 	}
 }
 
-Eina_Bool rc_init(void)
+Eina_Bool rc_init(const char *service)
 {
+	rc_service = service;
+
 	if (!elm_need_e_dbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
@@ -126,7 +129,7 @@ Eina_Bool rc_init(void)
 		return EINA_FALSE;
 	}
 
-	e_dbus_request_name(bus_conn, RC_SERVICE, DBUS_NAME_FLAG_DO_NOT_QUEUE,
+	e_dbus_request_name(bus_conn, rc_service, DBUS_NAME_FLAG_DO_NOT_QUEUE,
 				_rc_request_name_reply, NULL);
 	return EINA_TRUE;
 }
