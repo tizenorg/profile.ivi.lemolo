@@ -213,12 +213,10 @@ group {
             text {
                text: "Name Here";
                font: FONT_NORMAL;
-               size: SIZE_LARGE;
-               size_range: SIZE_SMALL SIZE_LARGE;
+               size: SIZE_MEDIUM;
+               align: 0.0 1.0;
                ellipsis: 0.0;
                min: 0 1;
-               fit: 1 0;
-               align: -1.0 1.0;
             }
          }
          description {
