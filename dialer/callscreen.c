@@ -666,10 +666,9 @@ static void _call_changed(void *data, OFono_Call *c)
 	_calls_update(ctx);
 
 	if ((ctx->calls.waiting) && (!was_waiting)) {
-		char buf[256];
 		contact = _call_name_get(ctx, ctx->calls.waiting);
-		snprintf(buf, sizeof(buf), "%s is waiting...", contact);
-		elm_object_part_text_set(ctx->self, "elm.text.waiting", buf);
+		elm_object_part_text_set(ctx->self, "elm.text.waiting",
+						contact);
 		elm_object_signal_emit(ctx->self, "show,waiting", "call");
 		free(contact);
 	} else if ((!ctx->calls.waiting) && (was_waiting)) {
