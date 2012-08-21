@@ -198,6 +198,8 @@ void ofono_modem_connected_cb_del(OFono_Callback_List_Modem_Node *callback_node)
 
 void ofono_pending_cancel(OFono_Pending *pending);
 
+const char *ofono_error_message_get(OFono_Error e);
+
 Eina_Bool ofono_init(void);
 void ofono_shutdown(void);
 

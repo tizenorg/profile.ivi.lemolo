@@ -138,33 +138,50 @@ static Eina_Bool _dbus_bool_get(DBusMessageIter *itr)
 static const struct Error_Map {
 	OFono_Error id;
 	const char *name;
+	const char *message;
 	size_t namelen;
 } error_map[] = {
-#define MAP(id, name) {id, name, sizeof(name) - 1}
-	MAP(OFONO_ERROR_FAILED, "Failed"),
-	MAP(OFONO_ERROR_DOES_NOT_EXIST, "DoesNotExist"),
-	MAP(OFONO_ERROR_IN_PROGRESS, "InProgress"),
-	MAP(OFONO_ERROR_IN_USE, "InUse"),
-	MAP(OFONO_ERROR_INVALID_ARGS, "InvalidArguments"),
-	MAP(OFONO_ERROR_INVALID_FORMAT, "InvalidFormat"),
-	MAP(OFONO_ERROR_ACCESS_DENIED, "AccessDenied"),
-	MAP(OFONO_ERROR_ATTACH_IN_PROGRESS, "AttachInProgress"),
-	MAP(OFONO_ERROR_INCORRECT_PASSWORD, "IncorrectPassword"),
-	MAP(OFONO_ERROR_NOT_ACTIVE, "NotActive"),
-	MAP(OFONO_ERROR_NOT_ALLOWED, "NotAllowed"),
-	MAP(OFONO_ERROR_NOT_ATTACHED, "NotAttached"),
-	MAP(OFONO_ERROR_NOT_AVAILABLE, "NotAvailable"),
-	MAP(OFONO_ERROR_NOT_FOUND, "NotFound"),
-	MAP(OFONO_ERROR_NOT_IMPLEMENTED, "NotImplemented"),
-	MAP(OFONO_ERROR_NOT_RECOGNIZED, "NotRecognized"),
-	MAP(OFONO_ERROR_NOT_REGISTERED, "NotRegistered"),
-	MAP(OFONO_ERROR_NOT_SUPPORTED, "NotSupported"),
-	MAP(OFONO_ERROR_SIM_NOT_READY, "SimNotReady"),
-	MAP(OFONO_ERROR_STK, "SimToolkit"),
-	MAP(OFONO_ERROR_TIMEDOUT, "Timedout"),
+#define MAP(id, name, msg) {id, name, msg, sizeof(name) - 1}
+	MAP(OFONO_ERROR_FAILED, "Failed", "Failed"),
+	MAP(OFONO_ERROR_DOES_NOT_EXIST, "DoesNotExist", "Does not exist"),
+	MAP(OFONO_ERROR_IN_PROGRESS, "InProgress", "Operation in progress"),
+	MAP(OFONO_ERROR_IN_USE, "InUse", "Already in use"),
+	MAP(OFONO_ERROR_INVALID_ARGS, "InvalidArguments", "Invalid arguments"),
+	MAP(OFONO_ERROR_INVALID_FORMAT, "InvalidFormat", "Invalid format"),
+	MAP(OFONO_ERROR_ACCESS_DENIED, "AccessDenied", "Access Denied"),
+	MAP(OFONO_ERROR_ATTACH_IN_PROGRESS, "AttachInProgress",
+		"Attach is already in progress"),
+	MAP(OFONO_ERROR_INCORRECT_PASSWORD, "IncorrectPassword",
+		"Incorrect password"),
+	MAP(OFONO_ERROR_NOT_ACTIVE, "NotActive", "Not active"),
+	MAP(OFONO_ERROR_NOT_ALLOWED, "NotAllowed", "Not allowed"),
+	MAP(OFONO_ERROR_NOT_ATTACHED, "NotAttached", "Not attached"),
+	MAP(OFONO_ERROR_NOT_AVAILABLE, "NotAvailable", "Not available"),
+	MAP(OFONO_ERROR_NOT_FOUND, "NotFound", "Not found"),
+	MAP(OFONO_ERROR_NOT_IMPLEMENTED, "NotImplemented", "Not implemented"),
+	MAP(OFONO_ERROR_NOT_RECOGNIZED, "NotRecognized", "Not recognized"),
+	MAP(OFONO_ERROR_NOT_REGISTERED, "NotRegistered", "Not registered"),
+	MAP(OFONO_ERROR_NOT_SUPPORTED, "NotSupported", "Not supported"),
+	MAP(OFONO_ERROR_SIM_NOT_READY, "SimNotReady", "SIM not ready"),
+	MAP(OFONO_ERROR_STK, "SimToolkit", "SIM Toolkit Failed"),
+	MAP(OFONO_ERROR_TIMEDOUT, "Timedout", "Timed out"),
 #undef MAP
-	{0, NULL, 0}
+	{0, NULL, NULL, 0}
 };
+
+const char *ofono_error_message_get(OFono_Error e)
+{
+	const struct Error_Map *itr;
+
+	if (e == OFONO_ERROR_NONE)
+		return "No error";
+
+	for (itr = error_map; itr->name != NULL; itr++)
+		if (itr->id == e)
+			return itr->message;
+
+	return "Unknown error";
+}
 
 static OFono_Error _ofono_error_parse(const char *name)
 {

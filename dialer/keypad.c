@@ -91,20 +91,7 @@ static void _imei_show(void)
 static void _pin_reply(void *data, OFono_Error error)
 {
 	const char *title = data;
-	const char *msg;
-	switch (error) {
-	case OFONO_ERROR_NONE:
-		msg = "Success";
-		break;
-	case OFONO_ERROR_INVALID_ARGS:
-		msg = "Invalid Arguments";
-		break;
-	case OFONO_ERROR_INVALID_FORMAT:
-		msg = "Invalid Format";
-		break;
-	default:
-		msg = "Failed";
-	}
+	const char *msg = ofono_error_message_get(error);
 
 	gui_simple_popup(title, msg);
 	if (error == OFONO_ERROR_NONE)
@@ -252,8 +239,9 @@ static void _dial_reply(void *data, OFono_Error err,
 
 	if (err != OFONO_ERROR_NONE) {
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "Could not call: %s",
-				eina_strbuf_string_get(ctx->number));
+		const char *msg = ofono_error_message_get(err);
+		snprintf(buf, sizeof(buf), "Could not call %s: %s",
+				eina_strbuf_string_get(ctx->number), msg);
 		gui_simple_popup("Error", buf);
 	}
 }
@@ -300,8 +288,8 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 		if (!ctx->ss_popup)
 			return;
 
-		snprintf(buf, sizeof(buf), "Could not complete.<br>Error #%d",
-				err);
+		snprintf(buf, sizeof(buf), "Could not complete.<br>Error: %s",
+				ofono_error_message_get(err));
 		gui_simple_popup_title_set(ctx->ss_popup, "Error");
 		gui_simple_popup_message_set(ctx->ss_popup, buf);
 		gui_simple_popup_button_dismiss_set(ctx->ss_popup);

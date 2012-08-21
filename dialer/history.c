@@ -239,7 +239,9 @@ static void _dial_reply(void *data, OFono_Error err,
 
 	if (err != OFONO_ERROR_NONE) {
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "Could not call: %s", number);
+		const char *msg = ofono_error_message_get(err);
+		snprintf(buf, sizeof(buf), "Could not call %s: %s",
+				number, msg);
 		gui_simple_popup("Error", buf);
 	}
 }

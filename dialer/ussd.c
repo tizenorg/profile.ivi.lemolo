@@ -40,13 +40,14 @@ static void _ussd_respond_reply(void *data, OFono_Error err, const char *str)
 
 		if (ctx->state == OFONO_USSD_STATE_USER_RESPONSE)
 			snprintf(buf, sizeof(buf),
-					"Could not complete.<br>Error #%d.<br>"
+					"Could not complete.<br>Error: %s.<br>"
 					"Try again:<br><br>%s",
-					err, ctx->message);
+					ofono_error_message_get(err),
+					ctx->message);
 		else
 			snprintf(buf, sizeof(buf),
-					"Could not complete.<br>Error #%d.",
-					err);
+					"Could not complete.<br>Error: %s.",
+					ofono_error_message_get(err));
 
 		gui_simple_popup_title_set(ctx->popup, "Error");
 		gui_simple_popup_message_set(ctx->popup, buf);
