@@ -232,20 +232,6 @@ static Eina_Bool _history_call_info_update(Call_Info *call_info)
 	return EINA_FALSE;
 }
 
-static void _dial_reply(void *data, OFono_Error err,
-			OFono_Call *call __UNUSED__)
-{
-	const char *number = data;
-
-	if (err != OFONO_ERROR_NONE) {
-		char buf[1024];
-		const char *msg = ofono_error_message_get(err);
-		snprintf(buf, sizeof(buf), "Could not call %s: %s",
-				number, msg);
-		gui_simple_popup("Error", buf);
-	}
-}
-
 static void _on_item_clicked(void *data, Evas_Object *obj __UNUSED__,
 				void *event_info)
 {
@@ -253,7 +239,7 @@ static void _on_item_clicked(void *data, Evas_Object *obj __UNUSED__,
 	const char *number = data;
 
 	INF("call %s", number);
-	ofono_dial(number, NULL, _dial_reply, number);
+	dial(number);
 	elm_genlist_item_selected_set(it, EINA_FALSE);
 }
 

@@ -287,7 +287,7 @@ static void _popup_redial(void *data, Evas_Object *o __UNUSED__, void *event __U
 {
 	Callscreen *ctx = data;
 
-	ofono_dial(ctx->disconnected.number, NULL, NULL, NULL);
+	dial(ctx->disconnected.number);
 	_popup_close(ctx, NULL, NULL);
 }
 

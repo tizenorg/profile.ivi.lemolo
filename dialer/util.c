@@ -7,6 +7,7 @@
 #include <Evas.h>
 #include <Elementary.h>
 
+#include "gui.h"
 #include "util.h"
 
 /* TODO: find a configurable way to format the number.
@@ -118,4 +119,26 @@ Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)
 		elm_image_file_set(icon, path, NULL);
 	}
 	return icon;
+}
+
+static void _dial_reply(void *data, OFono_Error err,
+			OFono_Call *call __UNUSED__)
+{
+	char *number = data;
+
+	if (err != OFONO_ERROR_NONE) {
+		char buf[1024];
+		const char *msg = ofono_error_message_get(err);
+		snprintf(buf, sizeof(buf), "Could not call %s: %s",
+				number, msg);
+		gui_simple_popup("Error", buf);
+	}
+
+	free(number);
+}
+
+OFono_Pending *dial(const char *number)
+{
+	char *copy = strdup(number);
+	return ofono_dial(copy, NULL, _dial_reply, copy);
 }

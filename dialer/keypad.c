@@ -232,26 +232,12 @@ static Eina_Bool _handle_if_mmi(Keypad *ctx)
 	return EINA_FALSE;
 }
 
-static void _dial_reply(void *data, OFono_Error err,
-			OFono_Call *call __UNUSED__)
-{
-	Keypad *ctx = data;
-
-	if (err != OFONO_ERROR_NONE) {
-		char buf[1024];
-		const char *msg = ofono_error_message_get(err);
-		snprintf(buf, sizeof(buf), "Could not call %s: %s",
-				eina_strbuf_string_get(ctx->number), msg);
-		gui_simple_popup("Error", buf);
-	}
-}
-
 static void _dial(Keypad *ctx)
 {
 	const char *number = eina_strbuf_string_get(ctx->number);
 
 	INF("call %s", number);
-	ofono_dial(number, NULL, _dial_reply, ctx);
+	dial(number);
 	eina_stringshare_replace(&(ctx->last), number);
 	eina_strbuf_reset(ctx->number);
 	_number_display(ctx);

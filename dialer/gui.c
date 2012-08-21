@@ -407,27 +407,13 @@ static void _gui_call_sync(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 	in_flip_anim = EINA_FALSE;
 }
 
-static void _dial_reply(void *data, OFono_Error err,
-			OFono_Call *call __UNUSED__)
-{
-	const char *number = data;
-
-	if (err != OFONO_ERROR_NONE) {
-		char buf[1024];
-		const char *msg = ofono_error_message_get(err);
-		snprintf(buf, sizeof(buf), "Could not call %s: %s",
-				number, msg);
-		gui_simple_popup("Error", buf);
-	}
-}
-
 static void _gui_voicemail(void)
 {
 	const char *number = ofono_voicemail_number_get();
 	EINA_SAFETY_ON_NULL_RETURN(number);
 	EINA_SAFETY_ON_FALSE_RETURN(*number != '\0');
 
-	ofono_dial(number, NULL, _dial_reply, number);
+	dial(number);
 }
 
 static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
