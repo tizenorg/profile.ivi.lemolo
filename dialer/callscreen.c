@@ -682,7 +682,8 @@ static void _call_changed(void *data, OFono_Call *c)
 	if ((is_held) && (!was_held)) {
 		elm_object_signal_emit(ctx->self, "show,held", "call");
 		_multiparty_private_available_update(ctx);
-	} else if ((!is_held) && (was_held)) {
+	} else if (((!is_held) && (was_held)) ||
+			(ctx->calls.active == ctx->calls.held)) {
 		elm_object_part_text_set(ctx->self, "elm.text.held", "");
 		elm_object_signal_emit(ctx->self, "hide,held", "call");
 		_multiparty_private_available_update(ctx);
