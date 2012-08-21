@@ -20,6 +20,10 @@ void gui_simple_popup_buttons_set(Evas_Object *p,
 					Evas_Smart_Cb b2_cb,
 					const void *data);
 
+void gui_simple_popup_entry_enable(Evas_Object *p);
+void gui_simple_popup_entry_disable(Evas_Object *p);
+const char *gui_simple_popup_entry_get(const Evas_Object *p);
+
 
 void gui_activate(void);
 void gui_number_set(const char *number, Eina_Bool auto_dial);

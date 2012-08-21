@@ -371,8 +371,91 @@ group {
 }
 
 group {
-   name: "elm/entry/base/dialer-popup";
-   alias: "elm/entry/base-noedit/dialer-popup";
+   name: "elm/entry/cursor/dialer";
+   parts {
+      part {
+         name: "cursor";
+         type: RECT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color_class: "action";
+            min: ITEM_PADDING (SEPARATOR_HEIGHT / 2);
+            align: 0.5 1.0;
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -1;
+            }
+         }
+         description {
+            state: "faded" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 128;
+         }
+      }
+      programs {
+         program {
+            name: "focus";
+            signal: "elm,action,focus";
+            source: "elm";
+            action: ACTION_STOP;
+            target: "unfocus";
+            target: "unfocus2";
+            after: "focus2";
+         }
+         program {
+            name: "focus2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "cursor";
+            after: "focus3";
+         }
+         program {
+            name: "focus3";
+            action: STATE_SET "faded" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "cursor";
+            after: "focus2";
+         }
+
+         program {
+            name: "unfocus";
+            signal: "elm,action,unfocus";
+            source: "elm";
+            action: ACTION_STOP;
+            target: "focus";
+            target: "focus2";
+            target: "focus3";
+            after: "unfocus2";
+         }
+         program {
+            name: "unfocus2";
+            action: STATE_SET "faded" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "cursor";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/entry/selection/dialer";
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color_class: "dark";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/entry/base-noedit/dialer-popup";
 
    styles {
       style {
@@ -388,6 +471,7 @@ group {
          tag: "br" "\n";
       }
    }
+
    parts {
       part {
          name: "elm.text";
@@ -395,6 +479,8 @@ group {
          mouse_events: 1;
          scale: 1;
          multiline: 1;
+         source: "elm/entry/selection/dialer";
+         source4: "elm/entry/cursor/dialer";
          description {
             state: "default" 0.0;
             text {
@@ -409,6 +495,77 @@ group {
             inherit: "default" 0.0;
             text {
                style: "entry_textblock_disabled_style";
+            }
+         }
+      }
+   }
+
+   programs {
+      program {
+         signal: "load";
+         source: "";
+         action: FOCUS_SET;
+         target: "elm.text";
+      }
+      program {
+         signal: "elm,state,disabled";
+         source: "elm";
+         action: STATE_SET "disabled" 0.0;
+         target: "elm.text";
+      }
+      program {
+         signal: "elm,state,enabled";
+         source: "elm";
+         action: STATE_SET "default" 0.0;
+         target: "elm.text";
+      }
+   }
+}
+
+group {
+   name: "elm/entry/base/dialer-popup-editable";
+
+   styles {
+      style {
+         name: "entry_textblock_editable_style";
+         base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=word valign=top align=auto";
+         tag:  "b" "+ font_weight=Bold";
+         tag: "br" "\n";
+      }
+      style {
+         name: "entry_textblock_editable_disabled_style";
+         base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=word valign=top align=auto";
+         tag:  "b" "+ font_weight=Bold";
+         tag: "br" "\n";
+      }
+   }
+
+   parts {
+      part {
+         name: "elm.text";
+         type: TEXTBLOCK;
+         mouse_events: 1;
+         scale: 1;
+         entry_mode: EDITABLE;
+         select_mode: EXPLICIT;
+         source: "elm/entry/selection/dialer";
+         source4: "elm/entry/cursor/dialer";
+         multiline: 1;
+         description {
+            state: "default" 0.0;
+            align: 0.0 0.0;
+            text {
+               style: "entry_textblock_editable_style";
+               min: 0 1;
+               max: 1 1;
+               align: -1.0 0.0;
+            }
+         }
+         description {
+            state: "disabled" 0.0;
+            inherit: "default" 0.0;
+            text {
+               style: "entry_textblock_editable_disabled_style";
             }
          }
       }
