@@ -9,6 +9,7 @@
 #include "history.h"
 #include "callscreen.h"
 #include "ussd.h"
+#include "util.h"
 
 static Evas_Object *win = NULL;
 static Evas_Object *main_layout = NULL;
