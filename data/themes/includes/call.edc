@@ -437,6 +437,30 @@ group {
          }
       }
 
+
+      part {
+         name: "area.held";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.held";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            rel1.to_y: "elm.text.held";
+            rel2 {
+               to_x: "elm.text.held";
+               to_y: "label.held";
+            }
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,clicked,1";
+            source: "area.held";
+            action: SIGNAL_EMIT "clicked,swap" "call";
+         }
+      }
+
       part {
          name: "elm.text.held";
          type: TEXT;
@@ -540,13 +564,13 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: WIDTH (ACTION_HEIGHT * 2);
+            min: WIDTH ACTION_HEIGHT;
             max: WIDTH 99999; /* keep it tight centered */
             fixed: 1 1;
             rel1 {
                to: "bg.buttons";
                relative: 0.0 0.0;
-               offset: 0 (-ACTION_HEIGHT * 2 - SEPARATOR_HEIGHT);
+               offset: 0 (-ACTION_HEIGHT - SEPARATOR_HEIGHT);
             }
             rel2 {
                to: "bg.buttons";
@@ -650,8 +674,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: ACTION_HEIGHT ACTION_HEIGHT;				\
+            max: ACTION_HEIGHT ACTION_HEIGHT;				\
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \
@@ -789,8 +813,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \
@@ -915,8 +939,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \
@@ -981,8 +1005,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: ACTION_WIDTH ACTION_HEIGHT;                            \
-            max: ACTION_WIDTH ACTION_HEIGHT;                            \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
             fixed: 1 1;                                                 \
             visible: 0;                                                 \
             rel1 {                                                      \
@@ -1120,15 +1144,13 @@ group {
          }                                                              \
       }
 
-      ACTION_TOGGLE("mute",    "mute",    0.000000000 0.0, 0.333333333 0.5);
-      ACTION_BUTTON("keypad",  "keypad",  0.333333333 0.0, 0.666666666 0.5);
-      ACTION_TOGGLE("speaker", "speaker", 0.666666666 0.0, 1.000000000 0.5);
+      ACTION_TOGGLE("mute",    "mute",    0.00 0.0, 0.25 1.0);
+      ACTION_TOGGLE("speaker", "speaker", 0.25 0.0, 0.50 1.0);
+      ACTION_BUTTON("keypad",  "keypad",  0.50 0.0, 0.75 1.0);
 
-      ACTION_HIDEABLE("merge",    "merge",  0.000000000 0.5, 0.333333333 1.0);
-      ACTION_HIDEABLE("add-call", "add_call",0.000000000 0.5, 0.333333333 1.0);
+      ACTION_HIDEABLE("merge",    "merge",  0.75 0.0, 1.0 1.0);
+      ACTION_HIDEABLE("add-call", "add_call", 0.75 0.0, 1.0 1.0);
 
-      ACTION_BUTTON("swap",     "swap",   0.333333333 0.5, 0.666666666 1.0);
-      ACTION_BUTTON("contacts", "contacts",0.666666666 0.5, 1.000000000 1.0);
 #undef ACTION_BUTTON
 #undef ACTION_TOGGLE
 
@@ -2014,7 +2036,7 @@ group {
       }
 
 #define BUTTON(id, label, colcls, prev)                                 \
-      SEPARATOR(id, "clipper."##id, 0.0, -SEPARATOR_HEIGHT, "button."##id);            \
+      SEPARATOR(id, "clipper."##id, 0.0, -SEPARATOR_HEIGHT, "button."##id); \
       part {                                                            \
          name: "clipper."##id;                                          \
          type: RECT;                                                    \
