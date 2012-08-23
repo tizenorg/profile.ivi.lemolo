@@ -203,4 +203,6 @@ const char *ofono_error_message_get(OFono_Error e);
 Eina_Bool ofono_init(void);
 void ofono_shutdown(void);
 
+Eina_Bool ofono_voice_is_online(void);
+
 #endif

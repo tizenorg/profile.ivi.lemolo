@@ -2993,3 +2993,19 @@ void ofono_call_removed_cb_del(OFono_Callback_List_Call_Node *node)
 	EINA_SAFETY_ON_NULL_RETURN(node);
 	_ofono_callback_call_list_delete(&cbs_call_removed, node);
 }
+
+Eina_Bool ofono_voice_is_online(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+
+	/* The modem is expected to be NULL here, because maybe
+	 * OFono isn't up yet.
+	 */
+	if (!m)
+		return EINA_FALSE;
+
+	if (m->interfaces & OFONO_API_VOICE)
+		return EINA_TRUE;
+
+	return EINA_FALSE;
+}

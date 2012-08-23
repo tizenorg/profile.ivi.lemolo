@@ -5,6 +5,7 @@
 
 #include "log.h"
 #include "gui.h"
+#include "ofono.h"
 
 static E_DBus_Connection *bus_conn = NULL;
 static E_DBus_Object *bus_obj = NULL;
@@ -14,6 +15,46 @@ static E_DBus_Interface *bus_iface = NULL;
 #define RC_PATH "/"
 
 static const char *rc_service = NULL;
+static OFono_Callback_List_Modem_Node *modem_changed_node = NULL;
+static DBusMessage *pending_dial = NULL;
+
+static void _dial_number(const char *number, Eina_Bool do_auto)
+{
+	INF("dial '%s' auto=%d!", number, do_auto);
+	gui_activate();
+	gui_call_exit();
+	gui_number_set(number, do_auto);
+}
+
+static void _modem_changed_cb(void *data __UNUSED__)
+{
+	DBusError err;
+	const char *number;
+	dbus_bool_t do_auto;
+	DBusMessage *reply;
+
+	if (!ofono_voice_is_online() || !pending_dial)
+		return;
+
+	dbus_error_init(&err);
+	dbus_message_get_args(pending_dial, &err, DBUS_TYPE_STRING, &number,
+				DBUS_TYPE_BOOLEAN, &do_auto, DBUS_TYPE_INVALID);
+
+	if (dbus_error_is_set(&err)) {
+		ERR("Could not parse message: %s: %s", err.name, err.message);
+		reply = dbus_message_new_error(pending_dial, err.name,
+						err.message);
+		goto reply_send;
+	}
+
+	_dial_number(number, do_auto);
+	reply = dbus_message_new_method_return(pending_dial);
+reply_send:
+	e_dbus_message_send(bus_conn, reply, NULL, -1, NULL);
+	dbus_message_unref(pending_dial);
+	dbus_message_unref(reply);
+	pending_dial = NULL;
+}
 
 static DBusMessage *
 _rc_activate(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
@@ -30,6 +71,13 @@ _rc_dial(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
 	dbus_bool_t do_auto;
 	const char *number;
 
+	if (!ofono_voice_is_online()) {
+		if (pending_dial)
+			dbus_message_unref(pending_dial);
+		pending_dial = dbus_message_ref(msg);
+		return NULL;
+	}
+
 	dbus_error_init(&err);
 	dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &number,
 				DBUS_TYPE_BOOLEAN, &do_auto, DBUS_TYPE_INVALID);
@@ -37,11 +85,7 @@ _rc_dial(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
 		ERR("Could not parse message: %s: %s", err.name, err.message);
 		return dbus_message_new_error(msg, err.name, err.message);
 	}
-
-	INF("dial '%s' auto=%d!", number, do_auto);
-	gui_activate();
-	gui_call_exit();
-	gui_number_set(number, do_auto);
+	_dial_number(number, do_auto);
 	return dbus_message_new_method_return(msg);
 }
 
@@ -131,6 +175,10 @@ Eina_Bool rc_init(const char *service)
 
 	e_dbus_request_name(bus_conn, rc_service, DBUS_NAME_FLAG_DO_NOT_QUEUE,
 				_rc_request_name_reply, NULL);
+
+	modem_changed_node = ofono_modem_changed_cb_add(_modem_changed_cb,
+							NULL);
+
 	return EINA_TRUE;
 }
 
@@ -140,5 +188,11 @@ void rc_shutdown(void)
 		e_dbus_object_free(bus_obj);
 	if (bus_iface)
 		e_dbus_interface_unref(bus_iface);
+
+	ofono_modem_changed_cb_del(modem_changed_node);
+
+	if (pending_dial)
+		dbus_message_unref(pending_dial);
+
 	bus_conn = NULL;
 }
