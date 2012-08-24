@@ -412,6 +412,14 @@ static void _bus_object_signal_listen(OFono_Bus_Object *o, const char *iface,
 	o->dbus_signals = eina_list_append(o->dbus_signals, sh);
 }
 
+typedef struct _OFono_Call_Cb_Context
+{
+	OFono_Call_Cb cb;
+	OFono_Modem *modem;
+	const void *data;
+	const char *name;
+} OFono_Call_Cb_Context;
+
 struct _OFono_Call
 {
 	OFono_Bus_Object base;
@@ -423,6 +431,7 @@ struct _OFono_Call
 	OFono_Call_State state;
 	Eina_Bool multiparty : 1;
 	Eina_Bool emergency : 1;
+	OFono_Call_Cb_Context *pending_dial;
 };
 
 struct _OFono_Modem
@@ -616,20 +625,10 @@ static void _call_disconnect_reason(void *data, DBusMessage *msg)
 							c, reason);
 }
 
-static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
+static OFono_Call *_call_common_add(OFono_Modem *m, const char *path)
 {
-	OFono_Call *c;
-
-	DBG("path=%s", path);
-
-	c = eina_hash_find(m->calls, path);
-	if (c) {
-		DBG("Call already exists %p (%s)", c, path);
-		goto update_properties;
-	}
-
-	c = _call_new(path);
-	EINA_SAFETY_ON_NULL_RETURN(c);
+	OFono_Call *c = _call_new(path);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 	eina_hash_add(m->calls, c->base.path, c);
 
 	_bus_object_signal_listen(&c->base,
@@ -640,12 +639,37 @@ static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 					OFONO_PREFIX "VoiceCall",
 					"PropertyChanged",
 					_call_property_changed, c);
+	return c;
+}
 
-	_notify_ofono_callbacks_call_list(cbs_call_added, c);
+static OFono_Call *_call_pending_add(OFono_Modem *m, const char *path,
+					OFono_Call_Cb_Context *ctx)
+{
+	OFono_Call *c;
 
-update_properties:
-	if (!prop)
-		return;
+	DBG("path=%s, ctx=%p", path, ctx);
+
+	c = _call_common_add(m, path);
+	c->pending_dial = ctx;
+	return c;
+}
+
+static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
+{
+	OFono_Call *c;
+	Eina_Bool needs_cb_added;
+
+	DBG("path=%s, prop=%p", path, prop);
+
+	c = eina_hash_find(m->calls, path);
+	needs_cb_added = !c;
+	if (c)
+		DBG("Call already exists %p (%s)", c, path);
+	else {
+		c = _call_common_add(m, path);
+		EINA_SAFETY_ON_NULL_RETURN(c);
+	}
+
 	for (; dbus_message_iter_get_arg_type(prop) == DBUS_TYPE_DICT_ENTRY;
 			dbus_message_iter_next(prop)) {
 		DBusMessageIter entry, value;
@@ -659,6 +683,18 @@ update_properties:
 
 		_call_property_update(c, key, &value);
 	}
+
+	if (c->pending_dial) {
+		OFono_Call_Cb_Context *ctx = c->pending_dial;
+		if (ctx->cb)
+			ctx->cb((void *)ctx->data, OFONO_ERROR_NONE, c);
+		free(ctx);
+		c->pending_dial = NULL;
+		needs_cb_added = EINA_TRUE;
+	}
+
+	if (needs_cb_added)
+		_notify_ofono_callbacks_call_list(cbs_call_added, c);
 
 	_notify_ofono_callbacks_call_list(cbs_call_changed, c);
 }
@@ -2131,14 +2167,6 @@ OFono_Pending *ofono_ussd_cancel(OFono_Simple_Cb cb, const void *data)
 	return _ofono_simple_do(OFONO_API_SUPPL_SERV, "Cancel", cb, data);
 }
 
-typedef struct _OFono_Call_Cb_Context
-{
-	OFono_Call_Cb cb;
-	OFono_Modem *modem;
-	const void *data;
-	const char *name;
-} OFono_Call_Cb_Context;
-
 static void _ofono_dial_reply(void *data, DBusMessage *msg, DBusError *err)
 {
 	OFono_Call_Cb_Context *ctx = data;
@@ -2160,14 +2188,19 @@ static void _ofono_dial_reply(void *data, DBusMessage *msg, DBusError *err)
 			oe = OFONO_ERROR_FAILED;
 		} else {
 			c = eina_hash_find(ctx->modem->calls, path);
+			DBG("path=%s, existing call=%p", path, c);
 			if (!c) {
-				_call_add(ctx->modem, path, NULL);
-				c = eina_hash_find(ctx->modem->calls, path);
+				c = _call_pending_add(ctx->modem, path, ctx);
+				if (c) {
+					/* ctx->cb will be dispatched on
+					 * CallAdded signal handler.
+					 */
+					return;
+				}
 			}
-			if (!c) {
-				ERR("Could not find call %s", path);
-				oe = OFONO_ERROR_FAILED;
-			}
+
+			ERR("Could not find call %s", path);
+			oe = OFONO_ERROR_FAILED;
 		}
 	}
 
