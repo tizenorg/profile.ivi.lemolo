@@ -19,12 +19,13 @@ typedef struct _Callscreen
 		double start;
 	} multiparty;
 	struct {
-		OFono_Call *active;
+		OFono_Call *first;
+		OFono_Call *second;
+		OFono_Call *current; /* first or second */
 		OFono_Call *waiting;
-		OFono_Call *held;
+		OFono_Call *incoming; /* should be first && current */
 		Eina_List *list;
 	} calls;
-	OFono_Call_State last_state;
 	Ecore_Timer *elapsed_updater;
 	struct {
 		Eina_Strbuf *todo;
@@ -54,8 +55,45 @@ static OFono_Callback_List_Call_Node *callback_node_call_changed = NULL;
 static OFono_Callback_List_Call_Disconnected_Node
 *callback_node_call_disconnected = NULL;
 
-static char *_call_name_or_id(const OFono_Call *call);
-static char *_call_type_get(const OFono_Call *call);
+static char *_call_name_or_id(const OFono_Call *call)
+{
+	const char *s = ofono_call_line_id_get(call);
+	Contact_Info *info;
+
+	if (!s)
+		return NULL;;
+
+	info = gui_contact_search(s, NULL);
+	if (info)
+		return strdup(contact_info_full_name_get(info));
+
+	return phone_format(s);
+}
+
+static char *_call_name_get(const Callscreen *ctx __UNUSED__,
+				const OFono_Call *call)
+{
+	if (!ofono_call_multiparty_get(call))
+		return _call_name_or_id(call);
+
+	return strdup("Conference");
+}
+
+static const char *_call_type_get(const OFono_Call *call)
+{
+	const char *type;
+	const char *s = ofono_call_line_id_get(call);
+	Contact_Info *info;
+
+	if (!s)
+		return NULL;
+
+	info = gui_contact_search(s, &type);
+	if (info)
+		return type;
+
+	return NULL;
+}
 
 static void _on_mp_hangup(void *data, Evas_Object *o __UNUSED__,
 				const char *emission __UNUSED__,
@@ -137,7 +175,8 @@ repopulate:
 	}
 
 	EINA_LIST_FOREACH(new, n1, c) {
-		char *name, *number, *type;
+		char *name, *number;
+		const char *type;
 
 		name = _call_name_or_id(c);
 		type = _call_type_get(c);
@@ -169,7 +208,6 @@ repopulate:
 
 		free(name);
 		free(number);
-		free(type);
 	}
 	elm_object_signal_emit(ctx->self, "show,multiparty-details", "call");
 }
@@ -177,101 +215,469 @@ repopulate:
 static void _multiparty_private_available_update(Callscreen *ctx)
 {
 	Eina_List *lst = elm_box_children_get(ctx->multiparty.bx);
-	const char *sig = ctx->calls.held ? "hide,private" : "show,private";
+	const char *sig = ctx->calls.second ? "hide,private" : "show,private";
 	Evas_Object *it;
 
 	EINA_LIST_FREE(lst, it)
 		elm_object_signal_emit(it, sig, "call");
 }
 
-static void _calls_update(Callscreen *ctx)
+static void _call_text_set(Callscreen *ctx, unsigned int id,
+				const char *part, const char *str)
 {
-	const Eina_List *n;
-	OFono_Call *c, *found = NULL, *waiting = NULL, *held = NULL;
-	OFono_Call_State found_state = OFONO_CALL_STATE_DISCONNECTED;
-	static const int state_priority[] = {
-		[OFONO_CALL_STATE_DISCONNECTED] = 0,
-		[OFONO_CALL_STATE_ACTIVE] = 6,
-		[OFONO_CALL_STATE_HELD] = 3,
-		[OFONO_CALL_STATE_DIALING] = 5,
-		[OFONO_CALL_STATE_ALERTING] = 4,
-		[OFONO_CALL_STATE_INCOMING] = 2,
-		[OFONO_CALL_STATE_WAITING] = 1
-	};
-
-	if (ctx->calls.active) {
-		OFono_Call_State s = ofono_call_state_get(ctx->calls.active);
-		if (s != OFONO_CALL_STATE_ACTIVE) {
-			ctx->calls.active = NULL;
-			ctx->last_state = 0;
-		}
-	}
-	if (ctx->calls.waiting) {
-		OFono_Call_State s = ofono_call_state_get(ctx->calls.waiting);
-		if (s != OFONO_CALL_STATE_WAITING)
-			ctx->calls.waiting = NULL;
-	}
-	if (ctx->calls.held) {
-		OFono_Call_State s = ofono_call_state_get(ctx->calls.held);
-		if (s != OFONO_CALL_STATE_HELD)
-			ctx->calls.held = NULL;
-	}
-
-	_multiparty_update(ctx);
-
-	if (ctx->calls.active && ctx->calls.waiting && ctx->calls.held)
-		return;
-
-	EINA_LIST_FOREACH(ctx->calls.list, n, c) {
-		OFono_Call_State state = ofono_call_state_get(c);
-
-		DBG("compare %p (%d) to %p (%d)", found, found_state,
-			c, state);
-		if (state_priority[state] > state_priority[found_state]) {
-			found_state = state;
-			found = c;
-		}
-		if ((!waiting) && (state == OFONO_CALL_STATE_WAITING))
-			waiting = c;
-		if ((!held) && (state == OFONO_CALL_STATE_HELD))
-			held = c;
-	}
-
-	DBG("found=%p, state=%d, waiting=%p, held=%p",
-		found, found_state, waiting, held);
-	if (!found)
-		return;
-
-	if (!ctx->calls.active) {
-		ctx->calls.active = found;
-		ctx->last_state = 0;
-	}
-	if (!ctx->calls.waiting)
-		ctx->calls.waiting = waiting;
-	if (!ctx->calls.held)
-		ctx->calls.held = held;
-
-	if (ctx->calls.active)
-		gui_call_enter();
+	char buf[128];
+	snprintf(buf, sizeof(buf), "elm.text.%u.%s", id, part);
+	elm_object_part_text_set(ctx->self, buf, str ? str : "");
 }
 
-static void _call_disconnected_done(Callscreen *ctx,
-					const char *reason __UNUSED__)
+static const char *_call_state_str(OFono_Call_State state)
 {
-	_calls_update(ctx);
+	switch (state) {
+	case OFONO_CALL_STATE_DISCONNECTED:
+		return "Disconnected";
+	case OFONO_CALL_STATE_ACTIVE:
+		return "Active";
+	case OFONO_CALL_STATE_HELD:
+		return "On Hold";
+	case OFONO_CALL_STATE_DIALING:
+		return "Dialing...";
+	case OFONO_CALL_STATE_ALERTING:
+		return "Alerting...";
+	case OFONO_CALL_STATE_INCOMING:
+		return "Incoming...";
+	case OFONO_CALL_STATE_WAITING:
+		return "Waiting...";
+	default:
+		ERR("unknown state: %d", state);
+		return NULL;
+	}
+}
 
-	if (!ctx->calls.list) {
+static const char *_call_state_id(OFono_Call_State state)
+{
+	switch (state) {
+	case OFONO_CALL_STATE_DISCONNECTED:
+		return "disconnected";
+	case OFONO_CALL_STATE_ACTIVE:
+		return "active";
+	case OFONO_CALL_STATE_HELD:
+		return "held";
+	case OFONO_CALL_STATE_DIALING:
+		return "dialing";
+	case OFONO_CALL_STATE_ALERTING:
+		return "alerting";
+	case OFONO_CALL_STATE_INCOMING:
+		return "incoming";
+	case OFONO_CALL_STATE_WAITING:
+		return "waiting";
+	default:
+		ERR("unknown state: %d", state);
+		return NULL;
+	}
+}
+
+static void _call_show(Callscreen *ctx, unsigned int id, const OFono_Call *c)
+{
+	char *contact = _call_name_get(ctx, c);
+	const char *type = _call_type_get(c);
+	const char *status = _call_state_str(ofono_call_state_get(c));
+
+	_call_text_set(ctx, id, "name", contact);
+	_call_text_set(ctx, id, "phone.type", type);
+	_call_text_set(ctx, id, "status", status);
+	_call_text_set(ctx, id, "elapsed", "");
+
+	free(contact);
+}
+
+static void _call_elapsed_update(Callscreen *ctx, unsigned int id,
+					const OFono_Call *c)
+{
+	Edje_Message_Float msgf = {0};
+	Evas_Object *ed;
+	double start, now, elapsed;
+	char part[128], buf[128] = "";
+
+	if (ofono_call_multiparty_get(c))
+		start = ctx->multiparty.start;
+	else
+		start = ofono_call_start_time_get(c);
+
+	if (start < 0) {
+		ERR("Unknown start time for call");
+		goto end;
+	}
+
+	now = ecore_loop_time_get();
+	elapsed =  now - start;
+	if (elapsed < 0) {
+		ERR("Time rewinded? %f - %f = %f", now, start, elapsed);
+		goto end;
+	}
+
+	msgf.val = elapsed;
+	if (elapsed > 3600)
+		snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+				(int)elapsed / 3600,
+				(int)elapsed % 3600 / 60,
+				(int)elapsed % 60);
+	else
+		snprintf(buf, sizeof(buf), "%02d:%02d",
+				(int)elapsed / 60,
+				(int)elapsed % 60);
+
+end:
+	ed = elm_layout_edje_get(ctx->self);
+	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 10 + id, &msgf);
+
+	snprintf(part, sizeof(part), "elm.text.%u.elapsed", id);
+	elm_object_part_text_set(ctx->self, part, buf);
+}
+
+static void _activecall_elapsed_update(Callscreen *ctx)
+{
+	Edje_Message_Float msgf = {0};
+	Evas_Object *ed;
+	double start, now, elapsed;
+	char buf[128] = "";
+
+	if (ofono_call_multiparty_get(ctx->calls.current))
+		start = ctx->multiparty.start;
+	else
+		start = ofono_call_start_time_get(ctx->calls.current);
+
+	if (start < 0) {
+		ERR("Unknown start time for call");
+		goto end;
+	}
+
+	now = ecore_loop_time_get();
+	elapsed =  now - start;
+	if (elapsed < 0) {
+		ERR("Time rewinded? %f - %f = %f", now, start, elapsed);
+		goto end;
+	}
+
+	msgf.val = elapsed;
+	if (elapsed > 3600)
+		snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+				(int)elapsed / 3600,
+				(int)elapsed % 3600 / 60,
+				(int)elapsed % 60);
+	else
+		snprintf(buf, sizeof(buf), "%02d:%02d",
+				(int)elapsed / 60,
+				(int)elapsed % 60);
+
+end:
+	ed = elm_layout_edje_get(ctx->gui_activecall);
+	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 1, &msgf);
+
+	elm_object_part_text_set(ctx->gui_activecall, "elm.text.elapsed", buf);
+}
+
+static void _call_update(Callscreen *ctx, unsigned int id, const OFono_Call *c)
+{
+	Evas_Object *o = ctx->self;
+	OFono_Call_State state = ofono_call_state_get(c);
+	const char *status_label = _call_state_str(state);
+	const char *status_id = _call_state_id(state);
+	char buf[128];
+
+	_call_text_set(ctx, id, "status", status_label);
+
+	snprintf(buf, sizeof(buf), "state,%u,%s", id, status_id);
+	elm_object_signal_emit(o, buf, "call");
+
+	snprintf(buf, sizeof(buf), "%s,%u,multiparty",
+			ofono_call_multiparty_get(c) ? "show" : "hide", id);
+	elm_object_signal_emit(o, buf, "call");
+
+	if ((state == OFONO_CALL_STATE_ACTIVE) ||
+		(state == OFONO_CALL_STATE_HELD)) {
+		_call_elapsed_update(ctx, id, c);
+		snprintf(buf, sizeof(buf), "show,%u,elapsed", id);
+		elm_object_signal_emit(o, buf, "call");
+	} else {
+		Edje_Message_Float msgf;
+
+		_call_text_set(ctx, id, "elapsed", "");
+		snprintf(buf, sizeof(buf), "hide,%u,elapsed", id);
+		elm_object_signal_emit(o, buf, "call");
+
+		msgf.val = 0.0;
+		edje_object_message_send(elm_layout_edje_get(o),
+				EDJE_MESSAGE_FLOAT, 10 + id, &msgf);
+	}
+}
+
+static void _call_clear(Callscreen *ctx, unsigned int id)
+{
+	Evas_Object *o = ctx->self;
+	Edje_Message_Float msgf;
+	char buf[128];
+
+	_call_text_set(ctx, id, "name", "");
+	_call_text_set(ctx, id, "phone.type", "");
+	_call_text_set(ctx, id, "status", "");
+	_call_text_set(ctx, id, "elapsed", "");
+
+	snprintf(buf, sizeof(buf), "state,%u,disconnected", id);
+	elm_object_signal_emit(o, buf, "call");
+
+	snprintf(buf, sizeof(buf), "hide,%u,multiparty", id);
+	elm_object_signal_emit(o, buf, "call");
+
+	snprintf(buf, sizeof(buf), "hide,%u,elapsed", id);
+	elm_object_signal_emit(o, buf, "call");
+
+	msgf.val = 0.0;
+	edje_object_message_send(elm_layout_edje_get(o),
+					EDJE_MESSAGE_FLOAT, 10 + id, &msgf);
+}
+
+static void _activecall_update(Callscreen *ctx)
+{
+	OFono_Call_State state = ofono_call_state_get(ctx->calls.current);
+	char *contact = _call_name_get(ctx, ctx->calls.current);
+	const char *type = _call_type_get(ctx->calls.current);
+	const char *status_label = _call_state_str(state);
+	const char *status_id = _call_state_id(state);
+	Evas_Object *o = ctx->gui_activecall;
+	char buf[128];
+
+	elm_object_part_text_set(o, "elm.text.name", contact);
+	elm_object_part_text_set(o, "elm.text.phone.type", type);
+	elm_object_part_text_set(o, "elm.text.status", status_label);
+
+	snprintf(buf, sizeof(buf), "state,%s", status_id);
+	elm_object_signal_emit(o, buf, "call");
+
+	_activecall_elapsed_update(ctx);
+
+	free(contact);
+}
+
+static void _call_waiting_set(Callscreen *ctx, OFono_Call *c)
+{
+	Evas_Object *o = ctx->self;
+
+	if (!c) {
+		elm_object_part_text_set(o, "elm.text.waiting", "");
+		elm_object_signal_emit(o, "hide,waiting", "call");
+	} else {
+		char *name = _call_name_get(ctx, c);
+		elm_object_part_text_set(o, "elm.text.waiting", name);
+		elm_object_signal_emit(o, "show,waiting", "call");
+		free(name);
+	}
+
+	ctx->calls.waiting = c;
+}
+
+static void _call_incoming_set(Callscreen *ctx, OFono_Call *c)
+{
+	Evas_Object *o = ctx->self;
+
+	if (!c)
+		elm_object_signal_emit(o, "hide,answer", "call");
+	else
+		elm_object_signal_emit(o, "show,answer", "call");
+
+	ctx->calls.incoming = c;
+}
+
+static void _call_current_actions_update(Callscreen *ctx)
+{
+	Evas_Object *o = ctx->self;
+	OFono_Call_State s;
+
+	if (ctx->calls.current)
+		s = ofono_call_state_get(ctx->calls.current);
+	else
+		s = OFONO_CALL_STATE_DISCONNECTED;
+
+	if ((s == OFONO_CALL_STATE_ACTIVE) || (s == OFONO_CALL_STATE_HELD))
+		elm_object_signal_emit(o, "enable,actions", "call");
+	else
+		elm_object_signal_emit(o, "disable,actions", "call");
+}
+
+static void _call_current_set(Callscreen *ctx, OFono_Call *c)
+{
+	Evas_Object *o = ctx->self;
+	Eina_Bool need_activecall_update = EINA_FALSE;
+
+	DBG("was=%p, now=%p, first=%p, second=%p",
+		ctx->calls.current, c, ctx->calls.first, ctx->calls.second);
+
+	if (!c) {
+		elm_object_signal_emit(o, "active,disconnected", "call");
 		if (ctx->gui_activecall) {
 			gui_activecall_set(NULL);
 			evas_object_del(ctx->gui_activecall);
 			ctx->gui_activecall = NULL;
 		}
-		gui_call_exit();
+	} else {
+		if (!ctx->gui_activecall) {
+			ctx->gui_activecall = gui_layout_add(o, "activecall");
+			elm_object_signal_callback_add(
+				ctx->gui_activecall, "clicked", "call",
+				_on_active_call_clicked, ctx);
+			gui_activecall_set(ctx->gui_activecall);
+			need_activecall_update = EINA_TRUE;
+		} else if (ctx->calls.current != c)
+			need_activecall_update = EINA_TRUE;
 	}
+
+	ctx->calls.current = c;
+
+	_call_current_actions_update(ctx);
+
+	if (need_activecall_update)
+		_activecall_update(ctx);
+}
+
+static void _call_first_set(Callscreen *ctx, OFono_Call *c)
+{
+	DBG("was=%p, now=%p", ctx->calls.first, c);
+
+	if (!c)
+		_call_clear(ctx, 1);
+	else {
+		_call_show(ctx, 1, c);
+		_call_update(ctx, 1, c);
+	}
+
+	ctx->calls.first = c;
+}
+
+static void _call_second_set(Callscreen *ctx, OFono_Call *c)
+{
+	DBG("was=%p, now=%p", ctx->calls.second, c);
+
+	if (!c) {
+		_call_clear(ctx, 2);
+		elm_object_signal_emit(ctx->self, "calls,1", "call");
+	} else {
+		_call_show(ctx, 2, c);
+		_call_update(ctx, 2, c);
+		elm_object_signal_emit(ctx->self, "calls,2", "call");
+	}
+
+	ctx->calls.second = c;
+}
+
+static void _call_auto_place(Callscreen *ctx, OFono_Call *c)
+{
+	OFono_Call_State state = ofono_call_state_get(c);
+	Eina_Bool is_multiparty = ofono_call_multiparty_get(c);
+
+	DBG("ctx=%p, %p, %p, call=%p, state=%d, multiparty=%d",
+		ctx, ctx->calls.first, ctx->calls.second, c,
+		state, is_multiparty);
+
+	if (!ctx->calls.first) {
+		DBG("first call %p", c);
+		_call_first_set(ctx, c);
+		_call_current_set(ctx, c);
+		return;
+	}
+
+	if (is_multiparty) {
+		if (ofono_call_multiparty_get(ctx->calls.first)) {
+			DBG("call %p is already part of first multiparty", c);
+			return;
+		} else if (ctx->calls.second &&
+				ofono_call_multiparty_get(ctx->calls.second)) {
+			DBG("call %p is already part of second multiparty", c);
+			return;
+		}
+	}
+
+	DBG("second call %p", c);
+	_call_second_set(ctx, c);
+	if (state == OFONO_CALL_STATE_ACTIVE)
+		_call_current_set(ctx, c);
+}
+
+static OFono_Call *_multiparty_find_other(const Callscreen *ctx,
+						const OFono_Call *c)
+{
+	OFono_Call *itr;
+	const Eina_List *n;
+	EINA_LIST_FOREACH(ctx->calls.list, n, itr) {
+		if (itr == c)
+			continue;
+		if (!ofono_call_multiparty_get(itr))
+			continue;
+		if (ofono_call_state_get(itr) == OFONO_CALL_STATE_DISCONNECTED)
+			continue;
+		DBG("%p is another multiparty peer of %p", itr, c);
+		return itr;
+	}
+	DBG("no other multiparty peers of %p", c);
+	return NULL;
+}
+
+static void _call_auto_unplace(Callscreen *ctx, OFono_Call *c)
+{
+	Eina_Bool is_multiparty = ofono_call_multiparty_get(c);
+	OFono_Call *replacement = NULL;
+
+	DBG("ctx=%p, %p, %p, current=%p, call=%p, multiparty=%d",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		c, is_multiparty);
+
+	if (is_multiparty) {
+		replacement = _multiparty_find_other(ctx, c);
+		DBG("replacement=%p", replacement);
+	}
+
+	if (ctx->calls.first == c) {
+		if (replacement) {
+			_call_first_set(ctx, replacement);
+			if (ctx->calls.current == c)
+				_call_current_set(ctx, replacement);
+			return;
+		}
+
+		if (!ctx->calls.second) {
+			DBG("no calls left");
+			_call_first_set(ctx, NULL);
+			_call_current_set(ctx, NULL);
+		} else {
+			DBG("move second to first");
+			_call_first_set(ctx, ctx->calls.second);
+			_call_second_set(ctx, NULL);
+			_call_current_set(ctx, ctx->calls.first);
+		}
+	} else if (ctx->calls.second == c) {
+		if (replacement) {
+			_call_second_set(ctx, replacement);
+			if (ctx->calls.current == c)
+				_call_current_set(ctx, replacement);
+			return;
+		}
+
+		DBG("remove second");
+		_call_second_set(ctx, NULL);
+		_call_current_set(ctx, ctx->calls.first);
+	}
+}
+
+static void _call_disconnected_done(Callscreen *ctx,
+					const char *reason __UNUSED__)
+{
+	_multiparty_update(ctx);
+
+	if (!ctx->calls.list)
+		gui_call_exit();
 	ctx->disconnected.call = NULL;
 }
 
-static void _popup_close(void *data, Evas_Object *o __UNUSED__, void *event __UNUSED__)
+static void _popup_close(void *data, Evas_Object *o __UNUSED__,
+				void *event __UNUSED__)
 {
 	Callscreen *ctx = data;
 
@@ -283,7 +689,8 @@ static void _popup_close(void *data, Evas_Object *o __UNUSED__, void *event __UN
 	_call_disconnected_done(ctx, "network");
 }
 
-static void _popup_redial(void *data, Evas_Object *o __UNUSED__, void *event __UNUSED__)
+static void _popup_redial(void *data, Evas_Object *o __UNUSED__,
+				void *event __UNUSED__)
 {
 	Callscreen *ctx = data;
 
@@ -298,31 +705,18 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	const char *number, *title;
 	char msg[1024];
 
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, previous=%s, "
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, previous=%s, "
 		"disconnected=%p (%s)",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
-		ctx->disconnected.number, c, reason);
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, ctx->disconnected.number, c, reason);
 
 	if (ctx->calls.waiting == c) {
-		ctx->calls.waiting = NULL;
-		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
-		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
-		goto done;
-	}
-	if (ctx->calls.held == c) {
-		ctx->calls.held = NULL;
-		if (ofono_call_multiparty_get(c))
-			goto done;
-		elm_object_part_text_set(ctx->self, "elm.text.held", "");
-		elm_object_signal_emit(ctx->self, "hide,held", "call");
-		_multiparty_private_available_update(ctx);
-		goto done;
+		_call_waiting_set(ctx, NULL);
+		goto done; /* do not ask to redial to waiting number */
 	}
 
-	if ((ctx->calls.active) && (ctx->calls.active != c))
-		goto done;
-	ctx->calls.active = NULL;
-	ctx->last_state = 0;
+	_call_auto_unplace(ctx, c);
+
 	ctx->disconnected.call = c;
 
 	elm_object_signal_emit(ctx->self, "active,disconnected", "call");
@@ -359,6 +753,7 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	/* TODO: sound to notify user */
 
 	return;
+
 done:
 	_call_disconnected_done(ctx, reason);
 }
@@ -385,9 +780,9 @@ static void _on_pressed(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
-		emission);
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "pressed,"));
 	emission += strlen("pressed,");
@@ -399,9 +794,9 @@ static void _on_released(void *data, Evas_Object *obj __UNUSED__,
 				const char *source __UNUSED__)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
-		emission);
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "released,"));
 	emission += strlen("released,");
@@ -413,14 +808,15 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 {
 	Callscreen *ctx = data;
 	const char *dtmf = NULL;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, signal: %s",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
-		emission);
+
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, signal: %s",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, emission);
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
 	emission += strlen("clicked,");
 
-	if ((emission[0] >= '0') && (emission[0] <= '9'))
+	if ((emission[0] >= '0') && (emission[0] <= '9') && (emission[1] == 0))
 		dtmf = emission;
 	else if (strcmp(emission, "star") == 0)
 		dtmf = "*";
@@ -437,14 +833,14 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	}
 
 	if (strcmp(emission, "hangup") == 0) {
-		OFono_Call *c = ctx->calls.active;
+		OFono_Call *c = ctx->calls.current;
 		if ((c) && (ofono_call_state_get(c) == OFONO_CALL_STATE_ACTIVE))
 			ofono_release_and_swap(NULL, NULL);
 		else if (c)
 			ofono_call_hangup(c, NULL, NULL);
 	} else if (strcmp(emission, "answer") == 0) {
-		if (ctx->calls.active)
-			ofono_call_answer(ctx->calls.active, NULL, NULL);
+		if (ctx->calls.current)
+			ofono_call_answer(ctx->calls.current, NULL, NULL);
 	} else if (strcmp(emission, "mute") == 0) {
 		Eina_Bool val = !ofono_mute_get();
 		ofono_mute_set(val, NULL, NULL);
@@ -455,11 +851,9 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	} else if (strcmp(emission, "add-call") == 0) {
 		gui_call_exit();
 	} else if (strcmp(emission, "merge") == 0) {
-		if (ctx->calls.held)
-			ofono_multiparty_create(NULL, NULL);
+		ofono_multiparty_create(NULL, NULL);
 	} else if (strcmp(emission, "swap") == 0) {
-		if (ctx->calls.held)
-			ofono_swap_calls(NULL, NULL);
+		ofono_swap_calls(NULL, NULL);
 	} else if (strcmp(emission, "waiting-hangup") == 0) {
 		if (ctx->calls.waiting)
 			ofono_call_hangup(ctx->calls.waiting, NULL, NULL);
@@ -516,9 +910,6 @@ static void _ofono_changed(void *data)
 	Evas_Object *ed;
 	const char *sig;
 
-	if (!ctx->calls.list)
-		return;
-
 	sig = ofono_mute_get() ? "toggle,on,mute" : "toggle,off,mute";
 	elm_object_signal_emit(ctx->self, sig, "call");
 
@@ -531,25 +922,35 @@ static void _ofono_changed(void *data)
 	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 2, &msgf);
 }
 
-
 static void _call_added(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, added=%p",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
+	OFono_Call_State state = ofono_call_state_get(c);
+
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, added=%p(%d)",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, c, state);
 
 	ctx->calls.list = eina_list_append(ctx->calls.list, c);
-	if (!ctx->calls.active) {
-		_calls_update(ctx);
-		gui_call_enter();
+
+	if (state == OFONO_CALL_STATE_WAITING)
+		_call_waiting_set(ctx, c);
+	else {
+		_call_auto_place(ctx, c);
+		if (state == OFONO_CALL_STATE_INCOMING)
+			_call_incoming_set(ctx, c);
 	}
+
+	gui_call_enter();
 }
 
 static void _call_removed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, removed=%p",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, removed=%p",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, c);
+
 	ctx->calls.list = eina_list_remove(ctx->calls.list, c);
 	_call_disconnected_show(ctx, c, "local");
 }
@@ -557,290 +958,259 @@ static void _call_removed(void *data, OFono_Call *c)
 static Eina_Bool _on_elapsed_updater(void *data)
 {
 	Callscreen *ctx = data;
-	double next, elapsed, start;
-	Edje_Message_Float msgf;
-	Evas_Object *ed, *activecall = ctx->gui_activecall;
-	char buf[128];
+	double next, now;
 
-	if (!ctx->calls.active)
-		goto stop;
-
-	if (ofono_call_multiparty_get(ctx->calls.active))
-		start = ctx->multiparty.start;
-	else
-		start = ofono_call_start_time_get(ctx->calls.active);
-
-	if (start < 0) {
-		ERR("Unknown start time for call");
-		goto stop;
+	if ((!ctx->calls.first) && (!ctx->calls.second)) {
+		ctx->elapsed_updater = NULL;
+		return EINA_FALSE;
 	}
 
-	elapsed = ecore_loop_time_get() - start;
-	if (elapsed < 0) {
-		ERR("Time rewinded? %f - %f = %f", ecore_loop_time_get(), start,
-			elapsed);
-		goto stop;
-	}
+	if (ctx->calls.first)
+		_call_elapsed_update(ctx, 1, ctx->calls.first);
+	if (ctx->calls.second)
+		_call_elapsed_update(ctx, 2, ctx->calls.second);
 
-	ed = elm_layout_edje_get(ctx->self);
-	msgf.val = elapsed;
-	edje_object_message_send(ed, EDJE_MESSAGE_FLOAT, 3, &msgf);
+	if (ctx->gui_activecall)
+		_activecall_elapsed_update(ctx);
 
-	if (elapsed > 3600)
-		snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
-				(int)elapsed / 3600,
-				(int)elapsed % 3600 / 60,
-				(int)elapsed % 60);
-	else
-		snprintf(buf, sizeof(buf), "%02d:%02d",
-				(int)elapsed / 60,
-				(int)elapsed % 60);
-	elm_object_part_text_set(ctx->self, "elm.text.elapsed", buf);
-	if (activecall)
-		elm_object_part_text_set(activecall, "elm.text.elapsed", buf);
-
-	next = 1.0 - (elapsed - (int)elapsed);
+	now = ecore_loop_time_get();
+	next = 1.0 - (now - (int)now);
 	ctx->elapsed_updater = ecore_timer_add(next, _on_elapsed_updater, ctx);
 	return EINA_FALSE;
+}
 
-stop:
-	if (activecall) {
-		elm_object_part_text_set(activecall, "elm.text.elapsed", "");
-		elm_object_signal_emit(activecall, "hide,elapsed", "call");
+static Eina_Bool _call_multiparty_changed(const Callscreen *ctx,
+						const OFono_Call *c)
+{
+	Eina_Bool current = ofono_call_multiparty_get(c);
+	Eina_Bool previous = !!eina_list_data_find(ctx->multiparty.calls, c);
+	return current ^ previous;
+}
+
+static inline int _call_priority_cmp(OFono_Call_State a, OFono_Call_State b)
+{
+	static const int state_priority[] = {
+		[OFONO_CALL_STATE_DISCONNECTED] = 0,
+		[OFONO_CALL_STATE_ACTIVE] = 6,
+		[OFONO_CALL_STATE_HELD] = 3,
+		[OFONO_CALL_STATE_DIALING] = 5,
+		[OFONO_CALL_STATE_ALERTING] = 4,
+		[OFONO_CALL_STATE_INCOMING] = 2,
+		[OFONO_CALL_STATE_WAITING] = 1
+	};
+	return state_priority[a] - state_priority[b];
+}
+
+static Eina_Bool _call_priority_higher_than_current(const Callscreen *ctx,
+							const OFono_Call *c)
+{
+	OFono_Call_State cur_state, new_state;
+
+	new_state = ofono_call_state_get(c);
+	if ((new_state == OFONO_CALL_STATE_DISCONNECTED) ||
+		(new_state == OFONO_CALL_STATE_WAITING))
+		return EINA_FALSE;
+
+	if (!ctx->calls.current)
+		return EINA_TRUE;
+
+	cur_state = ofono_call_state_get(ctx->calls.current);
+	return _call_priority_cmp(new_state, cur_state) > 0;
+}
+
+static OFono_Call *_call_priority_find_higher(const Callscreen *ctx,
+						OFono_Call *c)
+{
+	OFono_Call_State first, second, query, higher_state;
+	OFono_Call *higher = NULL;
+
+	if (!ctx->calls.first)
+		return NULL;
+
+	query = ofono_call_state_get(c);
+	first = ofono_call_state_get(ctx->calls.first);
+	if (ctx->calls.second)
+		second = ofono_call_state_get(ctx->calls.second);
+	else
+		second = OFONO_CALL_STATE_DISCONNECTED;
+
+	if (_call_priority_cmp(first, query) > 0) {
+		higher = ctx->calls.first;
+		higher_state = first;
+	} else {
+		higher = c;
+		higher_state = query;
 	}
 
-	elm_object_part_text_set(ctx->self, "elm.text.elapsed", "");
-	elm_object_signal_emit(ctx->self, "hide,elapsed", "call");
-	ctx->elapsed_updater = NULL;
-	return EINA_FALSE;
-}
-
-static char *_call_name_or_id(const OFono_Call *call)
-{
-	const char *s = ofono_call_line_id_get(call);
-	Contact_Info *info = gui_contact_search(s, NULL);
-
-	if (info)
-		return strdup(contact_info_full_name_get(info));
-
-	return phone_format(ofono_call_line_id_get(call));
-}
-
-static char *_call_name_get(const Callscreen *ctx __UNUSED__,
-				const OFono_Call *call)
-{
-	if (!ofono_call_multiparty_get(call))
-		return _call_name_or_id(call);
-
-	return strdup("Conference");
-}
-
-static char *_call_type_get(const OFono_Call *call)
-{
-	const char *type;
-	const char *s = ofono_call_line_id_get(call);
-	Contact_Info *info = gui_contact_search(s, &type);
-
-	if (info) {
-		return strdup(type);
+	if (_call_priority_cmp(second, higher_state) > 0) {
+		higher = ctx->calls.second;
+		higher_state = second;
 	}
+
+	if (higher != c)
+		return higher;
 
 	return NULL;
+}
+
+static void _call_changed_waiting_update(Callscreen *ctx, OFono_Call *c)
+{
+	OFono_Call_State state = ofono_call_state_get(c);
+
+	if (state == OFONO_CALL_STATE_DISCONNECTED) {
+		DBG("waiting was disconnected");
+		_call_waiting_set(ctx, NULL);
+	} else if (state != OFONO_CALL_STATE_WAITING) {
+		_call_waiting_set(ctx, NULL);
+		DBG("waiting was answered");
+		_call_auto_place(ctx, c);
+	}
+}
+
+static void _call_changed_current_update(Callscreen *ctx, OFono_Call *c)
+{
+	if (ctx->calls.current != c) {
+		if (_call_priority_higher_than_current(ctx, c)) {
+			DBG("changed call %p is higher than previous %p",
+				c, ctx->calls.current);
+			_call_current_set(ctx, c);
+		} else {
+			DBG("changed call %p is lower than previous %p",
+				c, ctx->calls.current);
+		}
+	} else if (ctx->calls.current == c) {
+		OFono_Call *other = _call_priority_find_higher(ctx, c);
+		if (other) {
+			DBG("other call %p is higher than changed %p",
+				other, c);
+			_call_current_set(ctx, other);
+		} else {
+			DBG("changed call %p is still the current", c);
+			_call_current_actions_update(ctx);
+		}
+	}
+}
+
+static void _call_changed_multiparty_update(Callscreen *ctx, OFono_Call *c)
+{
+	if (!_call_multiparty_changed(ctx, c)) {
+		DBG("multiparty unchanged");
+		return;
+	}
+
+	_multiparty_update(ctx);
+
+	_call_show(ctx, 1, ctx->calls.first);
+	_call_update(ctx, 1, ctx->calls.first);
+	_activecall_update(ctx);
+
+	if (ofono_call_state_get(c) == OFONO_CALL_STATE_DISCONNECTED) {
+		DBG("multiparty peer was disconnected");
+		return;
+	}
+
+	if (ofono_call_multiparty_get(c)) {
+		if (ctx->calls.first &&
+			(!ofono_call_multiparty_get(ctx->calls.first)))
+			DBG("multiparty added to second display");
+		else {
+			DBG("multiparty merged to first display, "
+				"remove second display");
+			_call_second_set(ctx, NULL);
+		}
+	} else if (ctx->calls.first != c) {
+		DBG("multiparty split, add peer as second display");
+		_call_second_set(ctx, c);
+	} else {
+		OFono_Call *other = _multiparty_find_other(ctx, c);
+		DBG("multiparty split, add another %p peer as second display",
+			other);
+		_call_second_set(ctx, other);
+	}
+}
+
+static void _call_changed_swap_merge_update(Callscreen *ctx)
+{
+	Evas_Object *o = ctx->self;
+
+	if (!ctx->calls.first) {
+		DBG("no calls, disable swap, pause and merge");
+		elm_object_signal_emit(o, "disable,swap", "call");
+		elm_object_signal_emit(o, "disable,pause", "call");
+		elm_object_signal_emit(o, "disable,merge", "call");
+		return;
+	}
+
+	if (ctx->calls.second) {
+		DBG("two calls, enable swap and merge, disable pause");
+		elm_object_signal_emit(o, "enable,swap", "call");
+		elm_object_signal_emit(o, "disable,pause", "call");
+		elm_object_signal_emit(o, "enable,merge", "call");
+	} else {
+		const char *sig_swap, *sig_pause;
+		if (ofono_call_state_get(ctx->calls.first) ==
+			OFONO_CALL_STATE_HELD) {
+			sig_swap = "enable,swap";
+			sig_pause = "disable,pause";
+		} else {
+			sig_swap = "disable,swap";
+			sig_pause = "enable,pause";
+		}
+		DBG("one call, disable merge and %s %s", sig_swap, sig_pause);
+		elm_object_signal_emit(o, sig_swap, "call");
+		elm_object_signal_emit(o, sig_pause, "call");
+		elm_object_signal_emit(o, "disable,merge", "call");
+	}
 }
 
 static void _call_changed(void *data, OFono_Call *c)
 {
 	Callscreen *ctx = data;
-	OFono_Call_State state;
-	Eina_Bool was_waiting, was_held, is_held;
-	const char *status, *sig = "hide,answer";
-	char *contact, *type;
+	OFono_Call_State state = ofono_call_state_get(c);
 
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, changed=%p",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting, c);
+	DBG("BEGIN: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%d)",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, c, state);
 
-	was_waiting = !!ctx->calls.waiting;
-
-	was_held = (ctx->calls.held) && (ctx->calls.held != ctx->calls.active);
-
-	_calls_update(ctx);
-
-	if ((ctx->calls.waiting) && (!was_waiting)) {
-		contact = _call_name_get(ctx, ctx->calls.waiting);
-		elm_object_part_text_set(ctx->self, "elm.text.waiting",
-						contact);
-		elm_object_signal_emit(ctx->self, "show,waiting", "call");
-		free(contact);
-	} else if ((!ctx->calls.waiting) && (was_waiting)) {
-		elm_object_part_text_set(ctx->self, "elm.text.waiting", "");
-		elm_object_signal_emit(ctx->self, "hide,waiting", "call");
+	if (ctx->calls.waiting == c)
+		_call_changed_waiting_update(ctx, c);
+	else if (ctx->calls.incoming == c) {
+		if (state != OFONO_CALL_STATE_INCOMING)
+			_call_incoming_set(ctx, NULL);
 	}
 
-	is_held = (ctx->calls.held) && (ctx->calls.held != ctx->calls.active);
+	_call_changed_current_update(ctx, c);
+	_call_changed_multiparty_update(ctx, c);
 
-	if ((is_held) && (!was_held)) {
-		elm_object_signal_emit(ctx->self, "show,held", "call");
+	if (ctx->calls.first == c)
+		_call_update(ctx, 1, c);
+	else if (ctx->calls.second == c)
+		_call_update(ctx, 2, c);
+
+	if (ctx->multiparty.calls)
 		_multiparty_private_available_update(ctx);
-	} else if (((!is_held) && (was_held)) ||
-			(ctx->calls.active == ctx->calls.held)) {
-		elm_object_part_text_set(ctx->self, "elm.text.held", "");
-		elm_object_signal_emit(ctx->self, "hide,held", "call");
-		_multiparty_private_available_update(ctx);
-	}
 
-	c = ctx->calls.active;
-	if (!c)
-		return;
-
-	contact = _call_name_get(ctx, c);
-	type = _call_type_get(c);
-
-	state = ofono_call_state_get(c);
-	switch (state) {
-	case OFONO_CALL_STATE_DISCONNECTED:
-		status = "Disconnected";
-		break;
-	case OFONO_CALL_STATE_ACTIVE:
-		status = "Active";
-		break;
-	case OFONO_CALL_STATE_HELD:
-		status = "On Hold";
-		break;
-	case OFONO_CALL_STATE_DIALING:
-		status = "Dialing...";
-		break;
-	case OFONO_CALL_STATE_ALERTING:
-		status = "Alerting...";
-		break;
-	case OFONO_CALL_STATE_INCOMING:
-		status = "Incoming...";
-		sig = "show,answer";
-		break;
-	case OFONO_CALL_STATE_WAITING:
-		status = "Waiting...";
-		break;
-	default:
-		status = "?";
-	}
-
-	if (!ctx->gui_activecall) {
-		ctx->gui_activecall = gui_layout_add(ctx->self, "activecall");
-		elm_object_signal_callback_add(ctx->gui_activecall,
-						"clicked", "call",
-						_on_active_call_clicked, ctx);
-		gui_activecall_set(ctx->gui_activecall);
-	}
-	elm_object_part_text_set(ctx->gui_activecall, "elm.text.name", contact);
-	if (type)
-		elm_object_part_text_set(ctx->gui_activecall,
-						"elm.text.phone.type", type);
-	elm_object_part_text_set(ctx->gui_activecall, "elm.text.status",
-					status);
-
-
-	elm_object_part_text_set(ctx->self, "elm.text.name", contact);
-	elm_object_part_text_set(ctx->self, "elm.text.phone.type", type);
-	free(contact);
-	free(type);
-
-	elm_object_part_text_set(ctx->self, "elm.text.status", status);
-	elm_object_signal_emit(ctx->self, sig, "call");
-
-	sig = ofono_call_multiparty_get(c) ? "show,multiparty" :
-		"hide,multiparty";
-	elm_object_signal_emit(ctx->self, sig, "call");
-	elm_object_signal_emit(ctx->gui_activecall, sig, "call");
-
-	if (ctx->last_state != state) {
-		Eina_Bool have_updater = !!ctx->elapsed_updater;
-		Eina_Bool want_updater = EINA_FALSE;
-
-		switch (state) {
-		case OFONO_CALL_STATE_DISCONNECTED:
-			sig = "state,disconnected";
-			break;
-		case OFONO_CALL_STATE_ACTIVE:
-			sig = "state,active";
-			want_updater = EINA_TRUE;
-			break;
-		case OFONO_CALL_STATE_HELD:
-			sig = "state,held";
-			break;
-		case OFONO_CALL_STATE_DIALING:
-			sig = "state,dialing";
-			break;
-		case OFONO_CALL_STATE_ALERTING:
-			sig = "state,alerting";
-			break;
-		case OFONO_CALL_STATE_INCOMING:
-			sig = "state,incoming";
-			break;
-		case OFONO_CALL_STATE_WAITING:
-			sig = "state,waiting";
-			break;
-		default:
-			sig = NULL;
-		}
-		if (sig) {
-			elm_object_signal_emit(ctx->self, sig, "call");
-			elm_object_signal_emit(ctx->gui_activecall,
-						sig, "call");
-		}
-		ctx->last_state = state;
-
-		sig = NULL;
-		if (have_updater && !want_updater) {
-			ecore_timer_del(ctx->elapsed_updater);
-			ctx->elapsed_updater = NULL;
-			sig = "hide,elapsed";
-			elm_object_part_text_set(ctx->self, "elm.text.elapsed",
-							"");
-		} else if (want_updater) {
-			if (!have_updater)
-				sig = "show,elapsed";
-			else {
-				ecore_timer_del(ctx->elapsed_updater);
-				ctx->elapsed_updater = NULL;
-			}
+	if (ctx->calls.current) {
+		if (!ctx->elapsed_updater)
 			_on_elapsed_updater(ctx);
-		}
-		if (sig) {
-			elm_object_signal_emit(ctx->self, sig, "call");
-			elm_object_signal_emit(ctx->gui_activecall,
-						sig, "call");
-		}
+	} else if (ctx->elapsed_updater) {
+		ecore_timer_del(ctx->elapsed_updater);
+		ctx->elapsed_updater = NULL;
 	}
 
-	if (is_held) {
-		contact = _call_name_get(ctx, ctx->calls.held);
-		elm_object_part_text_set(ctx->self, "elm.text.held", contact);
-		free(contact);
+	_call_changed_swap_merge_update(ctx);
 
-		if (ofono_call_multiparty_get(ctx->calls.held))
-			sig = "show,held,multiparty";
-		else
-			sig = "hide,held,multiparty";
-		elm_object_signal_emit(ctx->self, sig, "call");
-	}
-
-	sig = is_held ? "enable,merge" : "disable,merge";
-	elm_object_signal_emit(ctx->self, sig, "call");
-
-	sig = ctx->calls.held ? "enable,swap" : "disable,swap";
-	elm_object_signal_emit(ctx->self, sig, "call");
-
-	if (state == OFONO_CALL_STATE_DISCONNECTED)
-		_call_disconnected_show(ctx, c, "local");
-
-	_ofono_changed(ctx);
+	DBG("END: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%d)",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, c, state);
 }
 
 static void _call_disconnected(void *data, OFono_Call *c, const char *reason)
 {
 	Callscreen *ctx = data;
-	DBG("ctx=%p, active=%p, held=%p, waiting=%p, disconnected=%p (%s)",
-		ctx, ctx->calls.active, ctx->calls.held, ctx->calls.waiting,
-		c, reason);
+	DBG("ctx=%p, %p, %p, current=%p, waiting=%p, disconnected=%p (%s)",
+		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
+		ctx->calls.waiting, c, reason);
 
 	EINA_SAFETY_ON_NULL_RETURN(reason);
 	_call_disconnected_show(ctx, c, reason);
@@ -897,9 +1267,9 @@ Evas_Object *callscreen_add(Evas_Object *parent)
 	evas_object_event_callback_add(obj, EVAS_CALLBACK_KEY_DOWN,
 					_on_key_down, ctx);
 
-	elm_object_part_text_set(obj, "elm.text.name", "");
-	elm_object_part_text_set(obj, "elm.text.status", "");
-	elm_object_part_text_set(obj, "elm.text.elapsed", "");
+	_call_clear(ctx, 1);
+	_call_clear(ctx, 2);
+	elm_object_signal_emit(obj, "calls,1", "call");
 
 	ctx->multiparty.sc = elm_scroller_add(obj);
 	elm_scroller_policy_set(ctx->multiparty.sc, ELM_SCROLLER_POLICY_AUTO,

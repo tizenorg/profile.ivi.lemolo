@@ -4,6 +4,8 @@
 #define ACTION_WIDTH 240
 #define ACTION_HEIGHT 170
 
+#define CALL_HEIGHT 200
+
 #define BORDER_PADDING 46
 #define ITEM_PADDING 16
 

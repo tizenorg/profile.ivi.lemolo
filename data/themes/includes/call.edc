@@ -5,11 +5,11 @@ group {
     * Represents the dialer ongoing voice call(s) screen.
     *
     * Parts:
-    *   TEXT: elm.text.name
-    *   TEXT: elm.text.status
-    *   TEXT: elm.text.elapsed
+    *   TEXT: elm.text.<CALL>.name
+    *   TEXT: elm.text.<CALL>.status
+    *   TEXT: elm.text.<CALL>.elapsed
+    *   TEXT: elm.text.<CALL>.phone.type
     *   TEXT: elm.text.waiting
-    *   TEXT: elm.text.held
     *   SWALLOW: elm.swallow.multiparty-details
     *
     * Signals:
@@ -18,38 +18,39 @@ group {
     *     released,<ID>: key <ID> was released
     *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
     *   Listen (source is "call"):
-    *     show,answer:     show "answer" action
-    *     hide,answer:     hide "answer" action
-    *     show,waiting:    show call waiting popup (decline, hold+answer...)
-    *     hide,waiting:    hide call waiting popup
-    *     show,held:       show call held entry
-    *     hide,held:       hide call held entry
-    *     show,elapsed:    have elapsed (elm.text.elapsed) and should be visible
-    *     hide,elapsed:    don't have elapsed and it should be hidden
-    *     show,multiparty: active call is multiparty
-    *     hide,multiparty: active call is not multiparty
-    *     show,held,multiparty: held call is multiparty
-    *     hide,held,multiparty: held call is not multiparty
-    *     state,<STATE>:   state changed to <STATE>
-    *     disable,<ID>:    disable action <ID>
-    *     enable,<ID>:     enable action <ID>
-    *     toggle,on,<ID>:  mark toggle action <ID> as selected
-    *     toggle,off,<ID>: mark toggle action <ID> as unselected
+    *     show,answer:            show "answer" action
+    *     hide,answer:            hide "answer" action
+    *     show,waiting:           show call waiting popup (hold+answer...)
+    *     hide,waiting:           hide call waiting popup
+    *     show,<CALL>,elapsed:    have elapsed (elm.text.<CALL>.elapsed)
+    *     hide,<CALL>,elapsed:    don't have elapsed and it should be hidden
+    *     show,<CALL>,multiparty: call is multiparty
+    *     hide,<CALL>,multiparty: call is not multiparty
+    *     state,<CALL>,<STATE>:   state changed to <STATE>
+    *     disable,<ID>:           disable action <ID>
+    *     enable,<ID>:            enable action <ID>
+    *     toggle,on,<ID>:         mark toggle action <ID> as selected
+    *     toggle,off,<ID>:        mark toggle action <ID> as unselected
     *     show,multiparty-details: ask the multiparty details to be visible
     *     hide,multiparty-details: ask the multiparty details to be hidden
+    *     calls,1                  single call mode
+    *     calls,2                  two calls mode
     *
     * Messages:
     *     1 - FLOAT: speaker volume 0.0-1.0
     *     2 - FLOAT: microphone volume 0.0-1.0
-    *     3 - FLOAT: elapsed time in seconds (> 0.0)
+    *     11 - FLOAT: elapsed time in seconds (> 0.0) for call #1
+    *     12 - FLOAT: elapsed time in seconds (> 0.0) for call #2
     *
     * Where <ID> is: numbers 0 to 9, star, hash, mute, keypad,
     * speaker, add-call, merge, swap, contacts, answer, hangup,
-    * waiting-hangup, hold-answer, hangup-answer, multiparty,
-    * held-multiparty, multiparty-details
+    * waiting-hangup, hold-answer, hangup-answer, <CALL>,multiparty,
+    * multiparty-details, actions.
     *
     * Where <STATE> is: disconnected, active, held, dialing, alerting,
     * incoming, waiting.
+    *
+    * Where <CALL> is: 1 or 2.
     */
 
    min: WIDTH HEIGHT;
@@ -81,201 +82,6 @@ group {
                scale_hint: STATIC;
             }
             fill.smooth: 1;
-         }
-      }
-
-      part {
-         name: "clipper.multiparty";
-         type: RECT;
-         clip_to: "clipper.multiparty-details-hidden";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
-         description {
-            state: "multiparty" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 255;
-            visible: 1;
-         }
-      }
-      part {
-         name: "button.multiparty";
-         type: IMAGE;
-         mouse_events: 1;
-         clip_to: "clipper.multiparty";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "action";
-            min: 80 80;
-            max: 80 80;
-            rel1 {
-               relative: 1.0 0.0;
-               offset: -80 (BORDER_PADDING - 1);
-            }
-            rel2 {
-               relative: 1.0 0.0;
-               offset: -1 141;
-            }
-            image.normal: "ico_multiparty.png";
-         }
-         description {
-            state: "pressed" 0.0;
-            inherit: "default" 0.0;
-            color_class: "light";
-         }
-      }
-      programs {
-         program {
-            signal: "mouse,up,1";
-            source: "button.multiparty";
-            action: SIGNAL_EMIT "released,multiparty" "call";
-            after: "show_up_multiparty";
-            api: "multiparty_released" "multiparty was released";
-         }
-         program {
-            name: "show_up_multiparty";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "button.multiparty";
-         }
-         program {
-            signal: "mouse,down,1";
-            source: "button.multiparty";
-            after: "show_down_multiparty";
-            action: SIGNAL_EMIT "pressed,multiparty" "call";
-            api: "multiparty_pressed" "multiparty was pressed";
-         }
-         program {
-            name: "show_down_multiparty";
-            action: STATE_SET "pressed" 0.0;
-            transition: ACCELERATE 0.1;
-            target: "button.multiparty";
-         }
-         program {
-            signal: "mouse,clicked,1";
-            source: "button.multiparty";
-            action: SIGNAL_EMIT "clicked,multiparty" "call";
-            api: "multiparty_clicked" "multiparty was clicked";
-         }
-
-         program {
-            signal: "show,multiparty";
-            source: "call";
-            action: STATE_SET "multiparty" 0.0;
-            target: "clipper.multiparty";
-            target: "elm.text.name";
-            api: "multiparty_show" "make multiparty visible";
-         }
-         program {
-            signal: "hide,multiparty";
-            source: "call";
-            action: STATE_SET "default" 0.0;
-            target: "clipper.multiparty";
-            target: "elm.text.name";
-            api: "multiparty_hide" "make multiparty hidden";
-         }
-      }
-
-      part {
-         name: "elm.text.name";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         clip_to: "clipper.multiparty-details-hidden";
-         api: "name" "remote party call name";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "action";
-            align: 0.0 0.5;
-            rel1.offset: BORDER_PADDING 0;
-            rel2 {
-               relative: 1.0 0.0;
-               offset: (-BORDER_PADDING - 1) (ACTION_HEIGHT - 1);
-            }
-            text {
-               text: "Gustavo Barbieri";
-               font: FONT_NORMAL;
-               size: SIZE_HUGE;
-               size_range: SIZE_TINY SIZE_HUGE;
-               fit: 1 1;
-               align: 0.0 0.5;
-               ellipsis: 0.0;
-            }
-         }
-         description {
-            state: "multiparty" 0.0;
-            inherit: "default" 0.0;
-            rel2.offset: (-80 - ITEM_PADDING) (ACTION_HEIGHT - 1);
-         }
-      }
-
-      part {
-         name: "elm.text.status";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         clip_to: "clipper.multiparty-details-hidden";
-         api: "status" "call status";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "light";
-            fixed: 1 1;
-            align: 0.0 0.0;
-            rel1 {
-               to: "elm.text.name";
-               relative: 0.0 1.0;
-               offset: 0 -20;
-            }
-            rel2 {
-               to: "elm.text.name";
-               relative: 0.0 1.0;
-               offset: 0 -1;
-            }
-            text {
-               text: "calling...";
-               font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-               min: 1 1;
-               align: 0.0 0.0;
-            }
-         }
-      }
-
-      part {
-         name: "elm.text.elapsed";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         clip_to: "clipper.multiparty-details-hidden";
-         api: "elapsed" "call elapsed time (formatted)";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "light";
-            fixed: 1 1;
-            align: 0.0 0.0;
-            rel1 {
-               to: "elm.text.status";
-               relative: 1.0 0.0;
-               offset: ITEM_PADDING 0;
-            }
-            rel2 {
-               to: "elm.text.status";
-               relative: 1.0 1.0;
-               offset: ITEM_PADDING -1;
-            }
-            text {
-               text: "01:23";
-               font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-               min: 1 1;
-               align: 0.0 0.0;
-            }
          }
       }
 
@@ -323,236 +129,296 @@ group {
          }                                                              \
       }
 
-      part {
-         name: "clipper.held";
-         type: RECT;
-         clip_to: "clipper.keypad-hidden";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
-         description {
-            state: "visible" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 255;
-            visible: 1;
-         }
+#define CALL(id, offy)                                                  \
+      part {                                                            \
+         name: "call."##id;                                             \
+         type: RECT;                                                    \
+         clip_to: "clipper.multiparty-details-hidden";                  \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            rel1 {                                                      \
+               relative: 0.0 0.0;                                       \
+               offset: 0 (-SEPARATOR_HEIGHT + offy);                    \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 0.0;                                       \
+               offset: -1 (CALL_HEIGHT + offy);                         \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      SEPARATOR("call."##id, "call."##id, 0.0, 0, "call."##id);         \
+                                                                        \
+      part {                                                            \
+         name: "clipper."##id".multiparty";                             \
+         type: RECT;                                                    \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "multiparty" 0.0;                                    \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id".multiparty";                              \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id".multiparty";                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: 80 80;                                                 \
+            max: 80 80;                                                 \
+            rel1 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 0.0;                                       \
+               offset: -80 (BORDER_PADDING - 1);                        \
+            }                                                           \
+            rel2 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 0.0;                                       \
+               offset: -1 141;                                          \
+            }                                                           \
+            image.normal: "ico_multiparty.png";                         \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "light";                                       \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id".multiparty";                         \
+            action: SIGNAL_EMIT "released,"##id",multiparty" "call";    \
+            after: "show_up_"##id"_multiparty";                         \
+            api: ""##id"_multiparty_released"                           \
+               "call #"##id" multiparty was released";                  \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id"_multiparty";                          \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id".multiparty";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id".multiparty";                         \
+            after: "show_down_"##id"_multiparty";                       \
+            action: SIGNAL_EMIT "pressed,"##id",multiparty" "call";     \
+            api: ""##id"_multiparty_pressed"                            \
+               "call #"##id" multiparty was pressed";                   \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id"_multiparty";                        \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id".multiparty";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id".multiparty";                         \
+            action: SIGNAL_EMIT "clicked,"##id",multiparty" "call";     \
+            api: ""##id"_multiparty_clicked"                            \
+               "call #"##id" multiparty was clicked";                   \
+         }                                                              \
+                                                                        \
+         program {                                                      \
+            signal: "show,"##id",multiparty";                           \
+            source: "call";                                             \
+            action: STATE_SET "multiparty" 0.0;                         \
+            target: "clipper."##id".multiparty";                        \
+            target: "area."##id".name";                                 \
+            api: ""##id"_multiparty_show"                               \
+               "call #"##id" make multiparty visible";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "hide,"##id",multiparty";                           \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper."##id".multiparty";                        \
+            target: "area."##id".name";                                 \
+            api: ""##id"_multiparty_hide"                               \
+               "call #"##id" make multiparty hidden";                   \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {								\
+         name: "area."##id".name";                                      \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            rel1 {                                                      \
+               to: "call."##id;                                         \
+               offset: BORDER_PADDING SEPARATOR_HEIGHT;                 \
+            }                                                           \
+            rel2 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 0.0;                                       \
+               offset: (-BORDER_PADDING - 1) (ACTION_HEIGHT - 1);       \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "multiparty" 0.0;                                    \
+            inherit: "default" 0.0;                                     \
+            rel2.offset: (-80 - ITEM_PADDING) (ACTION_HEIGHT - 1);      \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "elm.text."##id".name";                                  \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: ""##id"_name" "remote party call name (call #"##id")";    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            rel1.to: "area."##id".name";                                \
+            rel2.to: "area."##id".name";                                \
+            text {                                                      \
+               text: "Gustavo Barbieri";                                \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_HUGE;                                         \
+               size_range: SIZE_TINY SIZE_HUGE;                         \
+               fit: 1 1;                                                \
+               align: 0.0 0.5;                                          \
+               ellipsis: 0.0;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "held" 0.0;                                          \
+            inherit: "default" 0.0;                                     \
+            color_class: "light";                                       \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.text."##id".status";                                \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: ""##id"_status" "call status (call #"##id")";             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "light";                                       \
+            fixed: 1 1;                                                 \
+            align: 0.0 0.0;                                             \
+            rel1 {                                                      \
+               to: "area."##id".name";                                  \
+               relative: 0.0 1.0;                                       \
+               offset: 0 -20;                                           \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area."##id".name";                                  \
+               relative: 0.0 1.0;                                       \
+               offset: 0 -1;                                            \
+            }                                                           \
+            text {                                                      \
+               text: "calling...";                                      \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               min: 1 1;                                                \
+               align: 0.0 0.0;                                          \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.text."##id".elapsed";                               \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: "1_elapsed" "call elapsed formatted time (call #"##id")"; \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "light";                                       \
+            fixed: 1 1;                                                 \
+            align: 0.0 0.0;                                             \
+            rel1 {                                                      \
+               to: "elm.text."##id".status";                            \
+               relative: 1.0 0.0;                                       \
+               offset: ITEM_PADDING 0;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.text."##id".status";                            \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -1;                                 \
+            }                                                           \
+            text {                                                      \
+               text: "01:23";                                           \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               min: 1 1;                                                \
+               align: 0.0 0.0;                                          \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "area."##id".name";                                 \
+            action: SIGNAL_EMIT "clicked,swap" "call";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "state,"##id",held";                                \
+            source: "call";                                             \
+            action: STATE_SET "held" 0.0;                               \
+            transition: ACCELERATE 0.1;                                 \
+            target: "elm.text."##id".name";                             \
+         }                                                              \
+         program {                                                      \
+            signal: "state,"##id",active";                              \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "elm.text."##id".name";                             \
+         }                                                              \
       }
 
-      part {
-         name: "clipper.held.multiparty";
-         type: RECT;
-         clip_to: "clipper.held";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 0;
-            visible: 0;
-         }
-         description {
-            state: "multiparty" 0.0;
-            inherit: "default" 0.0;
-            color: 255 255 255 255;
-            visible: 1;
-         }
-      }
-      part {
-         name: "button.held.multiparty";
-         type: IMAGE;
-         mouse_events: 1;
-         clip_to: "clipper.held.multiparty";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "action";
-            min: 80 80;
-            max: 80 80;
-            rel1 {
-               to_y: "elm.text.status";
-               relative: 1.0 1.0;
-               offset: -80 65;
-            }
-            rel2 {
-               to_y: "elm.text.status";
-               relative: 1.0 1.0;
-               offset: -1 161;
-            }
-            image.normal: "ico_multiparty.png";
-         }
-         description {
-            state: "pressed" 0.0;
-            inherit: "default" 0.0;
-            color_class: "light";
-         }
-      }
+      CALL("1", 0);
+      CALL("2", CALL_HEIGHT + SEPARATOR_HEIGHT);
+
       programs {
          program {
-            signal: "mouse,up,1";
-            source: "button.held.multiparty";
-            action: SIGNAL_EMIT "released,held-multiparty" "call";
-            after: "show_up_held_multiparty";
-            api: "held_multiparty_released" "held multiparty was released";
-         }
-         program {
-            name: "show_up_held_multiparty";
-            action: STATE_SET "default" 0.0;
-            transition: DECELERATE 0.1;
-            target: "button.held.multiparty";
-         }
-         program {
-            signal: "mouse,down,1";
-            source: "button.held.multiparty";
-            after: "show_down_held_multiparty";
-            action: SIGNAL_EMIT "pressed,held-multiparty" "call";
-            api: "held_multiparty_pressed" "held multiparty was pressed";
-         }
-         program {
-            name: "show_down_held_multiparty";
-            action: STATE_SET "pressed" 0.0;
+            signal: "calls,1";
+            source: "call";
+            action: STATE_SET "hidden" 0.0;
             transition: ACCELERATE 0.1;
-            target: "button.held.multiparty";
+            target: "call.2";
          }
          program {
-            signal: "mouse,clicked,1";
-            source: "button.held.multiparty";
-            action: SIGNAL_EMIT "clicked,held-multiparty" "call";
-            api: "held_multiparty_clicked" "held multiparty was clicked";
-         }
-
-         program {
-            signal: "show,held,multiparty";
-            source: "call";
-            action: STATE_SET "multiparty" 0.0;
-            target: "clipper.held.multiparty";
-            target: "elm.text.held";
-            api: "held_multiparty_show" "make held multiparty visible";
-         }
-         program {
-            signal: "hide,held,multiparty";
+            signal: "calls,2";
             source: "call";
             action: STATE_SET "default" 0.0;
-            target: "clipper.held.multiparty";
-            target: "elm.text.held";
-            api: "held_multiparty_hide" "make held multiparty hidden";
+            transition: ACCELERATE 0.1;
+            target: "call.2";
          }
       }
-
-
-      part {
-         name: "area.held";
-         type: RECT;
-         mouse_events: 1;
-         clip_to: "clipper.held";
-         description {
-            state: "default" 0.0;
-            color: 0 0 0 0;
-            rel1.to_y: "elm.text.held";
-            rel2 {
-               to_x: "elm.text.held";
-               to_y: "label.held";
-            }
-         }
-      }
-      programs {
-         program {
-            signal: "mouse,clicked,1";
-            source: "area.held";
-            action: SIGNAL_EMIT "clicked,swap" "call";
-         }
-      }
-
-      part {
-         name: "elm.text.held";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         api: "held" "held party call name";
-         clip_to: "clipper.held";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "action";
-            align: 0.0 0.5;
-            rel1 {
-               to_y: "elm.text.status";
-               to_x: "elm.text.name";
-               relative: 0.0 1.0;
-               offset: 0 30;
-            }
-            rel2 {
-               to_y: "elm.text.status";
-               relative: 1.0 1.0;
-               offset: (-BORDER_PADDING -1) (ACTION_HEIGHT + 30 - 1);
-            }
-            text {
-               text: "Someone on hold";
-               font: FONT_NORMAL;
-               size: SIZE_HUGE;
-               size_range: SIZE_TINY SIZE_HUGE;
-               fit: 1 1;
-               align: 0.0 0.5;
-               ellipsis: 0.0;
-            }
-         }
-         description {
-            state: "multiparty" 0.0;
-            inherit: "default" 0.0;
-            rel2.offset: (-80 - ITEM_PADDING) (ACTION_HEIGHT - 1);
-         }
-      }
-      part {
-         name: "label.held";
-         type: TEXT;
-         mouse_events: 0;
-         scale: 1;
-         clip_to: "clipper.held";
-         description {
-            state: "default" 0.0;
-            color: 255 255 255 255;
-            color_class: "light";
-            fixed: 1 1;
-            align: 0.0 0.0;
-            rel1 {
-               to: "elm.text.held";
-               relative: 0.0 1.0;
-               offset: -1.0 -20;
-            }
-            rel2 {
-               to: "elm.text.held";
-               relative: 0.0 1.0;
-               offset: -1.0 -1;
-            }
-            text {
-               text: "On Hold";
-               font: FONT_NORMAL;
-               size: SIZE_MEDIUM;
-               min: 1 1;
-               align: 0.0 0.0;
-            }
-         }
-      }
-
-      SEPARATOR("held1", "clipper.held", 0.0, -SEPARATOR_HEIGHT, "elm.text.held");
-
-      programs {
-         program {
-            signal: "show,held";
-            source: "call";
-            action: STATE_SET "visible" 0.0;
-            transition: DECELERATE 0.3;
-            target: "clipper.held";
-            api: "held_show" "make held entry visible";
-         }
-         program {
-            signal: "hide,held";
-            source: "call";
-            action: STATE_SET "default" 0.0;
-            transition: ACCELERATE 0.3;
-            target: "clipper.held";
-            api: "held_hide" "make held entry hidden";
-         }
-      }
-
 
       SEPARATOR("actions", "clipper.actions", 0.0, -SEPARATOR_HEIGHT, "bg.actions");
 
@@ -598,47 +464,35 @@ group {
       }
       programs {
          program {
-            name: "show,actions";
+            name: "enable,actions1";
+            signal: "enable,actions";
+            source: "call";
+            action: ACTION_STOP;
+            target: "disable,actions1";
+            target: "disable,actions2";
+            after: "enable,actions2";
+         }
+         program {
+            name: "enable,actions2";
             action: STATE_SET "visible" 0.0;
             transition: DECELERATE 0.3;
             target: "clipper.actions";
          }
+
          program {
-            name: "hide,actions";
+            name: "disable,actions1";
+            signal: "disable,actions";
+            source: "call";
+            action: ACTION_STOP;
+            target: "enable,actions1";
+            target: "enable,actions2";
+            after: "disable,actions2";
+         }
+         program {
+            name: "disable,actions2";
             action: STATE_SET "default" 0.0;
             transition: ACCELERATE 0.3;
             target: "clipper.actions";
-         }
-
-         program {
-            signal: "state,disconnected";
-            source: "call";
-            after: "hide,actions";
-         }
-         program {
-            signal: "state,active";
-            source: "call";
-            after: "show,actions";
-         }
-         program {
-            signal: "state,held";
-            source: "call";
-            after: "show,actions";
-         }
-         program {
-            signal: "state,dialing";
-            source: "call";
-            after: "hide,actions";
-         }
-         program {
-            signal: "state,alerting";
-            source: "call";
-            after: "hide,actions";
-         }
-         program {
-            signal: "state,incoming";
-            source: "call";
-            after: "hide,actions";
          }
       }
 
@@ -1949,14 +1803,14 @@ group {
          }
 
 	 program {
-            signal: "clicked,held-multiparty"; /* just show on user request */
+            signal: "clicked,2,multiparty";
             source: "call";
             after: "show-multiparty-details-phase1";
          }
 
          program {
             name: "show-multiparty-details-phase1";
-            signal: "clicked,multiparty"; /* just show on user request */
+            signal: "clicked,1,multiparty"; /* just show on user request */
             source: "call";
             action: STATE_SET "alternate" 0.0;
             transition: ACCELERATE 0.3;
@@ -2294,14 +2148,13 @@ group {
     *
     * Parts:
     *   TEXT: elm.text.name
+    *   TEXT: elm.text.phone.type
     *   TEXT: elm.text.status
     *   TEXT: elm.text.elapsed
     * Signals:
     *   Emit (source is "call"):
     *     clicked:
     * Listen (source is "call"):
-    *     show,elapsed:    have elapsed (elm.text.elapsed) and should be visible
-    *     hide,elapsed:    don't have elapsed and it should be hidden
     *     show,multiparty: active call is multiparty
     *     hide,multiparty: active call is not multiparty
     *     state,<STATE>:   state changed to <STATE>
