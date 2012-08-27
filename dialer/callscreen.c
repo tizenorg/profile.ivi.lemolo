@@ -863,7 +863,13 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	} else if (strcmp(emission, "merge") == 0) {
 		ofono_multiparty_create(NULL, NULL);
 	} else if (strcmp(emission, "swap") == 0) {
-		ofono_swap_calls(NULL, NULL);
+		if (ctx->calls.current) {
+			OFono_Call_State state;
+			state = ofono_call_state_get(ctx->calls.current);
+			if (state == OFONO_CALL_STATE_HELD ||
+				state == OFONO_CALL_STATE_ACTIVE)
+				ofono_swap_calls(NULL, NULL);
+		}
 	} else if (strcmp(emission, "waiting-hangup") == 0) {
 		if (ctx->calls.waiting)
 			ofono_call_hangup(ctx->calls.waiting, NULL, NULL);
