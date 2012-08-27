@@ -28,3 +28,12 @@ missing
 stamp-h1
 data/themes/*.edj
 ofono-efl-*.tar.*
+tizen/answer_daemon
+tizen/answer_daemon.desktop
+tizen/dialer.desktop
+tizen/dialer_daemon
+tizen/dialer_open
+tizen/order
+tizen/org.tizen.call.desktop
+tizen/org.tizen.dialer.service
+tizen/org.tizen.phone.desktop

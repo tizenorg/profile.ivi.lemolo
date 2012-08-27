@@ -1,0 +1,8 @@
+Instructions for Tizen setup.
+
+Copy start_ofono to /etc/rc.d/init.d and create link in the /etc/rc.d/rc3.d S61ofono
+type this command: chmod +x /etc/rc.d/init.d/start_ofono
+
+Append tizen/order to /opt/home/root/.e/e/applications/startup/.order
+
+Restart your phone. And that's it !

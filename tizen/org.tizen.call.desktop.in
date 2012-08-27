@@ -1,0 +1,11 @@
+Name=call
+Exec=@bindir@/dialer_daemon
+Icon=org.tizen.phone.png
+Type=Application
+MimeType=tel.uri
+Nodisplay=True
+Version=0.1.0
+X-Tizen-TaskManage=True
+X-Tizen-Multiple=False
+X-Tizen-Removable=false
+X-Tizen-Svc=http://tizen.org/appsvc/operation/call|tel|NULL

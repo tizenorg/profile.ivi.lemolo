@@ -12,5 +12,7 @@ collections {
 #include "includes/scroller.edc"
 #include "includes/popup.edc"
 #include "includes/buttons.edc"
+#include "includes/answer_screen.edc"
+#include "includes/action_answer.edc"
 
 }

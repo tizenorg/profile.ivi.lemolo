@@ -1,0 +1,10 @@
+Name=Phone
+Exec=@bindir@/dialer_open
+Icon=org.tizen.phone.png
+Type=Application
+MimeType=
+Nodisplay=False
+Version=0.1.0
+X-Tizen-TaskManage=True
+X-Tizen-Multiple=False
+X-Tizen-Removable=false

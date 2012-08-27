@@ -48,10 +48,14 @@ if test "$want_tizen" != "no"; then
                         appcore-efl
                         ui-gadget
                         capi-social-contacts
+                        vconf
+                        capi-system-power
+                        utilX
+                        aul
+                        appsvc
                 ],
                 [have_tizen="yes"],
                 [have_tizen="no"])
-
 fi
 
 if test "$want_tizen" = "yes" -a "$have_tizen" = "no"; then
@@ -68,6 +72,21 @@ AC_ARG_WITH(maximum-log-level,
                    [limit log level, any call to EINA_LOG() with values greater than this will be compiled out, ignoring runtime settings, but saving function calls.])],
    [with_max_log_level="${withval}"], [:])
 AC_DEFINE_UNQUOTED(EINA_LOG_LEVEL_MAXIMUM, ${with_max_log_level}, [if set, logging is limited to this amount.])
+
+with_dbusservicesdir=`pkg-config --variable=session_bus_services_dir dbus-1`
+AC_ARG_WITH(dbusservicesdir,
+   [AC_HELP_STRING([--with-dbusservicesdir=PATH],
+      [Where to place dbus services files])],
+   [with_dbusservicesdir="${withval}"], [:])
+AC_SUBST(with_dbusservicesdir)
+
+
+with_desktopdir="/opt/share/applications"
+AC_ARG_WITH(desktopdir,
+   [AC_HELP_STRING([--with-desktopdir=PATH],
+      [Where to place desktop files. Default=/opt/share/applications/])],
+   [with_desktopdir="${withval}"], [:])
+AC_SUBST(with_desktopdir)
 
 AC_CONFIG_FILES([
 Makefile

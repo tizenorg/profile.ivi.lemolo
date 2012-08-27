@@ -1,0 +1,32 @@
+#!/bin/sh -e
+#### BEGIN INIT INFO
+# Provides:          Profusion
+# Required-Start:    $remote_fs $syslog $all
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: This will start the ofono daemon
+### END INIT INFO
+#
+
+progname=ofonod
+execname=/usr/sbin/$progname
+options=""
+
+start() {
+        $execname $options
+        RETVAL=$?
+        sleep 3
+        dbus-send --system --print-reply --type=method_call --dest=org.ofono /phonesim \
+        org.ofono.Modem.SetProperty string:"Powered" variant:boolean:true
+
+        dbus-send --system --print-reply --type=method_call --dest=org.ofono /phonesim \
+        org.ofono.Modem.SetProperty string:"Online" variant:boolean:true
+
+        echo $RETVAL
+        return $RETVAL
+}
+
+start
+
+exit 0

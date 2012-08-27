@@ -20,6 +20,7 @@ MAINTAINERCLEANFILES = \
 	Makefile.in \
 	missing \
 	mkinstalldirs
+EXTRA_DIST =
 
 bin_PROGRAMS = dialer/dialer
 
@@ -51,6 +52,60 @@ else
 dialer_dialer_SOURCES += dialer/contacts.c
 endif
 
+if HAVE_TIZEN
+bin_PROGRAMS += \
+	tizen/answer_daemon \
+	tizen/dialer_open \
+	tizen/dialer_daemon
+
+tizen_answer_daemon_SOURCES = tizen/answer_daemon.c
+tizen_answer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+
+tizen_dialer_open_SOURCES = tizen/dialer_open.c
+tizen_dialer_open_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+
+tizen_dialer_daemon_SOURCES = tizen/dialer_daemon.c
+tizen_dialer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+
+%.service: %.service.in Makefile
+	sed 's:@bindir[@]:$(bindir):g' $< > $@
+
+dbusservicesdir = @with_dbusservicesdir@
+dbusservices_DATA = \
+tizen/org.tizen.dialer.service
+
+EXTRA_DIST += \
+tizen/org.tizen.dialer.service.in
+
+%.desktop: %.desktop.in Makefile
+	sed 's:@bindir[@]:$(bindir):g' $< > $@
+
+desktopdir = @with_desktopdir@
+desktop_DATA = \
+tizen/answer_daemon.desktop \
+tizen/dialer.desktop \
+tizen/org.tizen.call.desktop \
+tizen/org.tizen.phone.desktop
+
+EXTRA_DIST += \
+tizen/answer_daemon.desktop.in \
+tizen/dialer.desktop.in \
+tizen/org.tizen.call.desktop.in \
+tizen/org.tizen.phone.desktop.in
+
+
+tizen/order: tizen/order.in Makefile
+	sed 's:@desktopdir[@]:$(with_desktopdir):g' $< > $@
+
+tizenexamplesdir = $(pkgdatadir)/tizen-examples
+tizenexamples_DATA = \
+tizen/order
+
+EXTRA_DIST += \
+tizen/order.in
+
+endif
+
 # Themes are compiled with edje_cc given by user (cross-compile)
 EDJE_CC = @edje_cc@
 EDJE_FLAGS_VERBOSE_ =
@@ -69,6 +124,8 @@ am__v_EDJ_0 = @echo "  EDJ   " $@;
 
 THEME_IMAGES = \
 data/themes/images/bg_call.jpg \
+data/themes/images/arrow_right.png \
+data/themes/images/arrow_left.png \
 data/themes/images/bg_keypad.jpg \
 data/themes/images/ico_add_call.png \
 data/themes/images/ico_add_contact.png \
@@ -99,6 +156,8 @@ data/themes/images/loading_6.png \
 data/themes/images/loading_7.png
 
 THEME_INCLUDES = \
+data/themes/includes/action_answer.edc \
+data/themes/includes/answer_screen.edc \
 data/themes/includes/buttons.edc \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
@@ -113,7 +172,7 @@ data/themes/includes/popup.edc \
 data/themes/includes/scroller.edc
 
 
-EXTRA_DIST = \
+EXTRA_DIST += \
 data/themes/default-hd.edc \
 data/themes/default-sd.edc \
 data/themes/default.edc \

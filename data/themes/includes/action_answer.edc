@@ -1,0 +1,240 @@
+
+group {
+   name: "elm/actionslider/base/answer";
+
+   images {
+      image: "ico_call.png" COMP;
+      image: "arrow_right.png" COMP;
+      image: "arrow_left.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "elm.text.left";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "caution";
+            rel1.offset: BORDER_PADDING 0;
+            rel2.relative: 0.5 1.0;
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0 0.5;
+               min: 0 1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.image.arrow.right.1";
+         type: IMAGE;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: 22 30;
+            max: 22 30;
+            color: 255 255 255 255;
+            color_class: "caution";
+            rel1 {
+               to: "elm.drag_button";
+               offset: (-190 - ITEM_PADDING) 0;
+            }
+            rel2 {
+               to: "elm.drag_button";
+            }
+            image {
+               normal: "arrow_right.png";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+      part {
+         name: "elm.image.arrow.right.2";
+         type: IMAGE;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: 22 30;
+            max: 22 30;
+            color: 255 255 255 128;
+            color_class: "caution";
+            rel1 {
+               to: "elm.drag_button";
+               offset: (-135 - ITEM_PADDING) 0;
+            }
+            rel2 {
+               to: "elm.drag_button";
+            }
+            image {
+               normal: "arrow_right.png";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+       part {
+         name: "elm.image.arrow.left.1";
+         type: IMAGE;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: 22 30;
+            max: 22 30;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "elm.drag_button";
+               offset: (ITEM_PADDING + 190) 0;
+            }
+            rel2 {
+               to: "elm.drag_button";
+            }
+            image {
+               normal: "arrow_left.png";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+       part {
+         name: "elm.image.arrow.left.2";
+         type: IMAGE;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: 22 30;
+            max: 22 30;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               to: "elm.drag_button";
+               offset: (135 +ITEM_PADDING) 0;
+            }
+            rel2 {
+               to: "elm.drag_button";
+            }
+            image {
+               normal: "arrow_left.png";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+      }
+
+      part {
+         name: "elm.text.right";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               relative: 1.0 0.0;
+               offset: (-ACTION_HEIGHT -BORDER_PADDING) 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING 0;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0 0.5;
+               min: 0 1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.drag_button_base";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         description {
+	 state: "default" 0.0;
+            fixed: 1 1;
+            min: 170 170;
+            align: 0.5 0.5;
+            rel1.to: "bg";
+            rel2 {
+               relative: 0.0 1.0;
+               to: "bg";
+            }
+         }
+         dragable {
+            confine: "bg";
+            x: 1 1 0;
+            y: 0 0 0;
+         }
+      }
+      part {
+         name: "elm.drag_button";
+         type: IMAGE;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            min: 170 170;
+            max: 170 170;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to_x: "elm.drag_button_base";
+            rel1.to_y: "bg";
+            rel2.to_x: "elm.drag_button_base";
+            rel2.to_y: "bg";
+            image {
+               normal: "ico_call.png";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
+         }
+         dragable {
+            events: "elm.drag_button_base";
+         }
+      }
+   }
+
+   programs {
+      program {
+         name: "elm.drag_button,mouse,up";
+         signal: "mouse,up,1";
+         source: "elm.drag_button";
+         action: SIGNAL_EMIT "elm.drag_button,mouse,up" "";
+      }
+      program {
+         name: "elm.drag_button,mouse,down";
+         signal: "mouse,down,1";
+         source: "elm.drag_button";
+         action: SIGNAL_EMIT "elm.drag_button,mouse,down" "";
+      }
+      program {
+         name: "elm.drag_button,mouse,move";
+         signal: "mouse,move";
+         source: "elm.drag_button_base";
+         action: SIGNAL_EMIT "elm.drag_button,mouse,move" "";
+      }
+   }
+}
