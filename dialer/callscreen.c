@@ -295,8 +295,13 @@ static void _call_elapsed_update(Callscreen *ctx, unsigned int id,
 {
 	Edje_Message_Float msgf = {0};
 	Evas_Object *ed;
+	OFono_Call_State state = ofono_call_state_get(c);
 	double start, now, elapsed;
 	char part[128], buf[128] = "";
+
+	if ((state != OFONO_CALL_STATE_ACTIVE) &&
+		(state != OFONO_CALL_STATE_HELD))
+		goto end;
 
 	if (ofono_call_multiparty_get(c))
 		start = ctx->multiparty.start;
@@ -338,8 +343,13 @@ static void _activecall_elapsed_update(Callscreen *ctx)
 {
 	Edje_Message_Float msgf = {0};
 	Evas_Object *ed;
+	OFono_Call_State state = ofono_call_state_get(ctx->calls.current);
 	double start, now, elapsed;
 	char buf[128] = "";
+
+	if ((state != OFONO_CALL_STATE_ACTIVE) &&
+		(state != OFONO_CALL_STATE_HELD))
+		goto end;
 
 	if (ofono_call_multiparty_get(ctx->calls.current))
 		start = ctx->multiparty.start;
