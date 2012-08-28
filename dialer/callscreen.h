@@ -5,5 +5,4 @@
 
 Evas_Object *callscreen_add(Evas_Object *parent);
 void callscreen_call_add(Evas_Object *obj, OFono_Call *call);
-
 #endif

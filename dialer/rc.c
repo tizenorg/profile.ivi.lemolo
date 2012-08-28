@@ -13,10 +13,15 @@ static E_DBus_Interface *bus_iface = NULL;
 
 #define RC_IFACE "org.tizen.dialer.Control"
 #define RC_PATH "/"
+#define RC_SIG_CALL_ADDED "AddedCall"
+#define RC_SIG_CALL_REMOVED "RemovedCall"
 
 static const char *rc_service = NULL;
 static OFono_Callback_List_Modem_Node *modem_changed_node = NULL;
+static OFono_Callback_List_Call_Node *call_added = NULL;
+static OFono_Callback_List_Call_Node *call_removed = NULL;
 static DBusMessage *pending_dial = NULL;
+static OFono_Call *waiting = NULL;
 
 static void _dial_number(const char *number, Eina_Bool do_auto)
 {
@@ -89,6 +94,133 @@ _rc_dial(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
 	return dbus_message_new_method_return(msg);
 }
 
+static DBusMessage *_rc_hangup_call(E_DBus_Object *obj __UNUSED__,
+						DBusMessage *msg)
+{
+	if (!waiting) {
+		return dbus_message_new_error(msg,
+					"org.tizen.dialer.error.NotAvailable",
+					"No calls available");
+	}
+
+	ofono_call_hangup(waiting, NULL, NULL);
+
+	return dbus_message_new_method_return(msg);
+}
+
+static DBusMessage *_rc_answer_call(E_DBus_Object *obj __UNUSED__,
+						DBusMessage *msg)
+{
+	OFono_Call_State state;
+
+	if (!waiting) {
+		return dbus_message_new_error(msg,
+					"org.tizen.dialer.error.NotAvailable",
+					"No calls available");
+	}
+
+	state = ofono_call_state_get(waiting);
+	if (state == OFONO_CALL_STATE_INCOMING)
+		ofono_call_answer(waiting, NULL, NULL);
+	else if (state == OFONO_CALL_STATE_WAITING)
+		ofono_hold_and_answer(NULL, NULL);
+
+	return dbus_message_new_method_return(msg);
+}
+
+static void _rc_signal_reply(void *data __UNUSED__,
+					DBusMessage *msg __UNUSED__,
+					DBusError *err)
+{
+	if (dbus_error_is_set(err)) {
+		CRITICAL("Failed to send a signal: %s: %s",
+				err->name, err->message);
+		return;
+	}
+
+	DBG("Signal was sent successfully");
+}
+
+static void _new_call_sig_emit(OFono_Call *call)
+{
+	DBusMessage *msg;
+	const char *line_id, *name = "", *type = "", *img = "";
+	Contact_Info *c_info;
+
+	line_id = ofono_call_line_id_get(call);
+	c_info = gui_contact_search(line_id, &type);
+
+	if (c_info) {
+		name = contact_info_full_name_get(c_info);
+		img = contact_info_picture_get(c_info);
+		if (!img)
+			img = "";
+	}
+
+	msg = dbus_message_new_signal(RC_PATH, RC_IFACE, RC_SIG_CALL_ADDED);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &img,
+					DBUS_TYPE_STRING, &line_id,
+					DBUS_TYPE_STRING, &name,
+					DBUS_TYPE_STRING, &type,
+					DBUS_TYPE_INVALID)) {
+		ERR("Could not append msg args.");
+		goto err_args;
+	}
+
+	e_dbus_message_send(bus_conn, msg, _rc_signal_reply, -1, NULL);
+err_args:
+	dbus_message_unref(msg);
+}
+
+static DBusMessage *_rc_waiting_call_get(E_DBus_Object *obj __UNUSED__,
+						DBusMessage *msg)
+{
+	DBusMessage *ret;
+	const char *line_id, *name = "", *type = "", *img = "";
+	Contact_Info *c_info;
+
+
+	if (!waiting) {
+		return dbus_message_new_error(msg,
+					"org.tizen.dialer.error.NotAvailable",
+					"No calls available");
+	}
+
+	line_id = ofono_call_line_id_get(waiting);
+	c_info = gui_contact_search(line_id, &type);
+
+	if (c_info) {
+		name = contact_info_full_name_get(c_info);
+		img = contact_info_picture_get(c_info);
+		if (!img)
+			img = "";
+	}
+
+	ret = dbus_message_new_method_return(msg);
+	EINA_SAFETY_ON_NULL_GOTO(ret, err_ret);
+
+	if (!dbus_message_append_args(ret, DBUS_TYPE_STRING, &img,
+					DBUS_TYPE_STRING, &line_id,
+					DBUS_TYPE_STRING, &name,
+					DBUS_TYPE_STRING, &type,
+					DBUS_TYPE_INVALID)) {
+		ERR("Could not append msg args.");
+		goto err_args;
+	}
+
+	return ret;
+
+err_args:
+	dbus_message_unref(ret);
+
+err_ret:
+	return dbus_message_new_error(msg,
+					"org.tizen.dialer.error.Error",
+					"Could not create a reply");
+}
+
 static void _rc_object_register(void)
 {
 	bus_obj = e_dbus_object_add(bus_conn, RC_PATH, NULL);
@@ -104,7 +236,15 @@ static void _rc_object_register(void)
 
 	IF_ADD("Activate", "", "", _rc_activate);
 	IF_ADD("Dial", "sb", "", _rc_dial);
+	IF_ADD("HangupCall", "", "", _rc_hangup_call);
+	IF_ADD("AnswerCall", "", "", _rc_answer_call);
+	IF_ADD("GetAvailableCall", "", "ssss", _rc_waiting_call_get);
 #undef IF_ADD
+
+	e_dbus_interface_signal_add(bus_iface, RC_SIG_CALL_ADDED,
+					"ssss");
+	e_dbus_interface_signal_add(bus_iface, RC_SIG_CALL_REMOVED,
+					"");
 }
 
 static void _rc_activate_existing_reply(void *data __UNUSED__,
@@ -158,6 +298,43 @@ static void _rc_request_name_reply(void *data __UNUSED__, DBusMessage *msg,
 	}
 }
 
+static void _removed_signal_send(void)
+{
+	DBusMessage *msg;
+
+	msg = dbus_message_new_signal(RC_PATH, RC_IFACE, RC_SIG_CALL_REMOVED);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
+
+	e_dbus_message_send(bus_conn, msg, _rc_signal_reply, -1, NULL);
+
+	dbus_message_unref(msg);
+}
+
+static void _rc_call_added_cb(void *data __UNUSED__, OFono_Call *call)
+{
+	OFono_Call_State state = ofono_call_state_get(call);
+
+	if (state != OFONO_CALL_STATE_INCOMING &&
+		state != OFONO_CALL_STATE_WAITING)
+		return;
+
+	if (waiting)
+		_removed_signal_send();
+
+	waiting = call;
+	_new_call_sig_emit(call);
+
+}
+
+static void _rc_call_removed_cb(void *data __UNUSED__, OFono_Call *call)
+{
+
+	if (waiting == call) {
+		_removed_signal_send();
+		waiting = NULL;
+	}
+}
+
 Eina_Bool rc_init(const char *service)
 {
 	rc_service = service;
@@ -179,6 +356,9 @@ Eina_Bool rc_init(const char *service)
 	modem_changed_node = ofono_modem_changed_cb_add(_modem_changed_cb,
 							NULL);
 
+	call_added = ofono_call_added_cb_add(_rc_call_added_cb, NULL);
+	call_removed = ofono_call_removed_cb_add(_rc_call_removed_cb, NULL);
+
 	return EINA_TRUE;
 }
 
@@ -190,6 +370,8 @@ void rc_shutdown(void)
 		e_dbus_interface_unref(bus_iface);
 
 	ofono_modem_changed_cb_del(modem_changed_node);
+	ofono_call_added_cb_del(call_added);
+	ofono_call_removed_cb_del(call_removed);
 
 	if (pending_dial)
 		dbus_message_unref(pending_dial);
