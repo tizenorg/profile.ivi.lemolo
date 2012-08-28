@@ -16,6 +16,8 @@
 
 typedef struct _Contacts {
 	Evas_Object *self;
+	Eina_Bool contacts_on;
+	Ecore_Timer *reconnect;
 	struct ui_gadget *ug_all;
 	Eina_Hash *numbers, *hash_ids;
 	/*
@@ -457,6 +459,9 @@ Contact_Info *contact_search(Evas_Object *obj, const char *number,
 	contacts = evas_object_data_get(obj, "contacts.ctx");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
 
+	if (!contacts->contacts_on)
+		return NULL;
+
 	entry = eina_hash_find(contacts->numbers, number);
 
 	if (entry) {
@@ -769,36 +774,18 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	eina_hash_free(contacts->hash_ids);
 	eina_hash_free(contacts->numbers);
 	ug_destroy(contacts->ug_all);
+	if (contacts->reconnect)
+		ecore_timer_del(contacts->reconnect);
 	free(contacts);
 	contacts_disconnect();
 }
 
-Evas_Object *contacts_add(Evas_Object *parent)
+static void _create_contacts_ug(Contacts *contacts)
 {
+	char buf[PATH_MAX];
 	struct ug_cbs cbs;
 	struct ui_gadget *ug;
 	bundle *bd;
-	char buf[PATH_MAX];
-	Contacts *contacts;
-
-	if (contacts_connect() < 0) {
-		ERR("Could not connect to the contacts DB");
-		return NULL;
-	}
-
-	contacts = calloc(1, sizeof(Contacts));
-	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
-	contacts->self = gui_layout_add(parent, "contacts_bg");
-	EINA_SAFETY_ON_NULL_GOTO(contacts->self, err_layout);
-	evas_object_event_callback_add(contacts->self, EVAS_CALLBACK_DEL,
-					_on_del, contacts);
-
-	contacts->numbers = eina_hash_string_superfast_new(
-		_numbers_hash_elements_free);
-	EINA_SAFETY_ON_NULL_GOTO(contacts->numbers, err_hash);
-
-	contacts->hash_ids = eina_hash_int32_new(_hash_elements_free);
-	EINA_SAFETY_ON_NULL_GOTO(contacts->hash_ids, err_hash_id);
 
 	cbs.priv = contacts;
 	cbs.layout_cb = _contacts_ug_layout_create;
@@ -806,7 +793,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	cbs.destroy_cb = NULL;
 
 	bd = bundle_create();
-	EINA_SAFETY_ON_NULL_GOTO(bd, err_bd);
+	EINA_SAFETY_ON_NULL_RETURN(bd);
 
 	snprintf(buf, sizeof(buf), "%d", CT_UG_REQUEST_DETAIL);
 	bundle_add(bd, CT_UG_BUNDLE_TYPE, buf);
@@ -816,25 +803,65 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	ug = ug_create(NULL, UG_CONTACTS_LIST, UG_MODE_FRAMEVIEW, bd, &cbs);
 	EINA_SAFETY_ON_NULL_GOTO(ug, err_ug);
 
+	contacts->ug_all = ug;
+	evas_object_data_set(contacts->self, "contacts.ctx", contacts);
+err_ug:
 	bundle_free(bd);
 	bd = NULL;
+}
 
-	contacts->ug_all = ug;
+static Eina_Bool _contacts_reconnect(void *data)
+{
+	Contacts *contacts = data;
 
+	if (contacts_connect() != CONTACTS_ERROR_NONE)
+		return ECORE_CALLBACK_RENEW;
+
+	contacts->contacts_on = EINA_TRUE;
+	contacts->reconnect = NULL;
 	contacts_add_contact_db_changed_cb(_contact_db_changed, contacts);
+	_create_contacts_ug(contacts);
+	return ECORE_CALLBACK_DONE;
+}
 
-	evas_object_data_set(contacts->self, "contacts.ctx", contacts);
+Evas_Object *contacts_add(Evas_Object *parent)
+{
+	Contacts *contacts;
+
+	contacts = calloc(1, sizeof(Contacts));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
+	contacts->self = gui_layout_add(parent, "contacts_bg");
+	EINA_SAFETY_ON_NULL_GOTO(contacts->self, err_layout);
+	evas_object_event_callback_add(contacts->self, EVAS_CALLBACK_DEL,
+					_on_del, contacts);
+
+	if (contacts_connect() != CONTACTS_ERROR_NONE) {
+		WRN("Could not connect to the contacts DB");
+		contacts->contacts_on = EINA_FALSE;
+		contacts->reconnect = ecore_timer_add(1.0, _contacts_reconnect,
+							contacts);
+	} else {
+		contacts_add_contact_db_changed_cb(_contact_db_changed,
+							contacts);
+		contacts->contacts_on = EINA_TRUE;
+		_create_contacts_ug(contacts);
+	}
+
+	contacts->numbers = eina_hash_string_superfast_new(
+		_numbers_hash_elements_free);
+	EINA_SAFETY_ON_NULL_GOTO(contacts->numbers, err_hash);
+
+	contacts->hash_ids = eina_hash_int32_new(_hash_elements_free);
+	EINA_SAFETY_ON_NULL_GOTO(contacts->hash_ids, err_hash_id);
+
 	return contacts->self;
 
-err_ug:
-	if (bd)
-		bundle_free(bd);
-err_bd:
-	eina_hash_free(contacts->hash_ids);
 err_hash_id:
 	eina_hash_free(contacts->numbers);
 err_hash:
 	evas_object_del(contacts->self);
+	if (contacts->reconnect)
+		ecore_timer_del(contacts->reconnect);
 err_layout:
 	free(contacts);
 	return NULL;
