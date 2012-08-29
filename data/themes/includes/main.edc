@@ -536,6 +536,8 @@ group {
             state: "default" 0.0;
             color: 0 0 0 0;
             visible: 0;
+            rel1.to: "button.voicemail";
+            rel2.to: "button.voicemail";
          }
          description {
             state: "disabled" 0.0;
