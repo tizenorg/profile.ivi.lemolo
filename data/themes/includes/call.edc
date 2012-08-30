@@ -1073,11 +1073,11 @@ group {
          description {
             state: "default" 0.0;
             color: 0 0 0 0;
-            min: WIDTH (ACTION_HEIGHT * 4);
-            max: WIDTH (ACTION_HEIGHT * 4); /* keep it tight centered */
+            min: WIDTH (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT);
+            max: WIDTH (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT); /* keep it tight centered */
             rel1 {
                relative: 0.0 0.0;
-               offset: 0 (-ACTION_HEIGHT * 4 - SEPARATOR_HEIGHT);
+               offset: 0 (-HEIGHT + 2 * CALL_HEIGHT + 2 * ACTION_HEIGHT + 3 * SEPARATOR_HEIGHT);
                to_y: "button.hide-keypad";
             }
             rel2 {
@@ -1236,12 +1236,12 @@ group {
             rel1 {
                to_y: "button.hangup";
                relative: 0.0 -1.0;
-               offset: 0 (ACTION_HEIGHT * 4 + SEPARATOR_HEIGHT);
+               offset: 0 (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT);
             }
             rel2 {
                to_y: "button.hangup";
                relative: 1.0 0.0;
-               offset: -1 (ACTION_HEIGHT * 4 + SEPARATOR_HEIGHT - 1);
+               offset: -1 (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT - 1);
             }
          }
          description {
