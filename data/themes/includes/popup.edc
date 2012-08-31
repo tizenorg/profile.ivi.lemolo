@@ -29,6 +29,21 @@ group {
          }
       }
 
+      part {
+         name: "notification,bar";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+            rel1.relative: 0.0 0.0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: 0 50;
+            }
+         }
+      }
+
 #define SEPARATOR(id, clip, rely, offy, relto)                          \
       part {                                                            \
          name: "separator.dark."##id;                                   \
@@ -100,10 +115,12 @@ group {
             color_class: "action";
             visible: 1;
             rel1 {
-               relative: 0.0 0.0;
+               to: "notification,bar";
+               relative: 0.0 1.0;
                offset: 0 (-ACTION_HEIGHT / 2 - SEPARATOR_HEIGHT);
             }
             rel2 {
+               to: "notification,bar";
                relative: 1.0 0.0;
                offset: -1 (-SEPARATOR_HEIGHT - 1);
             }
@@ -119,10 +136,12 @@ group {
             inherit: "default" 0.0;
             visible: 1;
             rel1 {
-               relative: 0.0 0.0;
+               to: "notification,bar";
+               relative: 0.0 1.0;
                offset: 0 0;
             }
             rel2 {
+               to: "notification,bar";
                relative: 1.0 0.0;
                offset: -1 (ACTION_HEIGHT / 2 - 1);
             }
