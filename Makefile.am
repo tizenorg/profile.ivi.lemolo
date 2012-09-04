@@ -46,6 +46,11 @@ dialer_dialer_SOURCES = \
 	dialer/util.c \
 	dialer/util.h
 
+AM_V_SED = $(am__v_SED_$(V))
+am__v_SED_ = $(am__v_SED_$(AM_DEFAULT_VERBOSITY))
+am__v_SED_0 = @echo "  SED   " $@;
+
+
 if HAVE_TIZEN
 dialer_dialer_SOURCES += dialer/contacts-tizen.c
 else
@@ -78,7 +83,7 @@ EXTRA_DIST += \
 tizen/org.tizen.dialer.service.in
 
 %.desktop: %.desktop.in Makefile
-	sed 's:@bindir[@]:$(bindir):g' $< > $@
+	$(AM_V_SED)sed 's:@bindir[@]:$(bindir):g' $< > $@
 
 desktopdir = @with_desktopdir@
 desktop_DATA = \
@@ -95,7 +100,7 @@ tizen/org.tizen.phone.desktop.in
 
 
 tizen/order: tizen/order.in Makefile
-	sed 's:@desktopdir[@]:$(with_desktopdir):g' $< > $@
+	$(AM_V_SED)sed 's:@desktopdir[@]:$(with_desktopdir):g' $< > $@
 
 tizenexamplesdir = $(pkgdatadir)/tizen-examples
 tizenexamples_DATA = \
