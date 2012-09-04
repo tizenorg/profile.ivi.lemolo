@@ -33,4 +33,10 @@
 
 #define LOADING_SIZE 128
 
+#ifdef HAVE_TIZEN
+#define NOTIFICATION_BAR_HEIGHT 50
+#else
+#define NOTIFICATION_BAR_HEIGHT 0
+#endif
+
 #include "default.edc"
