@@ -37,9 +37,8 @@ EFL_WITH_BIN([edje], [edje-cc], [edje_cc])
 want_tizen="auto"
 have_tizen="no"
 AC_ARG_ENABLE([tizen],
-   AC_HELP_STRING([--enable-tizen], [enable Tizen integration. @<:@default==auto@:>@]),
-   [want_tizen="yes"],
-   [want_tizen="no"])
+   AC_HELP_STRING([--enable-tizen], [enable Tizen integration. @<:@default=auto@:>@]),
+   [want_tizen="${enableval}"], [:])
 
 if test "$want_tizen" != "no"; then
    PKG_CHECK_MODULES([TIZEN],
