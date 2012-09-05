@@ -20,21 +20,32 @@ static void _activate_cb(void *data __UNUSED__, DBusMessage *msg __UNUSED__,
 {
 	if (dbus_error_is_set(error)) {
 		fprintf(stderr, "Error: %s %s", error->name, error->message);
-		return;
 	}
+	elm_exit();
 }
 
-static int _bring_to_foreground(void)
+static void _bring_to_foreground(void)
 {
 	DBusMessage *msg;
 
 	msg = dbus_message_new_method_call(BUS_NAME, PATH, IFACE, "Activate");
 
-	EINA_SAFETY_ON_NULL_RETURN_VAL(msg, -1);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
 
 	e_dbus_message_send(bus_conn, msg, _activate_cb, -1, NULL);
 	dbus_message_unref(msg);
-	return 0;
+}
+
+static void _start_cb(void *data __UNUSED__, DBusMessage *msg __UNUSED__,
+			DBusError *error)
+{
+	if (dbus_error_is_set(error)) {
+		fprintf(stderr, "Error: %s %s", error->name, error->message);
+		elm_exit();
+		return;
+	}
+
+	_bring_to_foreground();
 }
 
 static void _has_owner_cb(void *data __UNUSED__, DBusMessage *msg,
@@ -45,6 +56,7 @@ static void _has_owner_cb(void *data __UNUSED__, DBusMessage *msg,
 
 	if (dbus_error_is_set(error)) {
 		fprintf(stderr, "Error: %s %s", error->name, error->message);
+		elm_exit();
 		return;
 	}
 	dbus_error_init(&err);
@@ -52,29 +64,9 @@ static void _has_owner_cb(void *data __UNUSED__, DBusMessage *msg,
 				DBUS_TYPE_INVALID);
 
 	if (!online)
-		e_dbus_start_service_by_name(bus_conn, BUS_NAME, 0, NULL, NULL);
-}
-
-static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
-{
-	DBusError err;
-	const char *name, *from, *to;
-
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err,
-					DBUS_TYPE_STRING, &name,
-					DBUS_TYPE_STRING, &from,
-					DBUS_TYPE_STRING, &to,
-					DBUS_TYPE_INVALID)) {
-		fprintf(stderr,
-			"Could not get NameOwnerChanged arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
-		return;
-	}
-
-	if (strcmp(name, BUS_NAME) != 0)
-		return;
+		e_dbus_start_service_by_name(bus_conn, BUS_NAME, 0, _start_cb, NULL);
+	else
+		_bring_to_foreground();
 }
 
 static Eina_Bool _dbus_init(void)
@@ -87,11 +79,6 @@ static Eina_Bool _dbus_init(void)
 		fprintf(stderr, "Could not fetch the DBus session");
 		return EINA_FALSE;
 	}
-
-	e_dbus_signal_handler_add(bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
-					E_DBUS_FDO_INTERFACE,
-					"NameOwnerChanged",
-					_name_owner_changed, NULL);
 
 	msg = dbus_message_new_method_call(E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
 						E_DBUS_FDO_INTERFACE,
@@ -119,10 +106,7 @@ static int _create(void *data __UNUSED__)
 
 static int _reset(bundle *b __UNUSED__, void *data __UNUSED__)
 {
-	int r;
-	r = _bring_to_foreground();
-	elm_exit();
-	return r;
+	return 0;
 }
 
 static int _resume(void *data __UNUSED__)
