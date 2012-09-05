@@ -276,7 +276,7 @@ static Eina_Bool _dbus_init(Call_Screen *cs)
 	DBusMessage *msg;
 	char *bus_name = BUS_NAME;
 
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SESSION);
+	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
 	if (!bus_conn) {
 		ERR("Could not fetch the DBus session");
 		return EINA_FALSE;
