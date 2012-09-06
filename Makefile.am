@@ -22,7 +22,9 @@ MAINTAINERCLEANFILES = \
 	mkinstalldirs
 EXTRA_DIST =
 
-bin_PROGRAMS = dialer/dialer
+bin_PROGRAMS = \
+	dialer/dialer \
+	tizen/answer_daemon
 
 dialer_dialer_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
 dialer_dialer_SOURCES = \
@@ -57,14 +59,13 @@ else
 dialer_dialer_SOURCES += dialer/contacts.c
 endif
 
-if HAVE_TIZEN
-bin_PROGRAMS += \
-	tizen/answer_daemon \
-	tizen/dialer_open \
-	tizen/dialer_daemon
-
 tizen_answer_daemon_SOURCES = tizen/answer_daemon.c
 tizen_answer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+
+if HAVE_TIZEN
+bin_PROGRAMS += \
+	tizen/dialer_open \
+	tizen/dialer_daemon
 
 tizen_dialer_open_SOURCES = tizen/dialer_open.c
 tizen_dialer_open_LDADD = @EFL_LIBS@ @TIZEN_LIBS@

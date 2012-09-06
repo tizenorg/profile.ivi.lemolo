@@ -7,13 +7,16 @@
 #include <Eina.h>
 #include <Evas.h>
 #include <Elementary.h>
+#include <E_DBus.h>
+
+#ifdef HAVE_TIZEN
+#include <Ecore_X.h>
 #include <vconf.h>
 #include <vconf-keys.h>
-#include <E_DBus.h>
-#include <Ecore_X.h>
 #include <utilX.h>
 #include <power.h>
 #include <aul.h>
+#endif
 
 #define APP_NAME "org.tizen.answer"
 #define BUS_NAME "org.tizen.dialer"
@@ -22,12 +25,10 @@
 
 static int _log_domain = -1;
 #define ERR(...)      EINA_LOG_DOM_ERR(_log_domain, __VA_ARGS__)
+#define INF(...)      EINA_LOG_DOM_INFO(_log_domain, __VA_ARGS__)
+#define DBG(...)      EINA_LOG_DOM_DBG(_log_domain, __VA_ARGS__)
 
 static E_DBus_Connection *bus_conn = NULL;
-static E_DBus_Signal_Handler *sig_incoming_call_add = NULL;
-static E_DBus_Signal_Handler *sig_incoming_call_removed = NULL;
-static E_DBus_Signal_Handler *sig_waiting_call_add = NULL;
-static E_DBus_Signal_Handler *sig_waiting_call_removed = NULL;
 
 typedef struct _Call {
 	const char *line_id, *img, *type, *name;
@@ -37,10 +38,14 @@ typedef struct _Call_Screen {
 	Evas_Object *win, *layout;
 	Call *call;
 	Eina_Bool screen_visible;
+	E_DBus_Signal_Handler *sig_call_add;
+	E_DBus_Signal_Handler *sig_call_removed;
+	E_DBus_Signal_Handler *sig_name_changed;
 } Call_Screen;
 
 static void _set_notification_type(Evas_Object *win, Eina_Bool high)
 {
+#ifdef HAVE_TIZEN
 	Ecore_X_Window xwin;
 
 	xwin = elm_win_xwindow_get(win);
@@ -53,10 +58,15 @@ static void _set_notification_type(Evas_Object *win, Eina_Bool high)
 		power_wakeup();
 	} else
 		ecore_x_netwm_window_type_set(xwin, ECORE_X_WINDOW_TYPE_NORMAL);
+#else
+	(void)win;
+	(void)high;
+#endif
 }
 
 static Eina_Bool _phone_locked(void)
 {
+#ifdef HAVE_TIZEN
 	int lock;
 	if (vconf_get_int(VCONFKEY_IDLE_LOCK_STATE, &lock) == -1)
 		return EINA_FALSE;
@@ -65,6 +75,9 @@ static Eina_Bool _phone_locked(void)
 		return EINA_TRUE;
 
 	return EINA_FALSE;
+#else
+	return EINA_TRUE; /* always have it to show */
+#endif
 }
 
 static Call *_call_create(DBusMessage *msg)
@@ -90,11 +103,15 @@ static Call *_call_create(DBusMessage *msg)
 	call->line_id = eina_stringshare_add(id);
 	call->type = eina_stringshare_add(type);
 	call->name = eina_stringshare_add(name);
+	DBG("c=%p line_id=%s, name=%s, type=%s, img=%s",
+		call, call->line_id, call->name, call->type, call->img);
 	return call;
 }
 
 static void _call_destroy(Call *c)
 {
+	DBG("c=%p line_id=%s, name=%s, type=%s, img=%s",
+		c, c->line_id, c->name, c->type, c->img);
 	eina_stringshare_del(c->img);
 	eina_stringshare_del(c->line_id);
 	eina_stringshare_del(c->type);
@@ -102,9 +119,13 @@ static void _call_destroy(Call *c)
 	free(c);
 }
 
-static void _call_screen_show(Call_Screen *cs, const char *state)
+static void _call_screen_show(Call_Screen *cs)
 {
 	Call *c = cs->call;
+
+	INF("Show line_id=%s, name=%s, type=%s",
+		c->line_id, c->name, c->type);
+
 	_set_notification_type(cs->win, EINA_TRUE);
 	cs->screen_visible = EINA_TRUE;
 	elm_win_raise(cs->win);
@@ -117,60 +138,72 @@ static void _call_screen_show(Call_Screen *cs, const char *state)
 		elm_object_part_text_set(cs->layout, "elm.text.name",
 						c->name);
 
-	elm_object_part_text_set(cs->layout, "elm.text.state", state);
+	elm_object_part_text_set(cs->layout, "elm.text.state", "Incoming...");
+	elm_object_part_text_set(cs->layout, "elm.text.phone.type", c->type);
 	elm_object_signal_emit(cs->layout, "show,activecall", "gui");
 	evas_object_show(cs->win);
+#ifdef HAVE_TIZEN
 	//screen can't be off
 	power_lock_state(POWER_STATE_NORMAL, 0);
+#endif
 }
 
 static void _sig_call_added(void *data, DBusMessage *msg)
 {
 	Call_Screen *cs = data;
+	Eina_Bool locked = _phone_locked();
 
-	if (!_phone_locked())
-		return;
+	DBG("previous=%p, visible=%d, locked=%d", cs->call, cs->screen_visible,
+		locked);
 
 	if (cs->call)
 		_call_destroy(cs->call);
-
 	cs->call = _call_create(msg);
-	_call_screen_show(cs, "Incoming...");
+
+	if (!locked)
+		return;
+
+	_call_screen_show(cs);
 }
 
 static void _call_screen_hide(Call_Screen *cs)
 {
+	INF("hide call");
 	cs->screen_visible = EINA_FALSE;
 	_set_notification_type(cs->win, EINA_FALSE);
 	elm_object_signal_emit(cs->layout, "hide,activecall", "gui");
 	evas_object_hide(cs->win);
+#ifdef HAVE_TIZEN
 	//screen can go off again
 	power_unlock_state(POWER_STATE_NORMAL);
+#endif
 }
 
 static void _sig_call_removed(void *data, DBusMessage *msg __UNUSED__)
 {
 	Call_Screen *cs = data;
 
-	if (!cs->screen_visible)
-		return;
+	DBG("previous=%p, visible=%d", cs->call, cs->screen_visible);
 
 	if (cs->call) {
 		_call_destroy(cs->call);
 		cs->call = NULL;
 	}
 
+	if (!cs->screen_visible)
+		return;
+
 	_call_screen_hide(cs);
 }
 
 static void _signal_handlers_add(Call_Screen *cs)
 {
-	sig_incoming_call_add = e_dbus_signal_handler_add(bus_conn, BUS_NAME,
-								PATH, IFACE,
-								"AddedCall",
-								_sig_call_added,
-								cs);
-	sig_incoming_call_removed = e_dbus_signal_handler_add(bus_conn,
+	cs->sig_call_add = e_dbus_signal_handler_add(bus_conn, BUS_NAME,
+							PATH, IFACE,
+							"AddedCall",
+							_sig_call_added,
+							cs);
+	cs->sig_call_removed = e_dbus_signal_handler_add(bus_conn,
 								BUS_NAME, PATH,
 								IFACE,
 								"RemovedCall",
@@ -178,6 +211,18 @@ static void _signal_handlers_add(Call_Screen *cs)
 								cs);
 }
 
+static void _signal_handlers_del(Call_Screen *cs)
+{
+	if (cs->sig_call_add) {
+		e_dbus_signal_handler_del(bus_conn, cs->sig_call_add);
+		cs->sig_call_add = NULL;
+	}
+
+	if (cs->sig_call_removed) {
+		e_dbus_signal_handler_del(bus_conn, cs->sig_call_removed);
+		cs->sig_call_removed = NULL;
+	}
+}
 
 static void _daemon_method_call_reply(void *data __UNUSED__,
 					DBusMessage *msg __UNUSED__,
@@ -196,6 +241,8 @@ static void _daemon_method_call_make_with_reply(const char *method,
 	DBusMessage *msg;
 
 	msg = dbus_message_new_method_call(BUS_NAME, PATH, IFACE, method);
+	INF("msg=%p name=%s, path=%s, %s.%s()",
+		msg, BUS_NAME, PATH, IFACE, method);
 	EINA_SAFETY_ON_NULL_RETURN(msg);
 
 	e_dbus_message_send(bus_conn, msg,  cb, -1, data);
@@ -215,18 +262,21 @@ static void _daemon_available_call_reply(void *data, DBusMessage *msg,
 
 	if (dbus_error_is_set(err)) {
 		const char *err_name = "org.tizen.dialer.error.NotAvailable";
-		if (strcmp(err_name, err->name) == 0)
+		if (strcmp(err_name, err->name) == 0) {
+			DBG("no incoming calls");
 			return;
+		}
 
 		ERR("Error calling remote method: %s %s", err->name,
 			err->message);
 		return;
 	}
+
 	if (cs->call)
 		_call_destroy(cs->call);
 
 	cs->call = _call_create(msg);
-	_call_screen_show(cs, "Incoming...");
+	_call_screen_show(cs);
 }
 
 static void _service_start_reply(void *data, DBusMessage *msg __UNUSED__,
@@ -260,6 +310,7 @@ static void _has_owner_cb(void *data, DBusMessage *msg __UNUSED__,
 				DBUS_TYPE_INVALID);
 
 	if (!online) {
+		INF("no dialer, start it");
 		e_dbus_start_service_by_name(bus_conn, BUS_NAME, 0,
 						_service_start_reply, cs);
 		return;
@@ -271,16 +322,65 @@ static void _has_owner_cb(void *data, DBusMessage *msg __UNUSED__,
 						cs);
 }
 
+static void _name_owner_changed(void *data, DBusMessage *msg)
+{
+	Call_Screen *cs = data;
+	DBusError err;
+	const char *name, *from, *to;
+
+	dbus_error_init(&err);
+	if (!dbus_message_get_args(msg, &err,
+					DBUS_TYPE_STRING, &name,
+					DBUS_TYPE_STRING, &from,
+					DBUS_TYPE_STRING, &to,
+					DBUS_TYPE_INVALID)) {
+		ERR("Could not get NameOwnerChanged arguments: %s: %s",
+			err.name, err.message);
+		dbus_error_free(&err);
+		return;
+	}
+
+	if (strcmp(name, BUS_NAME) != 0)
+		return;
+
+	if ((to == NULL) || (*to == '\0')) {
+		INF("missed dialer");
+		_signal_handlers_del(cs);
+		return;
+	}
+
+	INF("got new dialer at %s", to);
+	_signal_handlers_add(cs);
+	_daemon_method_call_make_with_reply("GetAvailableCall",
+						_daemon_available_call_reply,
+						cs);
+}
+
 static Eina_Bool _dbus_init(Call_Screen *cs)
 {
 	DBusMessage *msg;
 	char *bus_name = BUS_NAME;
 
+#ifdef HAVE_TIZEN
+	/* NOTE: Tizen is stupid and does not have a session bus.  at
+	 * least not for user "app". Moreover the dialer is started by
+	 * user "root" :-(
+	 */
+	INF("Running on System bus");
 	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
+#else
+	INF("Running on Session bus");
+	bus_conn = e_dbus_bus_get(DBUS_BUS_SESSION);
+#endif
+
 	if (!bus_conn) {
 		ERR("Could not fetch the DBus session");
 		return EINA_FALSE;
 	}
+
+	cs->sig_name_changed = e_dbus_signal_handler_add(
+		bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH, E_DBUS_FDO_INTERFACE,
+		"NameOwnerChanged", _name_owner_changed, cs);
 
 	msg = dbus_message_new_method_call(E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
 						E_DBUS_FDO_INTERFACE,
@@ -311,16 +411,21 @@ Evas_Object *gui_layout_add(Evas_Object *parent, const char *style)
 	return layout;
 }
 
+#ifdef HAVE_TIZEN
 static int _running_apps_iter(const aul_app_info *info, void *data __UNUSED__)
 {
 	if (strcmp(info->pkg_name, "org.tizen.draglock") == 0)
 		 aul_terminate_pid(info->pid);
 	return 0;
 }
+#endif
 
 static void _phone_unlock_screen(void)
 {
+	INF("unlock screen");
+#ifdef HAVE_TIZEN
 	aul_app_get_running_app_info(_running_apps_iter, NULL);
+#endif
 }
 
 static void _slider_pos_changed_cb(void *data, Evas_Object *obj,
@@ -419,19 +524,25 @@ EAPI int elm_main(int argc __UNUSED__, char **argv __UNUSED__)
 
 	elm_run();
 
-	e_dbus_signal_handler_del(bus_conn, sig_waiting_call_add);
-	e_dbus_signal_handler_del(bus_conn, sig_waiting_call_removed);
-	e_dbus_signal_handler_del(bus_conn, sig_incoming_call_add);
-	e_dbus_signal_handler_del(bus_conn, sig_incoming_call_removed);
-	e_dbus_connection_close(bus_conn);
+	_signal_handlers_del(cs);
+
+	if (cs->sig_name_changed)
+		e_dbus_signal_handler_del(bus_conn, cs->sig_name_changed);
+
 	evas_object_del(cs->win);
-	_call_destroy(cs->call);
+	if (cs->call)
+		_call_destroy(cs->call);
+
+	elm_shutdown();
+
 	free(cs);
 
-	return 0;
+	return EXIT_SUCCESS;
 
 err_dbus:
+	elm_shutdown();
+
 	free(cs);
-	return -1;
+	return EXIT_FAILURE;
 }
 ELM_MAIN()
