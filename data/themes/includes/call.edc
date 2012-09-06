@@ -86,7 +86,7 @@ group {
       }
 
       part {
-         name: "notification,bar";
+         name: "notification.bar";
          type: RECT;
          mouse_events: 0;
          description {
@@ -95,7 +95,7 @@ group {
             rel1.relative: 0.0 0.0;
             rel2 {
                relative: 1.0 0.0;
-               offset: 0 50;
+               offset: -1 NOTIFICATION_BAR_HEIGHT;
             }
          }
       }
@@ -152,12 +152,12 @@ group {
          description {                                                  \
             state: "default" 0.0;                                       \
             rel1 {                                                      \
-               to: "notification,bar";                                  \
+               to: "notification.bar";                                  \
                relative: 0.0 1.0;                                       \
                offset: 0 (-SEPARATOR_HEIGHT + offy);                    \
             }                                                           \
             rel2 {                                                      \
-               to: "notification,bar";                                  \
+               to: "notification.bar";                                  \
                relative: 1.0 1.0;                                       \
                offset: -1 (CALL_HEIGHT + offy);                         \
             }                                                           \
