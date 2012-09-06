@@ -20,6 +20,7 @@ static const char *rc_service = NULL;
 static OFono_Callback_List_Modem_Node *modem_changed_node = NULL;
 static OFono_Callback_List_Call_Node *call_added = NULL;
 static OFono_Callback_List_Call_Node *call_removed = NULL;
+static OFono_Callback_List_Call_Node *call_changed = NULL;
 static DBusMessage *pending_dial = NULL;
 static OFono_Call *waiting = NULL;
 
@@ -334,6 +335,22 @@ static void _rc_call_removed_cb(void *data __UNUSED__, OFono_Call *call)
 	waiting = NULL;
 }
 
+static void _rc_call_changed_cb(void *data __UNUSED__, OFono_Call *call)
+{
+	OFono_Call_State state;
+
+	if (waiting != call)
+		return;
+
+	state = ofono_call_state_get(call);
+	if (state == OFONO_CALL_STATE_INCOMING ||
+		state == OFONO_CALL_STATE_WAITING)
+		return;
+
+	_removed_signal_send();
+	waiting = NULL;
+}
+
 Eina_Bool rc_init(const char *service)
 {
 	rc_service = service;
@@ -367,6 +384,7 @@ Eina_Bool rc_init(const char *service)
 
 	call_added = ofono_call_added_cb_add(_rc_call_added_cb, NULL);
 	call_removed = ofono_call_removed_cb_add(_rc_call_removed_cb, NULL);
+	call_changed = ofono_call_changed_cb_add(_rc_call_changed_cb, NULL);
 
 	return EINA_TRUE;
 }
@@ -381,6 +399,7 @@ void rc_shutdown(void)
 	ofono_modem_changed_cb_del(modem_changed_node);
 	ofono_call_added_cb_del(call_added);
 	ofono_call_removed_cb_del(call_removed);
+	ofono_call_added_cb_del(call_changed);
 
 	if (pending_dial)
 		dbus_message_unref(pending_dial);
