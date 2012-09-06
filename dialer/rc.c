@@ -328,11 +328,10 @@ static void _rc_call_added_cb(void *data __UNUSED__, OFono_Call *call)
 
 static void _rc_call_removed_cb(void *data __UNUSED__, OFono_Call *call)
 {
-
-	if (waiting == call) {
-		_removed_signal_send();
-		waiting = NULL;
-	}
+	if (waiting != call)
+		return;
+	_removed_signal_send();
+	waiting = NULL;
 }
 
 Eina_Bool rc_init(const char *service)
