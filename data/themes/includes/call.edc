@@ -64,7 +64,7 @@ group {
       image: "ico_merge.png" COMP;
       image: "ico_swap.png" COMP;
       image: "ico_contacts.png" COMP;
-      image: "ico_multiparty.png" COMP;
+      image: "ico_arrow_right.png" COMP;
    }
 
    parts {
@@ -197,19 +197,19 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
             color_class: "action";                                      \
-            min: 80 80;                                                 \
-            max: 80 80;                                                 \
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;				\
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;                         \
             rel1 {                                                      \
                to: "call."##id;                                         \
                relative: 1.0 0.0;                                       \
-               offset: -80 (BORDER_PADDING - 1);                        \
+               offset: (-LIST_ICON_SIZE - BORDER_PADDING) 0;            \
             }                                                           \
             rel2 {                                                      \
                to: "call."##id;                                         \
-               relative: 1.0 0.0;                                       \
-               offset: -1 141;                                          \
+               relative: 1.0 1.0;                                       \
+               offset: (-BORDER_PADDING -1) -1;                         \
             }                                                           \
-            image.normal: "ico_multiparty.png";                         \
+            image.normal: "ico_arrow_right.png";                        \
          }                                                              \
          description {                                                  \
             state: "pressed" 0.0;                                       \
@@ -296,7 +296,7 @@ group {
          description {                                                  \
             state: "multiparty" 0.0;                                    \
             inherit: "default" 0.0;                                     \
-            rel2.offset: (-80 - ITEM_PADDING) (ACTION_HEIGHT - 1);      \
+            rel2.offset: (-BORDER_PADDING - ITEM_PADDING -LIST_ICON_SIZE - 1) (ACTION_HEIGHT - 1); \
          }                                                              \
       }                                                                 \
       part {                                                            \
@@ -310,15 +310,24 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
             color_class: "action";                                      \
-            rel1.to: "area."##id".name";                                \
-            rel2.to: "area."##id".name";                                \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 0.0;                                       \
+               offset: ITEM_PADDING 0;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area."##id".name";                                  \
+               relative: 1.0 1.0;                                       \
+               offset: -1 -CALL_TEXT_OFFSET;                            \
+            }                                                           \
             text {                                                      \
                text: "Gustavo Barbieri";                                \
                font: FONT_NORMAL;                                       \
                size: SIZE_HUGE;                                         \
-               size_range: SIZE_TINY SIZE_HUGE;                         \
+               size_range: SIZE_MEDIUM SIZE_HUGE;                       \
                fit: 1 1;                                                \
-               align: 0.0 0.5;                                          \
+               max: 0 1;                                                \
+               align: 0.0 1.0;                                          \
                ellipsis: 0.0;                                           \
             }                                                           \
          }                                                              \
@@ -343,14 +352,15 @@ group {
             fixed: 1 1;                                                 \
             align: 0.0 0.0;                                             \
             rel1 {                                                      \
-               to: "area."##id".name";                                  \
-               relative: 0.0 1.0;                                       \
-               offset: 0 -20;                                           \
+               to_x: "elm.swallow.img."##id;                            \
+               to_y: "elm.text."##id".name";                            \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -SEPARATOR_HEIGHT;                  \
             }                                                           \
             rel2 {                                                      \
-               to: "area."##id".name";                                  \
-               relative: 0.0 1.0;                                       \
-               offset: 0 -1;                                            \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -1;                                 \
             }                                                           \
             text {                                                      \
                text: "calling...";                                      \
@@ -395,6 +405,78 @@ group {
          }                                                              \
       }                                                                 \
                                                                         \
+      part {                                                            \
+         name: "elm.swallow.border."##id;                               \
+         type: RECT;                                                    \
+         scale: 1;                                                      \
+         mouse_events: 0;                                               \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 0.0 0.0;                                       \
+               offset: -1 -1;                                           \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: 0 0;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.swallow.img.bg".#id;                                \
+         type: RECT;                                                    \
+         scale: 1;                                                      \
+         mouse_events: 0;                                               \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 0.0 0.0;                                       \
+               offset: 0 0;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.swallow.img."##id;                                  \
+         type: SWALLOW;                                                 \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            visible: 1;                                                 \
+            min: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;                       \
+            max: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;                       \
+            rel1 {                                                      \
+               to: "area."##id."name";                                  \
+               relative: 0.0 0.0;                                       \
+               offset: 0 ITEM_PADDING;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area."##id."name";                                  \
+               relative: 0.0 0.0;                                       \
+               offset: CALL_PHOTO_SIZE (CALL_PHOTO_SIZE + ITEM_PADDING); \
+            }                                                           \
+         }								\
+								        \
+      }                                                                 \
+									\
+                                                                        \
       programs {                                                        \
          program {                                                      \
             signal: "mouse,clicked,1";                                  \
@@ -415,6 +497,7 @@ group {
             transition: ACCELERATE 0.1;                                 \
             target: "elm.text."##id".name";                             \
          }                                                              \
+                                                                        \
       }
 
       CALL("1", 0);
@@ -2037,11 +2120,15 @@ group {
             state: "default" 0.0;
             color: 255 255 255 255;
             color_class: "action";
-            align: 0.0 0.5;
-            rel1.offset: BORDER_PADDING 0;
-            rel2 {
+            rel1 {
+               to: "elm.swallow.waiting.photo";
                relative: 1.0 0.0;
-               offset: (-BORDER_PADDING - 1) (ACTION_HEIGHT - 1);
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to: "notification.bar";
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING ACTION_HEIGHT;
             }
             text {
                text: "Someone";
@@ -2051,6 +2138,75 @@ group {
                fit: 1 1;
                align: 0.0 0.5;
                ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "waiting.img.border";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "elm.swallow.waiting.photo";
+               relative: 0.0 0.0;
+               offset: -1 -1;
+            }
+            rel2 {
+               to: "elm.swallow.waiting.photo";
+               relative: 1.0 1.0;
+               offset: 0 0;
+            }
+         }
+      }
+
+      part {
+         name: "waiting.img.bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "dark";
+            rel1 {
+               to: "elm.swallow.waiting.photo";
+               relative: 0.0 0.0;
+               offset: 0 0;
+            }
+            rel2 {
+               to: "elm.swallow.waiting.photo";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.waiting.photo";
+         type: SWALLOW;
+         scale: 1;
+         clip_to: "clipper.waiting-visible";
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            min: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;
+            max: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;
+            rel1 {
+               to: "notification.bar";
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to: "notification.bar";
+               relative: 0.0 1.0;
+               offset: (CALL_PHOTO_SIZE + BORDER_PADDING) (CALL_PHOTO_SIZE + ITEM_PADDING);
             }
          }
       }
@@ -2255,6 +2411,29 @@ group {
                min: 1 0;
                align: 1.0 0.5;
             }
+         }
+      }
+   }
+}
+
+group {
+
+   name: "elm/icon/multiparty/default";
+
+   images{
+      image: "ico_multiparty.png" COMP;
+   }
+
+   parts {
+      part {
+         name : "base";
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            aspect: 1.0 1.0;
+            color_class: "action";
+            aspect_preference: BOTH;
+            image.normal: "ico_multiparty.png";
          }
       }
    }

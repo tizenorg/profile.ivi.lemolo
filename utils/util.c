@@ -113,12 +113,16 @@ Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)
 	if (!picture || *picture == '\0')
 		elm_icon_standard_set(icon, "no-picture");
 	else {
+#ifdef HAVE_TIZEN
+		elm_icon_file_set(icon, picture, NULL);
+#else
 		char path[PATH_MAX];
 		const char *prefix;
 		prefix = efreet_config_home_get();
 		snprintf(path, sizeof(path), "%s/%s/%s", prefix, PACKAGE_NAME,
 				picture);
 		elm_image_file_set(icon, path, NULL);
+#endif
 	}
 	return icon;
 }

@@ -122,6 +122,7 @@ static void _call_destroy(Call *c)
 static void _call_screen_show(Call_Screen *cs)
 {
 	Call *c = cs->call;
+	Evas_Object *icon = NULL;
 
 	INF("Show line_id=%s, name=%s, type=%s",
 		c->line_id, c->name, c->type);
@@ -137,9 +138,20 @@ static void _call_screen_show(Call_Screen *cs)
 	else
 		elm_object_part_text_set(cs->layout, "elm.text.name",
 						c->name);
+	icon = elm_icon_add(cs->layout);
+
+	if (strcmp("", c->img) != 0) {
+#ifdef HAVE_TIZEN
+		elm_icon_file_set(icon, c->img, NULL);
+#else
+		elm_image_file_set(icon, c->img, NULL);
+#endif
+	} else
+		elm_icon_standard_set(icon, "no-picture");
 
 	elm_object_part_text_set(cs->layout, "elm.text.state", "Incoming...");
 	elm_object_part_text_set(cs->layout, "elm.text.phone.type", c->type);
+	elm_object_part_content_set(cs->layout, "elm.swallow.photo", icon);
 	elm_object_signal_emit(cs->layout, "show,activecall", "gui");
 	evas_object_show(cs->win);
 #ifdef HAVE_TIZEN

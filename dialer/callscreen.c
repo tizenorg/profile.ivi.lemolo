@@ -62,13 +62,27 @@ static char *_call_name_or_id(const OFono_Call *call)
 	Contact_Info *info;
 
 	if (!s)
-		return NULL;;
+		return NULL;
 
 	info = gui_contact_search(s, NULL);
 	if (info)
 		return strdup(contact_info_full_name_get(info));
 
 	return phone_format(s);
+}
+
+static Evas_Object *_call_photo_get(const OFono_Call *call, Evas_Object *parent)
+{
+	const char *s = ofono_call_line_id_get(call);
+	Contact_Info *info;
+
+	if (!s)
+		return NULL;
+
+	info = gui_contact_search(s, NULL);
+	if (info)
+		return picture_icon_get(parent, contact_info_picture_get(info));
+	return NULL;
 }
 
 static char *_call_name_get(const Callscreen *ctx __UNUSED__,
@@ -277,17 +291,38 @@ static const char *_call_state_id(OFono_Call_State state)
 	}
 }
 
+static void _call_photo_set(Callscreen *ctx, unsigned int id,
+				Evas_Object *photo)
+{
+	char buf[128];
+
+	if (!photo) {
+		photo = elm_icon_add(ctx->self);
+		elm_icon_standard_set(photo, "no-picture");
+	}
+
+	snprintf(buf, sizeof(buf), "elm.swallow.img.%u", id);
+	elm_object_part_content_set(ctx->self, buf, photo);
+}
+
 static void _call_show(Callscreen *ctx, unsigned int id, const OFono_Call *c)
 {
 	char *contact = _call_name_get(ctx, c);
 	const char *type = _call_type_get(c);
 	const char *status = _call_state_str(ofono_call_state_get(c));
+	Evas_Object *photo;
+
+	if (ofono_call_multiparty_get(c)) {
+		photo = elm_icon_add(ctx->self);
+		elm_icon_standard_set(photo, "multiparty");
+	} else
+		photo = _call_photo_get(c, ctx->self);
 
 	_call_text_set(ctx, id, "name", contact);
 	_call_text_set(ctx, id, "phone.type", type);
 	_call_text_set(ctx, id, "status", status);
 	_call_text_set(ctx, id, "elapsed", "");
-
+	_call_photo_set(ctx, id, photo);
 	free(contact);
 }
 
@@ -478,6 +513,13 @@ static void _call_waiting_set(Callscreen *ctx, OFono_Call *c)
 		elm_object_signal_emit(o, "hide,waiting", "call");
 	} else {
 		char *name = _call_name_get(ctx, c);
+		Evas_Object *photo = _call_photo_get(c, o);
+		if (!photo) {
+			photo = elm_icon_add(o);
+			elm_icon_standard_set(photo, "no-picture");
+		}
+		elm_object_part_content_set(o, "elm.swallow.waiting.photo",
+						photo);
 		elm_object_part_text_set(o, "elm.text.waiting", name);
 		elm_object_signal_emit(o, "show,waiting", "call");
 		free(name);

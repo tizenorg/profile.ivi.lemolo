@@ -26,7 +26,6 @@
 #define SIZE_TINY 16
 
 #define CONTACT_PHOTO_SIZE 128
-#define CONTACT_HALF_PHOTO 64
 #define LIST_CONTACT_HEIGHT 170
 
 #define GROUP_HEIGHT 30
@@ -38,5 +37,8 @@
 #else
 #define NOTIFICATION_BAR_HEIGHT 0
 #endif
+
+#define CALL_TEXT_OFFSET 32
+#define CALL_PHOTO_SIZE 180
 
 #include "default.edc"
