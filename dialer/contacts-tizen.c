@@ -830,7 +830,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 
 	contacts = calloc(1, sizeof(Contacts));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
-	contacts->self = gui_layout_add(parent, "contacts_bg");
+	contacts->self = layout_add(parent, "contacts_bg");
 	EINA_SAFETY_ON_NULL_GOTO(contacts->self, err_layout);
 	evas_object_event_callback_add(contacts->self, EVAS_CALLBACK_DEL,
 					_on_del, contacts);

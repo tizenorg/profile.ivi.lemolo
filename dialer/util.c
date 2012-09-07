@@ -9,6 +9,9 @@
 
 #include "gui.h"
 #include "util.h"
+#include "log.h"
+
+static char def_theme[PATH_MAX] = "";
 
 /* TODO: find a configurable way to format the number.
  * Right now it's: 1-234-567-8901 as per
@@ -119,4 +122,50 @@ Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)
 		elm_image_file_set(icon, path, NULL);
 	}
 	return icon;
+}
+
+Evas_Object *layout_add(Evas_Object *parent, const char *style)
+{
+	Evas_Object *layout = elm_layout_add(parent);
+	if (!elm_layout_theme_set(layout, "layout", "dialer", style)) {
+		CRITICAL("No theme for 'elm/layout/dialer/%s' at %s",
+				style, def_theme);
+		evas_object_del(layout);
+		return NULL;
+	}
+	return layout;
+}
+
+Eina_Bool util_init(const char *theme)
+{
+	elm_app_compile_bin_dir_set(PACKAGE_BIN_DIR);
+	elm_app_compile_data_dir_set(PACKAGE_DATA_DIR);
+	elm_app_info_set(util_init, "ofono-efl", "themes/default.edj");
+
+	snprintf(def_theme, sizeof(def_theme), "%s/themes/default.edj",
+			elm_app_data_dir_get());
+
+	elm_theme_extension_add(NULL, def_theme);
+	if (!theme)
+		elm_theme_overlay_add(NULL, def_theme);
+	else {
+		char tmp[PATH_MAX];
+		if (theme[0] != '/') {
+			if (eina_str_has_suffix(theme, ".edj")) {
+				snprintf(tmp, sizeof(tmp), "%s/themes/%s",
+						elm_app_data_dir_get(), theme);
+			} else {
+				snprintf(tmp, sizeof(tmp), "%s/themes/%s.edj",
+						elm_app_data_dir_get(), theme);
+			}
+			theme = tmp;
+		}
+		elm_theme_overlay_add(NULL, theme);
+	}
+
+	return EINA_TRUE;
+}
+
+void util_shutdown(void)
+{
 }

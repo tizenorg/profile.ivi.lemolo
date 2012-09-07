@@ -8,6 +8,7 @@
 #include "ofono.h"
 #include "gui.h"
 #include "rc.h"
+#include "util.h"
 
 #include <Ecore_Getopt.h>
 
@@ -166,10 +167,16 @@ EAPI int elm_main(int argc, char **argv)
 		ofono_modem_type_require(def_modem_type);
 	}
 
-	if (!gui_init(theme)) {
+	if (!util_init(theme)) {
 		CRITICAL("Could not setup graphical user interface");
 		_app_exit_code = EXIT_FAILURE;
 		goto end_ofono;
+	}
+
+	if (!gui_init()) {
+		CRITICAL("Could not setup graphical user interface");
+		_app_exit_code = EXIT_FAILURE;
+		goto end_util;
 	}
 
 	INF("Entering main loop");
@@ -178,6 +185,8 @@ EAPI int elm_main(int argc, char **argv)
 
 	gui_shutdown();
 
+end_util:
+	util_shutdown();
 end_ofono:
 	ofono_shutdown();
 end_rc:

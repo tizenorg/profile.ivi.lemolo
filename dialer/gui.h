@@ -4,8 +4,6 @@
 #include "contacts.h"
 #include "ofono.h"
 
-Evas_Object *gui_layout_add(Evas_Object *parent, const char *style);
-
 Evas_Object *gui_simple_popup(const char *title, const char *message);
 
 void gui_simple_popup_title_set(Evas_Object *p, const char *title);
@@ -36,7 +34,7 @@ void gui_contacts_show(void);
 void gui_call_enter(void);
 void gui_call_exit(void);
 
-Eina_Bool gui_init(const char *theme);
+Eina_Bool gui_init(void);
 void gui_shutdown(void);
 
 Contact_Info *gui_contact_search(const char *number, const char **type);

@@ -182,7 +182,7 @@ repopulate:
 		type = _call_type_get(c);
 		number = phone_format(ofono_call_line_id_get(c));
 
-		it = gui_layout_add(ctx->multiparty.bx, "multiparty-details");
+		it = layout_add(ctx->multiparty.bx, "multiparty-details");
 		evas_object_size_hint_align_set(it,
 						EVAS_HINT_FILL, EVAS_HINT_FILL);
 		evas_object_show(it);
@@ -530,7 +530,7 @@ static void _call_current_set(Callscreen *ctx, OFono_Call *c)
 		}
 	} else {
 		if (!ctx->gui_activecall) {
-			ctx->gui_activecall = gui_layout_add(o, "activecall");
+			ctx->gui_activecall = layout_add(o, "activecall");
 			elm_object_signal_callback_add(
 				ctx->gui_activecall, "clicked", "call",
 				_on_active_call_clicked, ctx);
@@ -1261,7 +1261,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 Evas_Object *callscreen_add(Evas_Object *parent)
 {
 	Callscreen *ctx;
-	Evas_Object *obj = gui_layout_add(parent, "call");
+	Evas_Object *obj = layout_add(parent, "call");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
 
 	ctx = calloc(1, sizeof(Callscreen));

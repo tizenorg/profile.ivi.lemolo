@@ -737,10 +737,10 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
 
 
-	details = gui_layout_add(parent, "contacts_details");
+	details = layout_add(parent, "contacts_details");
 	EINA_SAFETY_ON_NULL_GOTO(details, err_layout);
 
-	obj = gui_layout_add(parent, "contacts_bg");
+	obj = layout_add(parent, "contacts_bg");
 	EINA_SAFETY_ON_NULL_GOTO(obj, err_obj);
 
 	genlist = elm_genlist_add(obj);

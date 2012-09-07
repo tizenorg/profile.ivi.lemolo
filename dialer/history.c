@@ -764,7 +764,7 @@ static Evas_Object *_item_content_get(void *data, Evas_Object *obj,
 	Evas_Object *btn = NULL;
 
 	if (strcmp(part, "call.swallow.more") == 0) {
-		btn = gui_layout_add(obj, "history/img");
+		btn = layout_add(obj, "history/img");
 		EINA_SAFETY_ON_NULL_RETURN_VAL(btn, NULL);
 		elm_object_signal_callback_add(btn, "clicked,more", "gui",
 						_on_more_clicked, NULL);
@@ -823,7 +823,7 @@ Evas_Object *history_add(Evas_Object *parent)
 	history = calloc(1, sizeof(History));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history, NULL);
 
-	history->self = obj = gui_layout_add(parent, "history_bg");
+	history->self = obj = layout_add(parent, "history_bg");
 	EINA_SAFETY_ON_NULL_GOTO(obj, err_layout);
 
 	genlist_all = elm_genlist_add(obj);

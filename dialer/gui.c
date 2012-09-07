@@ -24,7 +24,6 @@ static Evas_Object *contacts = NULL;
 static Evas_Object *history = NULL;
 static Evas_Object *cs = NULL;
 static Evas_Object *flip = NULL;
-static char def_theme[PATH_MAX] = "";
 
 static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
 static OFono_Callback_List_USSD_Notify_Node *callback_node_ussd_notify = NULL;
@@ -58,18 +57,6 @@ OFono_Pending *gui_dial(const char *number)
 {
 	char *copy = strdup(number);
 	return ofono_dial(copy, NULL, _dial_reply, copy);
-}
-
-Evas_Object *gui_layout_add(Evas_Object *parent, const char *style)
-{
-	Evas_Object *layout = elm_layout_add(parent);
-	if (!elm_layout_theme_set(layout, "layout", "dialer", style)) {
-		CRITICAL("No theme for 'elm/layout/dialer/%s' at %s",
-				style, def_theme);
-		evas_object_del(layout);
-		return NULL;
-	}
-	return layout;
 }
 
 static void _gui_show(Evas_Object *o)
@@ -346,7 +333,7 @@ static void _gui_simple_popup_del(void *data, Evas *e __UNUSED__,
 
 Evas_Object *gui_simple_popup(const char *title, const char *message)
 {
-	Evas_Object *p = gui_layout_add(win, "popup");
+	Evas_Object *p = layout_add(win, "popup");
 	Simple_Popup *ctx;
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(p, NULL);
@@ -525,38 +512,13 @@ static void _ofono_ussd_notify(void *data __UNUSED__, Eina_Bool needs_reply,
 	ussd_start(message);
 }
 
-Eina_Bool gui_init(const char *theme)
+Eina_Bool gui_init(void)
 {
 	Evas_Object *lay, *obj;
 	Evas_Coord w, h;
 
 	/* dialer should never, ever quit */
 	elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_NONE);
-
-	elm_app_compile_bin_dir_set(PACKAGE_BIN_DIR);
-	elm_app_compile_data_dir_set(PACKAGE_DATA_DIR);
-	elm_app_info_set(gui_init, "ofono-efl", "themes/default.edj");
-
-	snprintf(def_theme, sizeof(def_theme), "%s/themes/default.edj",
-			elm_app_data_dir_get());
-
-	elm_theme_extension_add(NULL, def_theme);
-	if (!theme)
-		elm_theme_overlay_add(NULL, def_theme);
-	else {
-		char tmp[PATH_MAX];
-		if (theme[0] != '/') {
-			if (eina_str_has_suffix(theme, ".edj")) {
-				snprintf(tmp, sizeof(tmp), "%s/themes/%s",
-						elm_app_data_dir_get(), theme);
-			} else {
-				snprintf(tmp, sizeof(tmp), "%s/themes/%s.edj",
-						elm_app_data_dir_get(), theme);
-			}
-			theme = tmp;
-		}
-		elm_theme_overlay_add(NULL, theme);
-	}
 
 	win = elm_win_util_standard_add("ofono-dialer", "oFono Dialer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
@@ -576,7 +538,7 @@ Eina_Bool gui_init(const char *theme)
 					_gui_call_sync, NULL);
 	evas_object_show(flip);
 
-	main_layout = lay = gui_layout_add(win, "main");
+	main_layout = lay = layout_add(win, "main");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(lay, EINA_FALSE);
 	evas_object_size_hint_weight_set(lay,
 				EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);

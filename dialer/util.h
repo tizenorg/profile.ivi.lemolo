@@ -14,4 +14,9 @@ char *date_format(time_t date);
 
 Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture);
 
+Evas_Object *layout_add(Evas_Object *parent, const char *style);
+
+Eina_Bool util_init(const char *theme);
+void util_shutdown(void);
+
 #endif
