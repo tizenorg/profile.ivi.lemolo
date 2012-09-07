@@ -224,6 +224,15 @@ static void _ofono_ussd_notify(void *data __UNUSED__, Eina_Bool needs_reply,
 	ussd_start(message);
 }
 
+static void _on_contacts_selected(void *data __UNUSED__,
+					Evas_Object *obj __UNUSED__,
+					void *event_info)
+{
+	const char *number = event_info;
+	DBG("Contact selected: %s", number);
+	gui_dial(number);
+}
+
 Eina_Bool gui_init(void)
 {
 	Evas_Object *lay, *obj;
@@ -266,6 +275,8 @@ Eina_Bool gui_init(void)
 	elm_object_part_content_set(lay, "elm.swallow.keypad", obj);
 
 	contacts = obj = contacts_add(win);
+	evas_object_smart_callback_add(contacts, "selected",
+					_on_contacts_selected, NULL);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
 	elm_object_part_content_set(lay, "elm.swallow.contacts", obj);
 

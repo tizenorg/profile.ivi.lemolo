@@ -6,7 +6,6 @@
 #include <Eina.h>
 
 #include "log.h"
-#include "gui.h"
 #include "ofono.h"
 #include "contacts.h"
 #include "util.h"
@@ -517,11 +516,13 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	eet_shutdown();
 }
 
-static void _on_number_clicked(void *data, Evas_Object *obj __UNUSED__,
+static void _on_number_clicked(void *data, Evas_Object *obj,
 				void *event_inf __UNUSED__)
 {
 	const char *number = data;
-	gui_dial(number);
+	Evas_Object *contacts = evas_object_data_get(obj, "contacts");
+	printf("contacts=%p, number=%p\n", contacts, number);
+	evas_object_smart_callback_call(contacts, "selected", (void *)number);
 }
 
 static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
@@ -555,6 +556,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
 	evas_object_show(btn);
+	evas_object_data_set(btn, "contacts", contacts->layout);
 	evas_object_smart_callback_add(btn, "clicked", _on_number_clicked,
 					c_info->mobile);
 	elm_layout_box_append(details, "box.phones", btn);
@@ -570,6 +572,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
 	evas_object_show(btn);
+	evas_object_data_set(btn, "contacts", contacts->layout);
 	evas_object_smart_callback_add(btn, "clicked", _on_number_clicked,
 					c_info->home);
 	elm_layout_box_append(details, "box.phones", btn);
@@ -585,6 +588,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 						EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
 	evas_object_show(btn);
+	evas_object_data_set(btn, "contacts", contacts->layout);
 	evas_object_smart_callback_add(btn, "clicked", _on_number_clicked,
 					c_info->work);
 	elm_layout_box_append(details, "box.phones", btn);
