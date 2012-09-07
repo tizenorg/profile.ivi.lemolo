@@ -4,6 +4,7 @@ AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\"$(pkgdatadir)/\" \
 	-DPACKAGE_BIN_DIR=\"$(bindir)\" \
 	-DPACKAGE_LIB_DIR=\"$(libdir)\" \
+	-I$(top_srcdir)/utils \
 	@EFL_CFLAGS@ \
 	@TIZEN_CFLAGS@
 
@@ -22,44 +23,51 @@ MAINTAINERCLEANFILES = \
 	mkinstalldirs
 EXTRA_DIST =
 
+noinst_LTLIBRARIES = utils/libofono-efl-utils.la
+
+utils_libofono_efl_utils_la_SOURCES = \
+	utils/contacts.h \
+	utils/log.h \
+	utils/ofono.c \
+	utils/ofono.h \
+	utils/simple-popup.c \
+	utils/simple-popup.c \
+	utils/util.c \
+	utils/util.h
+
+if HAVE_TIZEN
+utils_libofono_efl_utils_la_SOURCES += utils/contacts-tizen.c
+else
+utils_libofono_efl_utils_la_SOURCES += utils/contacts.c
+endif
+
 bin_PROGRAMS = \
 	dialer/dialer \
 	tizen/answer_daemon
 
-dialer_dialer_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+dialer_dialer_LDADD = \
+	@EFL_LIBS@ \
+	@TIZEN_LIBS@ \
+	utils/libofono-efl-utils.la
+
 dialer_dialer_SOURCES = \
 	dialer/main.c \
-	dialer/log.h \
-	dialer/ofono.c \
-	dialer/ofono.h \
 	dialer/rc.c \
 	dialer/rc.h \
 	dialer/gui.c \
 	dialer/gui.h \
 	dialer/keypad.c \
 	dialer/keypad.h \
-	dialer/contacts.h \
 	dialer/history.c \
 	dialer/history.h \
 	dialer/callscreen.c \
 	dialer/callscreen.h \
 	dialer/ussd.c \
-	dialer/ussd.h \
-	dialer/simple-popup.c \
-	dialer/simple-popup.h \
-	dialer/util.c \
-	dialer/util.h
+	dialer/ussd.h
 
 AM_V_SED = $(am__v_SED_$(V))
 am__v_SED_ = $(am__v_SED_$(AM_DEFAULT_VERBOSITY))
 am__v_SED_0 = @echo "  SED   " $@;
-
-
-if HAVE_TIZEN
-dialer_dialer_SOURCES += dialer/contacts-tizen.c
-else
-dialer_dialer_SOURCES += dialer/contacts.c
-endif
 
 tizen_answer_daemon_SOURCES = tizen/answer_daemon.c
 tizen_answer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@

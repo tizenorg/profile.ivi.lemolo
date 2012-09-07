@@ -1,5 +1,8 @@
 *.o
+*.lo
+*.la
 *~
+.libs
 .deps
 .dirstamp
 aclocal.m4
