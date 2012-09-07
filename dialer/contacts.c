@@ -521,7 +521,7 @@ static void _on_number_clicked(void *data, Evas_Object *obj __UNUSED__,
 				void *event_inf __UNUSED__)
 {
 	const char *number = data;
-	dial(number);
+	gui_dial(number);
 }
 
 static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,

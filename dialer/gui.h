@@ -2,6 +2,7 @@
 #define _EFL_OFONO_GUI_H__ 1
 
 #include "contacts.h"
+#include "ofono.h"
 
 Evas_Object *gui_layout_add(Evas_Object *parent, const char *style);
 
@@ -39,5 +40,7 @@ Eina_Bool gui_init(const char *theme);
 void gui_shutdown(void);
 
 Contact_Info *gui_contact_search(const char *number, const char **type);
+
+OFono_Pending *gui_dial(const char *number);
 
 #endif

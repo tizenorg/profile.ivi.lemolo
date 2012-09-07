@@ -38,6 +38,28 @@ Contact_Info *gui_contact_search(const char *number, const char **type)
 	return contact_search(contacts, number, type);
 }
 
+static void _dial_reply(void *data, OFono_Error err,
+			OFono_Call *call __UNUSED__)
+{
+	char *number = data;
+
+	if (err != OFONO_ERROR_NONE) {
+		char buf[1024];
+		const char *msg = ofono_error_message_get(err);
+		snprintf(buf, sizeof(buf), "Could not call %s: %s",
+				number, msg);
+		gui_simple_popup("Error", buf);
+	}
+
+	free(number);
+}
+
+OFono_Pending *gui_dial(const char *number)
+{
+	char *copy = strdup(number);
+	return ofono_dial(copy, NULL, _dial_reply, copy);
+}
+
 Evas_Object *gui_layout_add(Evas_Object *parent, const char *style)
 {
 	Evas_Object *layout = elm_layout_add(parent);
@@ -432,7 +454,7 @@ static void _gui_voicemail(void)
 	EINA_SAFETY_ON_NULL_RETURN(number);
 	EINA_SAFETY_ON_FALSE_RETURN(*number != '\0');
 
-	dial(number);
+	gui_dial(number);
 }
 
 static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,

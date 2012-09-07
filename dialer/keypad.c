@@ -237,7 +237,7 @@ static void _dial(Keypad *ctx)
 	const char *number = eina_strbuf_string_get(ctx->number);
 
 	INF("call %s", number);
-	dial(number);
+	gui_dial(number);
 	eina_stringshare_replace(&(ctx->last), number);
 	eina_strbuf_reset(ctx->number);
 	_number_display(ctx);

@@ -239,7 +239,7 @@ static void _on_item_clicked(void *data, Evas_Object *obj __UNUSED__,
 	const char *number = data;
 
 	INF("call %s", number);
-	dial(number);
+	gui_dial(number);
 	elm_genlist_item_selected_set(it, EINA_FALSE);
 }
 
