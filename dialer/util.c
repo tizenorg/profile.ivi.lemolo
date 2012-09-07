@@ -7,7 +7,6 @@
 #include <Evas.h>
 #include <Elementary.h>
 
-#include "gui.h"
 #include "util.h"
 #include "log.h"
 

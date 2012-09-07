@@ -9,7 +9,6 @@
 #include <contacts.h>
 
 #include "log.h"
-#include "gui.h"
 #include "ofono.h"
 #include "contacts.h"
 #include "util.h"
