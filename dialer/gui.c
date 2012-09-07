@@ -182,8 +182,14 @@ void gui_simple_popup_message_set(Evas_Object *p, const char *msg)
 		elm_object_style_set(en, "dialer-popup");
 		elm_entry_editable_set(en, EINA_FALSE);
 		elm_entry_scrollable_set(en, EINA_TRUE);
+#if ELM_VERSION_MAJOR == 1 && ELM_VERSION_MINOR < 7
+		/* old, deprecated api */
 		elm_entry_scrollbar_policy_set(en, ELM_SCROLLER_POLICY_OFF,
 						ELM_SCROLLER_POLICY_AUTO);
+#else
+		elm_scroller_policy_set(en, ELM_SCROLLER_POLICY_OFF,
+					ELM_SCROLLER_POLICY_AUTO);
+#endif
 
 		evas_object_event_callback_add(en, EVAS_CALLBACK_DEL,
 					_gui_simple_popup_message_del,
@@ -211,8 +217,14 @@ void gui_simple_popup_entry_enable(Evas_Object *p)
 	elm_object_style_set(en, "dialer-popup-editable");
 	elm_entry_editable_set(en, EINA_TRUE);
 	elm_entry_scrollable_set(en, EINA_TRUE);
+#if ELM_VERSION_MAJOR == 1 && ELM_VERSION_MINOR < 7
+	/* old, deprecated api */
 	elm_entry_scrollbar_policy_set(en, ELM_SCROLLER_POLICY_OFF,
 					ELM_SCROLLER_POLICY_AUTO);
+#else
+	elm_scroller_policy_set(en, ELM_SCROLLER_POLICY_OFF,
+				ELM_SCROLLER_POLICY_AUTO);
+#endif
 
 	evas_object_size_hint_weight_set(en, EVAS_HINT_EXPAND,
 						EVAS_HINT_EXPAND);
