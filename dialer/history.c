@@ -12,6 +12,7 @@
 #include "log.h"
 #include "util.h"
 #include "gui.h"
+#include "simple-popup.h"
 
 #ifndef EET_COMPRESSION_DEFAULT
 #define EET_COMPRESSION_DEFAULT 1
@@ -635,7 +636,7 @@ static void _history_clear(History *ctx)
 	ctx->clear_popup = p = gui_simple_popup("Clear History",
 				"Do you want to clear all history entries?");
 
-	gui_simple_popup_buttons_set(p,
+	simple_popup_buttons_set(p,
 					"Dismiss",
 					"dialer",
 					_history_clear_cancel,

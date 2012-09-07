@@ -6,6 +6,7 @@
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
+#include "simple-popup.h"
 
 typedef struct _USSD
 {
@@ -30,11 +31,11 @@ static void _ussd_respond_reply(void *data, OFono_Error err, const char *str)
 
 	if (err == OFONO_ERROR_NONE) {
 		eina_stringshare_replace(&(ctx->message), str);
-		gui_simple_popup_message_set(ctx->popup, ctx->message);
+		simple_popup_message_set(ctx->popup, ctx->message);
 	} else if (err == OFONO_ERROR_OFFLINE) {
-		gui_simple_popup_title_set(ctx->popup, "Offline");
-		gui_simple_popup_message_set(ctx->popup, "System is Offline");
-		gui_simple_popup_button_dismiss_set(ctx->popup);
+		simple_popup_title_set(ctx->popup, "Offline");
+		simple_popup_message_set(ctx->popup, "System is Offline");
+		simple_popup_button_dismiss_set(ctx->popup);
 	} else {
 		char buf[256];
 
@@ -49,8 +50,8 @@ static void _ussd_respond_reply(void *data, OFono_Error err, const char *str)
 					"Could not complete.<br>Error: %s.",
 					ofono_error_message_get(err));
 
-		gui_simple_popup_title_set(ctx->popup, "Error");
-		gui_simple_popup_message_set(ctx->popup, buf);
+		simple_popup_title_set(ctx->popup, "Error");
+		simple_popup_message_set(ctx->popup, buf);
 	}
 }
 
@@ -58,7 +59,7 @@ static void _ussd_respond(void *data, Evas_Object *o __UNUSED__,
 				void *event_info __UNUSED__)
 {
 	USSD *ctx = data;
-	const char *markup = gui_simple_popup_entry_get(ctx->popup);
+	const char *markup = simple_popup_entry_get(ctx->popup);
 	char *utf8;
 
 	DBG("ctx=%p, markup=%s, pending=%p, popup=%p",
@@ -76,8 +77,8 @@ static void _ussd_respond(void *data, Evas_Object *o __UNUSED__,
 	ctx->pending = ofono_ussd_respond(utf8, _ussd_respond_reply, ctx);
 	free(utf8);
 
-	gui_simple_popup_message_set(ctx->popup, NULL);
-	gui_simple_popup_entry_disable(ctx->popup);
+	simple_popup_message_set(ctx->popup, NULL);
+	simple_popup_entry_disable(ctx->popup);
 }
 
 static void _ussd_cancel_reply(void *data, OFono_Error e)
@@ -110,11 +111,11 @@ static void _ofono_changed(void *data)
 		return;
 
 	if (state != OFONO_USSD_STATE_USER_RESPONSE) {
-		gui_simple_popup_entry_disable(ctx->popup);
-		gui_simple_popup_button_dismiss_set(ctx->popup);
+		simple_popup_entry_disable(ctx->popup);
+		simple_popup_button_dismiss_set(ctx->popup);
 	} else {
-		gui_simple_popup_entry_enable(ctx->popup);
-		gui_simple_popup_buttons_set(ctx->popup,
+		simple_popup_entry_enable(ctx->popup);
+		simple_popup_buttons_set(ctx->popup,
 						"Respond",
 						"dialer",
 						_ussd_respond,

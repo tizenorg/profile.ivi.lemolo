@@ -8,6 +8,7 @@
 #include "ofono.h"
 #include "ussd.h"
 #include "util.h"
+#include "simple-popup.h"
 
 /* timeout before a popup is show for supplementary services.  It is
  * not shown immediately as the call may fail as "not supported" in
@@ -262,10 +263,10 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 		_dial(ctx);
 		evas_object_del(ctx->ss_popup);
 	} else if (err == OFONO_ERROR_OFFLINE) {
-		gui_simple_popup_title_set(ctx->ss_popup, "Offline");
-		gui_simple_popup_message_set(ctx->ss_popup,
+		simple_popup_title_set(ctx->ss_popup, "Offline");
+		simple_popup_message_set(ctx->ss_popup,
 						"System is Offline");
-		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
+		simple_popup_button_dismiss_set(ctx->ss_popup);
 		evas_object_show(ctx->ss_popup);
 	} else if (err != OFONO_ERROR_NONE) {
 		char buf[256];
@@ -276,9 +277,9 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 
 		snprintf(buf, sizeof(buf), "Could not complete.<br>Error: %s",
 				ofono_error_message_get(err));
-		gui_simple_popup_title_set(ctx->ss_popup, "Error");
-		gui_simple_popup_message_set(ctx->ss_popup, buf);
-		gui_simple_popup_button_dismiss_set(ctx->ss_popup);
+		simple_popup_title_set(ctx->ss_popup, "Error");
+		simple_popup_message_set(ctx->ss_popup, buf);
+		simple_popup_button_dismiss_set(ctx->ss_popup);
 		evas_object_show(ctx->ss_popup);
 	} else {
 		evas_object_del(ctx->ss_popup);

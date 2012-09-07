@@ -6,24 +6,6 @@
 
 Evas_Object *gui_simple_popup(const char *title, const char *message);
 
-void gui_simple_popup_title_set(Evas_Object *p, const char *title);
-void gui_simple_popup_message_set(Evas_Object *p, const char *msg);
-
-void gui_simple_popup_button_dismiss_set(Evas_Object *p);
-void gui_simple_popup_buttons_set(Evas_Object *p,
-					const char *b1_label,
-					const char *b1_class,
-					Evas_Smart_Cb b1_cb,
-					const char *b2_label,
-					const char *b2_class,
-					Evas_Smart_Cb b2_cb,
-					const void *data);
-
-void gui_simple_popup_entry_enable(Evas_Object *p);
-void gui_simple_popup_entry_disable(Evas_Object *p);
-const char *gui_simple_popup_entry_get(const Evas_Object *p);
-
-
 void gui_activate(void);
 void gui_number_set(const char *number, Eina_Bool auto_dial);
 

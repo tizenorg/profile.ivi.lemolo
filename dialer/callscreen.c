@@ -7,6 +7,7 @@
 #include "gui.h"
 #include "ofono.h"
 #include "util.h"
+#include "simple-popup.h"
 
 typedef struct _Callscreen
 {
@@ -751,7 +752,7 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 	eina_stringshare_replace(&ctx->disconnected.number, number);
 
 	ctx->disconnected.popup = p = gui_simple_popup(title, msg);
-	gui_simple_popup_buttons_set(p,
+	simple_popup_buttons_set(p,
 					"Dismiss",
 					"dialer",
 					_popup_close,
