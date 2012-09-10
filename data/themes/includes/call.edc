@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/call";
+   name: "elm/layout/ofono-efl/call";
 
    /*
     * Represents the dialer ongoing voice call(s) screen.
@@ -2314,7 +2314,7 @@ group {
 }
 
 group {
-   name: "elm/layout/dialer/activecall";
+   name: "elm/layout/ofono-efl/activecall";
 
    /*
     * Represents the active call in the other screens (not callscreen)

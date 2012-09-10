@@ -186,10 +186,10 @@ data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
 data/themes/includes/contacts-bg.edc \
 data/themes/includes/contacts.edc \
+data/themes/includes/dialer.edc \
 data/themes/includes/history-bg.edc \
 data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
-data/themes/includes/main.edc \
 data/themes/includes/multiparty-list.edc \
 data/themes/includes/popup.edc \
 data/themes/includes/scroller.edc

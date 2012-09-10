@@ -130,8 +130,8 @@ Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)
 Evas_Object *layout_add(Evas_Object *parent, const char *style)
 {
 	Evas_Object *layout = elm_layout_add(parent);
-	if (!elm_layout_theme_set(layout, "layout", "dialer", style)) {
-		CRITICAL("No theme for 'elm/layout/dialer/%s' at %s",
+	if (!elm_layout_theme_set(layout, "layout", "ofono-efl", style)) {
+		CRITICAL("No theme for 'elm/layout/ofono-efl/%s' at %s",
 				style, def_theme);
 		evas_object_del(layout);
 		return NULL;

@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/multiparty-details";
+   name: "elm/layout/ofono-efl/multiparty-details";
 
    images {
       image: "ico_multiparty_hangup.png" COMP;

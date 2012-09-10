@@ -240,7 +240,7 @@ group {
 }
 
 group {
-   name: "elm/layout/dialer/contacts_details";
+   name: "elm/layout/ofono-efl/contacts_details";
 
    parts {
 

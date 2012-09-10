@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/main";
+   name: "elm/layout/ofono-efl/dialer";
 
    min: WIDTH HEIGHT;
 

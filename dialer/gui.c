@@ -259,7 +259,7 @@ Eina_Bool gui_init(void)
 					_gui_call_sync, NULL);
 	evas_object_show(flip);
 
-	main_layout = lay = layout_add(win, "main");
+	main_layout = lay = layout_add(win, "dialer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(lay, EINA_FALSE);
 	evas_object_size_hint_weight_set(lay,
 				EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);

@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/popup";
+   name: "elm/layout/ofono-efl/popup";
 
    images {
       image: "loading_0.png" COMP;

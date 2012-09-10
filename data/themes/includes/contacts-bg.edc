@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/contacts_bg";
+   name: "elm/layout/ofono-efl/contacts_bg";
 
    images {
       image: "bg_keypad.jpg" COMP;

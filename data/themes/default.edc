@@ -1,7 +1,7 @@
 collections {
 
 #include "includes/colors.edc"
-#include "includes/main.edc"
+#include "includes/dialer.edc"
 #include "includes/keypad.edc"
 #include "includes/call.edc"
 #include "includes/contacts-bg.edc"

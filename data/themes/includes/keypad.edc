@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/keypad";
+   name: "elm/layout/ofono-efl/keypad";
 
    /*
     * Represents the dialer keypad with the current number display and buttons.

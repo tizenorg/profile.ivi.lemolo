@@ -1,5 +1,5 @@
 group {
-   name: "elm/layout/dialer/history/img";
+   name: "elm/layout/ofono-efl/history/img";
 
    parts {
       part {
