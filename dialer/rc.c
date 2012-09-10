@@ -399,7 +399,7 @@ void rc_shutdown(void)
 	ofono_modem_changed_cb_del(modem_changed_node);
 	ofono_call_added_cb_del(call_added);
 	ofono_call_removed_cb_del(call_removed);
-	ofono_call_added_cb_del(call_changed);
+	ofono_call_changed_cb_del(call_changed);
 
 	if (pending_dial)
 		dbus_message_unref(pending_dial);
