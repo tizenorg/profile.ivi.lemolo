@@ -34,6 +34,9 @@ utils_libofono_efl_utils_la_SOURCES = \
 	utils/simple-popup.c \
 	utils/util.c \
 	utils/util.h
+utils_libofono_efl_utils_la_LIBADD = \
+	@EFL_LIBS@ \
+	@TIZEN_LIBS@
 
 if HAVE_TIZEN
 utils_libofono_efl_utils_la_SOURCES += utils/contacts-tizen.c
