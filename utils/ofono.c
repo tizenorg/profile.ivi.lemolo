@@ -30,6 +30,7 @@ static DBusPendingCall *pc_get_modems = NULL;
 static void _ofono_call_volume_properties_get(OFono_Modem *m);
 static void _ofono_msg_waiting_properties_get(OFono_Modem *m);
 static void _ofono_suppl_serv_properties_get(OFono_Modem *m);
+static void _ofono_msg_properties_get(OFono_Modem *m);
 
 static OFono_Pending *_ofono_simple_do(OFono_API api, const char *method,
 					OFono_Simple_Cb cb, const void *data);
@@ -62,6 +63,20 @@ struct _OFono_Callback_List_USSD_Notify_Node
 	const void *cb_data;
 };
 
+struct _OFono_Callback_List_Sent_SMS_Node
+{
+	EINA_INLIST;
+	OFono_Sent_SMS_Cb cb;
+	const void *cb_data;
+};
+
+struct _OFono_Callback_List_Incoming_SMS_Node
+{
+	EINA_INLIST;
+	OFono_Incoming_SMS_Cb cb;
+	const void *cb_data;
+};
+
 static Eina_Inlist *cbs_modem_changed = NULL;
 static Eina_Inlist *cbs_modem_connected = NULL;
 static Eina_Inlist *cbs_modem_disconnected = NULL;
@@ -71,6 +86,9 @@ static Eina_Inlist *cbs_call_changed = NULL;
 static Eina_Inlist *cbs_call_added = NULL;
 static Eina_Inlist *cbs_call_disconnected = NULL;
 static Eina_Inlist *cbs_call_removed = NULL;
+
+static Eina_Inlist *cbs_sent_sms_changed = NULL;
+static Eina_Inlist *cbs_incoming_sms = NULL;
 
 #define OFONO_SERVICE			"org.ofono"
 
@@ -434,13 +452,31 @@ struct _OFono_Call
 	OFono_Call_Cb_Context *pending_dial;
 };
 
+typedef struct _OFono_Sent_SMS_Cb_Context
+{
+	OFono_Sent_SMS_Cb cb;
+	OFono_Modem *modem;
+	const void *data;
+} OFono_Sent_SMS_Cb_Context;
+
+struct _OFono_Sent_SMS
+{
+	OFono_Bus_Object base;
+	OFono_Sent_SMS_State state;
+	OFono_Sent_SMS_Cb_Context *pending_send;
+};
+
 struct _OFono_Modem
 {
 	OFono_Bus_Object base;
 	const char *name;
 	const char *serial;
 	const char *voicemail_number;
+	const char *serv_center_addr;
+	const char *msg_bearer;
+	const char *msg_alphabet;
 	Eina_Hash *calls;
+	Eina_Hash *sent_sms;
 	unsigned int interfaces;
 	unsigned char strength;
 	unsigned char data_strength;
@@ -454,6 +490,7 @@ struct _OFono_Modem
 	Eina_Bool roaming : 1;
 	Eina_Bool muted : 1;
 	Eina_Bool voicemail_waiting : 1;
+	Eina_Bool use_delivery_reports : 1;
 };
 
 static OFono_Call *_call_new(const char *path)
@@ -987,6 +1024,27 @@ static void _modem_calls_load(OFono_Modem *m)
 	_bus_object_message_send(&m->base, msg, _ofono_calls_get_reply, m);
 }
 
+static OFono_Sent_SMS *_sent_sms_new(const char *path)
+{
+	OFono_Sent_SMS *sms = calloc(1, sizeof(OFono_Sent_SMS));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, NULL);
+
+	sms->base.path = eina_stringshare_add(path);
+	EINA_SAFETY_ON_NULL_GOTO(sms->base.path, error_path);
+
+	return sms;
+
+error_path:
+	free(sms);
+	return NULL;
+}
+
+static void _sent_sms_free(OFono_Sent_SMS *sms)
+{
+	DBG("sms=%p %s", sms, sms->base.path);
+	_bus_object_free(&sms->base);
+}
+
 static OFono_Modem *_modem_new(const char *path)
 {
 	OFono_Modem *m = calloc(1, sizeof(OFono_Modem));
@@ -998,8 +1056,13 @@ static OFono_Modem *_modem_new(const char *path)
 	m->calls = eina_hash_string_small_new(EINA_FREE_CB(_call_free));
 	EINA_SAFETY_ON_NULL_GOTO(m->calls, error_calls);
 
+	m->sent_sms = eina_hash_string_small_new(EINA_FREE_CB(_sent_sms_free));
+	EINA_SAFETY_ON_NULL_GOTO(m->sent_sms, error_sent_sms);
+
 	return m;
 
+error_sent_sms:
+	eina_hash_free(m->calls);
 error_calls:
 	eina_stringshare_del(m->base.path);
 error_path:
@@ -1017,8 +1080,12 @@ static void _modem_free(OFono_Modem *m)
 	eina_stringshare_del(m->name);
 	eina_stringshare_del(m->serial);
 	eina_stringshare_del(m->voicemail_number);
+	eina_stringshare_del(m->serv_center_addr);
+	eina_stringshare_del(m->msg_bearer);
+	eina_stringshare_del(m->msg_alphabet);
 
 	eina_hash_free(m->calls);
+	eina_hash_free(m->sent_sms);
 
 	_bus_object_free(&m->base);
 }
@@ -1086,6 +1153,33 @@ static void _suppl_serv_property_update(OFono_Modem *m, const char *prop_name,
 		dbus_message_iter_get_basic(iter, &s);
 		m->ussd_state = _suppl_serv_state_parse(s);
 		DBG("%s USSD.State %d",	m->base.path, m->ussd_state);
+	} else
+		DBG("%s %s (unused property)", m->base.path, prop_name);
+}
+
+static void _msg_property_update(OFono_Modem *m, const char *prop_name,
+					DBusMessageIter *iter)
+{
+
+	if (strcmp(prop_name, "ServiceCenterAddress") == 0) {
+		const char *str;
+		dbus_message_iter_get_basic(iter, &str);
+		DBG("%s ServiceCenterAddress %s", m->base.path, str);
+		eina_stringshare_replace(&(m->serv_center_addr), str);
+	} else if (strcmp(prop_name, "UseDeliveryReports") == 0) {
+		m->use_delivery_reports = _dbus_bool_get(iter);
+		DBG("%s UseDeliveryReports %hhu", m->base.path,
+			m->use_delivery_reports);
+	} else if (strcmp(prop_name, "Bearer") == 0) {
+		const char *str;
+		dbus_message_iter_get_basic(iter, &str);
+		DBG("%s Bearer %s", m->base.path, str);
+		eina_stringshare_replace(&(m->msg_bearer), str);
+	} else if (strcmp(prop_name, "Alphabet") == 0) {
+		const char *str;
+		dbus_message_iter_get_basic(iter, &str);
+		DBG("%s Alphabet %s", m->base.path, str);
+		eina_stringshare_replace(&(m->msg_alphabet), str);
 	} else
 		DBG("%s %s (unused property)", m->base.path, prop_name);
 }
@@ -1187,6 +1281,287 @@ static void _suppl_serv_request_recv(void *data __UNUSED__, DBusMessage *msg)
 	_notify_ofono_callbacks_ussd_notify_list(cbs_ussd_notify, EINA_TRUE, s);
 }
 
+static void _msg_property_changed(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, variant_iter;
+	const char *prop_name;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	dbus_message_iter_get_basic(&iter, &prop_name);
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &variant_iter);
+	_msg_property_update(m, prop_name, &variant_iter);
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
+}
+
+static OFono_Sent_SMS_State _sent_sms_state_parse(const char *str)
+{
+	if (strcmp(str, "pending") == 0)
+		return OFONO_SENT_SMS_STATE_PENDING;
+	else if (strcmp(str, "failed") == 0)
+		return OFONO_SENT_SMS_STATE_FAILED;
+	else if (strcmp(str, "sent") == 0)
+		return OFONO_SENT_SMS_STATE_SENT;
+
+	ERR("unknown message state: %s", str);
+	return OFONO_SENT_SMS_STATE_FAILED;
+}
+
+static void _sent_sms_property_update(OFono_Sent_SMS *sms, const char *key,
+					DBusMessageIter *value)
+{
+	if (strcmp(key, "State") == 0) {
+		const char *str;
+		OFono_Sent_SMS_State state;
+		dbus_message_iter_get_basic(value, &str);
+		state = _sent_sms_state_parse(str);
+		DBG("%s State %d %s", sms->base.path, state, str);
+		sms->state = state;
+	} else
+		DBG("%s %s (unused property)", sms->base.path, key);
+}
+
+static void _notify_ofono_callbacks_sent_sms(OFono_Error err,
+						OFono_Sent_SMS *sms)
+{
+	OFono_Callback_List_Sent_SMS_Node *node;
+
+	EINA_INLIST_FOREACH(cbs_sent_sms_changed, node)
+		node->cb((void *) node->cb_data, err, sms);
+}
+
+static void _sent_sms_property_changed(void *data, DBusMessage *msg)
+{
+	OFono_Sent_SMS *sms = data;
+	DBusMessageIter iter, value;
+	const char *key;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	DBG("path=%s", sms->base.path);
+
+	dbus_message_iter_get_basic(&iter, &key);
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &value);
+	_sent_sms_property_update(sms, key, &value);
+
+	_notify_ofono_callbacks_sent_sms(OFONO_ERROR_NONE, sms);
+}
+
+static void _notify_ofono_callbacks_incoming_sms(unsigned int sms_class,
+							double timestamp,
+							const char *sender,
+							const char *message)
+{
+	OFono_Callback_List_Incoming_SMS_Node *node;
+
+	EINA_INLIST_FOREACH(cbs_incoming_sms, node) {
+		node->cb((void *) node->cb_data, sms_class, timestamp, sender,
+			message);
+	}
+}
+
+static void _msg_notify(unsigned int sms_class, DBusMessageIter *iter)
+{
+	DBusMessageIter info;
+	const char *message = NULL;
+	const char *sender = NULL;
+	const char *orig_timestamp = NULL;
+	const char *local_timestamp = NULL;
+	time_t st, ut;
+	double lt, timestamp = 0.0;
+
+	dbus_message_iter_get_basic(iter, &message);
+	EINA_SAFETY_ON_NULL_RETURN(message);
+	DBG("Message '%s'", message);
+
+	dbus_message_iter_next(iter);
+	dbus_message_iter_recurse(iter, &info);
+	for (; dbus_message_iter_get_arg_type(&info) == DBUS_TYPE_DICT_ENTRY;
+			dbus_message_iter_next(&info)) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(&info, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+
+		if (strcmp(key, "Sender") == 0) {
+			dbus_message_iter_get_basic(&value, &sender);
+			DBG("Sender %s", sender);
+		} else if (strcmp(key, "SentTime") == 0) {
+			dbus_message_iter_get_basic(&value, &orig_timestamp);
+			DBG("SentTime %s", orig_timestamp);
+		} else if (strcmp(key, "LocalSentTime") == 0) {
+			dbus_message_iter_get_basic(&value, &local_timestamp);
+			DBG("LocalSentTime %s", local_timestamp);
+		} else
+			DBG("%s (unused property)", key);
+	}
+
+	EINA_SAFETY_ON_NULL_RETURN(sender);
+	EINA_SAFETY_ON_NULL_RETURN(local_timestamp);
+
+	st = _ofono_time_parse(local_timestamp);
+	ut = time(NULL);
+	lt = ecore_loop_time_get();
+	timestamp = st - ut + lt;
+
+	_notify_ofono_callbacks_incoming_sms(sms_class, timestamp, sender,
+						message);
+}
+
+static void _msg_immediate(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	DBG("path=%s", m->base.path);
+	_msg_notify(0, &iter);
+}
+
+static void _msg_incoming(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	DBG("path=%s", m->base.path);
+	_msg_notify(1, &iter);
+}
+
+static OFono_Sent_SMS *_sent_sms_common_add(OFono_Modem *m, const char *path)
+{
+	OFono_Sent_SMS *sms = _sent_sms_new(path);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, NULL);
+	eina_hash_add(m->sent_sms, sms->base.path, sms);
+
+	_bus_object_signal_listen(&sms->base,
+					OFONO_PREFIX "Message",
+					"PropertyChanged",
+					_sent_sms_property_changed, sms);
+	return sms;
+}
+
+static OFono_Sent_SMS *_sent_sms_pending_add(OFono_Modem *m, const char *path,
+						OFono_Sent_SMS_Cb_Context *ctx)
+{
+	OFono_Sent_SMS *sms;
+
+	DBG("path=%s, ctx=%p", path, ctx);
+
+	sms = _sent_sms_common_add(m, path);
+	sms->pending_send = ctx;
+	return sms;
+}
+
+static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
+{
+	OFono_Sent_SMS *sms;
+
+	DBG("path=%s, prop=%p", path, prop);
+
+	sms = eina_hash_find(m->sent_sms, path);
+	if (sms)
+		DBG("SMS already exists %p (%s)", sms, path);
+	else {
+		sms = _sent_sms_common_add(m, path);
+		EINA_SAFETY_ON_NULL_RETURN(sms);
+	}
+
+	for (; dbus_message_iter_get_arg_type(prop) == DBUS_TYPE_DICT_ENTRY;
+			dbus_message_iter_next(prop)) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(prop, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+
+		_sent_sms_property_update(sms, key, &value);
+	}
+
+	if (sms->pending_send) {
+		OFono_Sent_SMS_Cb_Context *ctx = sms->pending_send;
+		if (ctx->cb)
+			ctx->cb((void *)ctx->data, OFONO_ERROR_NONE, sms);
+		free(ctx);
+		sms->pending_send = NULL;
+	}
+
+	_notify_ofono_callbacks_sent_sms(OFONO_ERROR_NONE, sms);
+}
+
+static void _msg_added(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, properties;
+	const char *path;
+
+	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	dbus_message_iter_get_basic(&iter, &path);
+
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_recurse(&iter, &properties);
+
+	_msg_add(m, path, &properties);
+}
+
+static void _msg_remove(OFono_Modem *m, const char *path)
+{
+	DBG("path=%s", path);
+	eina_hash_del_by_key(m->sent_sms, path);
+}
+
+static void _msg_removed(void *data, DBusMessage *msg)
+{
+	OFono_Modem *m = data;
+	DBusError err;
+	const char *path;
+
+	if (!msg) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	dbus_error_init(&err);
+	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_OBJECT_PATH,
+					&path, NULL)) {
+		ERR("Could not get MessageRemoved arguments: %s: %s",
+			err.name, err.message);
+		dbus_error_free(&err);
+		return;
+	}
+
+	_msg_remove(m, path);
+}
+
 static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
 {
 	DBusMessageIter entry;
@@ -1236,6 +1611,10 @@ static void _modem_update_interfaces(OFono_Modem *m, unsigned int ifaces)
 	if (((m->interfaces & OFONO_API_SUPPL_SERV) == 0) &&
 		(ifaces & OFONO_API_SUPPL_SERV) == OFONO_API_SUPPL_SERV)
 		_ofono_suppl_serv_properties_get(m);
+
+	if (((m->interfaces & OFONO_API_MSG) == 0) &&
+		(ifaces & OFONO_API_MSG) == OFONO_API_MSG)
+		_ofono_msg_properties_get(m);
 }
 
 static void _modem_property_update(OFono_Modem *m, const char *key,
@@ -1426,6 +1805,52 @@ static void _ofono_suppl_serv_properties_get(OFono_Modem *m)
 				_ofono_suppl_serv_properties_get_reply, m);
 }
 
+
+static void _ofono_msg_properties_get_reply(void *data,	DBusMessage *msg,
+						DBusError *err)
+{
+	OFono_Modem *m = data;
+	DBusMessageIter iter, prop;
+
+	if (dbus_error_is_set(err)) {
+		DBG("%s: %s", err->name, err->message);
+		return;
+	}
+
+	dbus_message_iter_init(msg, &iter);
+	dbus_message_iter_recurse(&iter, &prop);
+
+	DBG("m=%s", m->base.path);
+	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
+	     dbus_message_iter_next(&prop)) {
+		DBusMessageIter entry, value;
+		const char *key;
+
+		dbus_message_iter_recurse(&prop, &entry);
+		dbus_message_iter_get_basic(&entry, &key);
+
+		dbus_message_iter_next(&entry);
+		dbus_message_iter_recurse(&entry, &value);
+		_msg_property_update(m, key, &value);
+	}
+
+	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
+}
+
+static void _ofono_msg_properties_get(OFono_Modem *m)
+{
+	DBusMessage *msg;
+	msg = dbus_message_new_method_call(bus_id, m->base.path,
+						OFONO_PREFIX
+						OFONO_MSG_IFACE,
+						"GetProperties");
+	DBG("m=%s", m->base.path);
+	EINA_SAFETY_ON_NULL_RETURN(msg);
+
+	_bus_object_message_send(&m->base, msg,
+				_ofono_msg_properties_get_reply, m);
+}
+
 static void _modem_add(const char *path, DBusMessageIter *prop)
 {
 	OFono_Modem *m;
@@ -1465,6 +1890,18 @@ static void _modem_add(const char *path, DBusMessageIter *prop)
 					OFONO_PREFIX OFONO_SUPPL_SERV_IFACE,
 					"RequestReceived",
 					_suppl_serv_request_recv, m);
+
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_MSG_IFACE,
+					"PropertyChanged",
+					_msg_property_changed, m);
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_MSG_IFACE,
+					"ImmediateMessage", _msg_immediate, m);
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_MSG_IFACE,
+					"IncomingMessage", _msg_incoming, m);
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_MSG_IFACE,
+					"MessageAdded", _msg_added, m);
+	_bus_object_signal_listen(&m->base, OFONO_PREFIX OFONO_MSG_IFACE,
+					"MessageRemoved", _msg_removed, m);
 
 	/* TODO: do we need to listen to BarringActive or Forwarded? */
 
@@ -2644,6 +3081,162 @@ OFono_USSD_State ofono_ussd_state_get(void)
 	return m->ussd_state;
 }
 
+const char *ofono_service_center_address_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, NULL);
+	return m->serv_center_addr;
+}
+
+Eina_Bool ofono_use_delivery_reports_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
+	return m->use_delivery_reports;
+}
+
+const char *ofono_message_bearer_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, NULL);
+	return m->msg_bearer;
+}
+
+const char *ofono_message_alphabet_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, NULL);
+	return m->msg_alphabet;
+}
+
+OFono_Sent_SMS_State ofono_sent_sms_state_get(const OFono_Sent_SMS *sms)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, OFONO_SENT_SMS_STATE_FAILED);
+	return sms->state;
+}
+
+OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb,
+					const void *data)
+{
+	OFono_Simple_Cb_Context *ctx = NULL;
+	OFono_Error err = OFONO_ERROR_OFFLINE;
+	OFono_Pending *p;
+	DBusMessage *msg;
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(bus_id, sms->base.path,
+						OFONO_PREFIX "Message",
+						"Cancel");
+	if (!msg)
+		goto error;
+
+	INF("Cancel(%s)", sms->base.path);
+	p = _bus_object_message_send(&sms->base, msg, _ofono_simple_reply, ctx);
+	return p;
+
+error:
+	if (cb)
+		cb((void *)data, err);
+	free(ctx);
+	return NULL;
+}
+
+static void _ofono_sms_send_reply(void *data, DBusMessage *msg, DBusError *err)
+{
+	OFono_Sent_SMS_Cb_Context *ctx = data;
+	OFono_Sent_SMS *sms = NULL;
+	OFono_Error oe = OFONO_ERROR_NONE;
+
+	if (!msg) {
+		DBG("%s: %s", err->name, err->message);
+		oe = _ofono_error_parse(err->name);
+	} else {
+		DBusError e;
+		const char *path;
+		dbus_error_init(&e);
+		if (!dbus_message_get_args(msg, &e, DBUS_TYPE_OBJECT_PATH,
+						&path, DBUS_TYPE_INVALID)) {
+			ERR("Could not get SendMessage reply: %s: %s",
+				e.name, e.message);
+			dbus_error_free(&e);
+			oe = OFONO_ERROR_FAILED;
+		} else {
+			sms = eina_hash_find(ctx->modem->sent_sms, path);
+			DBG("path=%s, existing sms=%p", path, sms);
+			if (!sms) {
+				sms = _sent_sms_pending_add(ctx->modem, path,
+								ctx);
+				if (sms) {
+					/* ctx->cb will be dispatched on
+					 * MessageAdded signal handler.
+					 */
+					return;
+				}
+			}
+
+			ERR("Could not find sms %s", path);
+			oe = OFONO_ERROR_FAILED;
+		}
+	}
+
+	if (ctx->cb)
+		ctx->cb((void *)ctx->data, oe, sms);
+
+	free(ctx);
+}
+
+OFono_Pending *ofono_sms_send(const char *number, const char *message,
+				OFono_Sent_SMS_Cb cb, const void *data)
+{
+	OFono_Sent_SMS_Cb_Context *ctx = NULL;
+	OFono_Error err = OFONO_ERROR_OFFLINE;
+	OFono_Pending *p;
+	DBusMessage *msg;
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_GOTO(m, error);
+	EINA_SAFETY_ON_NULL_GOTO(number, error);
+	EINA_SAFETY_ON_NULL_GOTO(message, error);
+
+	if ((m->interfaces & OFONO_API_MSG) == 0)
+		goto error;
+	err = OFONO_ERROR_FAILED;
+
+	ctx = calloc(1, sizeof(OFono_Sent_SMS_Cb_Context));
+	EINA_SAFETY_ON_NULL_GOTO(ctx, error);
+	ctx->cb = cb;
+	ctx->data = data;
+	ctx->modem = m;
+
+	msg = dbus_message_new_method_call(
+		bus_id, m->base.path, OFONO_PREFIX OFONO_MSG_IFACE,
+		"SendMessage");
+	if (!msg)
+		goto error;
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &number,
+					DBUS_TYPE_STRING, &message,
+					DBUS_TYPE_INVALID))
+		goto error_message;
+
+	INF("SendMessage(%s, %s)", number, message);
+	p = _bus_object_message_send(&m->base, msg, _ofono_sms_send_reply, ctx);
+	return p;
+
+error_message:
+	dbus_message_unref(msg);
+error:
+	if (cb)
+		cb((void *)data, err, NULL);
+	free(ctx);
+	return NULL;
+}
+
 OFono_Pending *ofono_tones_send(const char *tones,
 						OFono_Simple_Cb cb,
 						const void *data)
@@ -2992,6 +3585,56 @@ void ofono_call_removed_cb_del(OFono_Callback_List_Call_Node *node)
 {
 	EINA_SAFETY_ON_NULL_RETURN(node);
 	_ofono_callback_call_list_delete(&cbs_call_removed, node);
+}
+
+OFono_Callback_List_Sent_SMS_Node *
+ofono_sent_sms_changed_cb_add(OFono_Sent_SMS_Cb cb, const void *data)
+{
+	OFono_Callback_List_Sent_SMS_Node *node;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node = calloc(1, sizeof(OFono_Callback_List_Sent_SMS_Node));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node, NULL);
+	node->cb = cb;
+	node->cb_data = data;
+
+	cbs_sent_sms_changed = eina_inlist_append(cbs_sent_sms_changed,
+							EINA_INLIST_GET(node));
+
+	return node;
+}
+
+void ofono_sent_sms_changed_cb_del(OFono_Callback_List_Sent_SMS_Node *node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(node);
+	cbs_sent_sms_changed = eina_inlist_remove(cbs_sent_sms_changed,
+							EINA_INLIST_GET(node));
+	free(node);
+}
+
+OFono_Callback_List_Incoming_SMS_Node *
+ofono_incoming_sms_cb_add(OFono_Incoming_SMS_Cb cb, const void *data)
+{
+	OFono_Callback_List_Incoming_SMS_Node *node;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(cb, NULL);
+	node = calloc(1, sizeof(OFono_Callback_List_Incoming_SMS_Node));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(node, NULL);
+	node->cb = cb;
+	node->cb_data = data;
+
+	cbs_incoming_sms = eina_inlist_append(cbs_incoming_sms,
+						EINA_INLIST_GET(node));
+
+	return node;
+}
+
+void ofono_incoming_sms_cb_del(OFono_Callback_List_Incoming_SMS_Node *node)
+{
+	EINA_SAFETY_ON_NULL_RETURN(node);
+	cbs_incoming_sms = eina_inlist_remove(cbs_incoming_sms,
+						EINA_INLIST_GET(node));
+	free(node);
 }
 
 Eina_Bool ofono_voice_is_online(void)

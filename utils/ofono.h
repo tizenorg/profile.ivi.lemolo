@@ -64,12 +64,20 @@ typedef enum
 
 typedef enum
 {
+	OFONO_SENT_SMS_STATE_PENDING = 0,
+	OFONO_SENT_SMS_STATE_FAILED,
+	OFONO_SENT_SMS_STATE_SENT
+} OFono_Sent_SMS_State;
+
+typedef enum
+{
 	OFONO_USSD_STATE_IDLE = 0,
 	OFONO_USSD_STATE_ACTIVE,
 	OFONO_USSD_STATE_USER_RESPONSE
 } OFono_USSD_State;
 
 typedef struct _OFono_Call OFono_Call;
+typedef struct _OFono_Sent_SMS OFono_Sent_SMS;
 typedef struct _OFono_Pending OFono_Pending;
 
 typedef struct _OFono_Callback_List_USSD_Notify_Node OFono_Callback_List_USSD_Notify_Node;
@@ -78,10 +86,15 @@ typedef struct _OFono_Callback_List_Modem_Node OFono_Callback_List_Modem_Node;
 typedef struct _OFono_Callback_List_Call_Node OFono_Callback_List_Call_Node;
 typedef struct _OFono_Callback_List_Call_Disconnected_Node OFono_Callback_List_Call_Disconnected_Node;
 
+typedef struct _OFono_Callback_List_Sent_SMS_Node OFono_Callback_List_Sent_SMS_Node;
+typedef struct _OFono_Callback_List_Incoming_SMS_Node OFono_Callback_List_Incoming_SMS_Node;
+
 typedef void (*OFono_Simple_Cb)(void *data, OFono_Error error);
 typedef void (*OFono_String_Cb)(void *data, OFono_Error error, const char *str);
 typedef void (*OFono_Call_Cb)(void *data, OFono_Error error, OFono_Call *call);
 
+typedef void (*OFono_Sent_SMS_Cb)(void *data, OFono_Error error, OFono_Sent_SMS *sms);
+typedef void (*OFono_Incoming_SMS_Cb)(void *data, unsigned int sms_class, double timestamp, const char *sender, const char *message);
 
 /* Voice Call: */
 OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
@@ -173,6 +186,26 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 OFono_Pending *ofono_ussd_respond(const char *string, OFono_String_Cb cb, const void *data);
 OFono_Pending *ofono_ussd_cancel(OFono_Simple_Cb cb, const void *data);
 OFono_USSD_State ofono_ussd_state_get(void);
+
+/* SMS (Message) */
+const char *ofono_service_center_address_get(void);
+Eina_Bool ofono_use_delivery_reports_get(void);
+const char *ofono_message_bearer_get(void);
+const char *ofono_message_alphabet_get(void);
+
+OFono_Pending *ofono_sms_send(const char *number, const char *message,
+				OFono_Sent_SMS_Cb cb, const void *data);
+
+OFono_Sent_SMS_State ofono_sent_sms_state_get(const OFono_Sent_SMS *sms);
+OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb, const void *data);
+
+OFono_Callback_List_Sent_SMS_Node *ofono_sent_sms_changed_cb_add(OFono_Sent_SMS_Cb cb,
+									const void *data);
+void ofono_sent_sms_changed_cb_del(OFono_Callback_List_Sent_SMS_Node *node);
+
+OFono_Callback_List_Incoming_SMS_Node *ofono_incoming_sms_cb_add(OFono_Incoming_SMS_Cb cb,
+										const void *data);
+void ofono_incoming_sms_cb_del(OFono_Callback_List_Incoming_SMS_Node *node);
 
 /* Setup: */
 void ofono_modem_api_list(FILE *fp, const char *prefix, const char *suffix);
