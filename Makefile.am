@@ -26,7 +26,7 @@ EXTRA_DIST =
 noinst_LTLIBRARIES = utils/libofono-efl-utils.la
 
 utils_libofono_efl_utils_la_SOURCES = \
-	utils/contacts.h \
+	utils/contacts-ofono-efl.h \
 	utils/log.h \
 	utils/ofono.c \
 	utils/ofono.h \

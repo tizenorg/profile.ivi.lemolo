@@ -7,7 +7,7 @@
 
 #include "log.h"
 #include "ofono.h"
-#include "contacts.h"
+#include "contacts-ofono-efl.h"
 #include "util.h"
 
 #ifndef EET_COMPRESSION_DEFAULT
