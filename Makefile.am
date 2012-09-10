@@ -31,7 +31,7 @@ utils_libofono_efl_utils_la_SOURCES = \
 	utils/ofono.c \
 	utils/ofono.h \
 	utils/simple-popup.c \
-	utils/simple-popup.c \
+	utils/simple-popup.h \
 	utils/util.c \
 	utils/util.h
 utils_libofono_efl_utils_la_LIBADD = \
