@@ -15,4 +15,7 @@ collections {
 #include "includes/answer_screen.edc"
 #include "includes/action_answer.edc"
 
+#include "includes/messages.edc"
+#include "includes/compose.edc"
+
 }

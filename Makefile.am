@@ -46,6 +46,7 @@ endif
 
 bin_PROGRAMS = \
 	dialer/dialer \
+	messages/messages \
 	tizen/answer_daemon
 
 dialer_dialer_LDADD = \
@@ -67,6 +68,20 @@ dialer_dialer_SOURCES = \
 	dialer/callscreen.h \
 	dialer/ussd.c \
 	dialer/ussd.h
+
+messages_messages_LDADD = \
+	@EFL_LIBS@ \
+	@TIZEN_LIBS@ \
+	utils/libofono-efl-utils.la
+
+messages_messages_SOURCES = \
+	messages/main.c \
+	messages/rc.c \
+	messages/rc.h \
+	messages/gui.c \
+	messages/gui.h \
+	messages/compose.c \
+	messages/compose.h
 
 AM_V_SED = $(am__v_SED_$(V))
 am__v_SED_ = $(am__v_SED_$(AM_DEFAULT_VERBOSITY))
@@ -184,12 +199,14 @@ data/themes/includes/answer_screen.edc \
 data/themes/includes/buttons.edc \
 data/themes/includes/call.edc \
 data/themes/includes/colors.edc \
+data/themes/includes/compose.edc \
 data/themes/includes/contacts-bg.edc \
 data/themes/includes/contacts.edc \
 data/themes/includes/dialer.edc \
 data/themes/includes/history-bg.edc \
 data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
+data/themes/includes/messages.edc \
 data/themes/includes/multiparty-list.edc \
 data/themes/includes/popup.edc \
 data/themes/includes/scroller.edc

@@ -1,0 +1,43 @@
+group {
+   name: "elm/layout/ofono-efl/messages";
+
+   min: WIDTH HEIGHT;
+
+   /*
+    * Represents the messages main layout with actions and swallows.
+    *
+    * Parts:
+    *
+    * Signals:
+    *   Emit (source is "gui"):
+    *   Listens (source is "gui"):
+    *
+    */
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+         }
+      }
+
+      part {
+         name: "notification.bar";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+            rel1.relative: 0.0 0.0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -1 NOTIFICATION_BAR_HEIGHT;
+            }
+         }
+      }
+   }
+}
