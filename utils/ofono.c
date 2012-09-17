@@ -457,6 +457,8 @@ typedef struct _OFono_Sent_SMS_Cb_Context
 	OFono_Sent_SMS_Cb cb;
 	OFono_Modem *modem;
 	const void *data;
+	const char *destination;
+	const char *message;
 } OFono_Sent_SMS_Cb_Context;
 
 struct _OFono_Sent_SMS
@@ -464,6 +466,9 @@ struct _OFono_Sent_SMS
 	OFono_Bus_Object base;
 	OFono_Sent_SMS_State state;
 	OFono_Sent_SMS_Cb_Context *pending_send;
+	const char *destination;
+	const char *message;
+	time_t timestamp;
 };
 
 struct _OFono_Modem
@@ -1042,6 +1047,8 @@ error_path:
 static void _sent_sms_free(OFono_Sent_SMS *sms)
 {
 	DBG("sms=%p %s", sms, sms->base.path);
+	eina_stringshare_del(sms->destination);
+	eina_stringshare_del(sms->message);
 	_bus_object_free(&sms->base);
 }
 
@@ -1502,6 +1509,9 @@ static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 		OFono_Sent_SMS_Cb_Context *ctx = sms->pending_send;
 		if (ctx->cb)
 			ctx->cb((void *)ctx->data, OFONO_ERROR_NONE, sms);
+		sms->destination = ctx->destination;
+		sms->message = ctx->message;
+		sms->timestamp = time(NULL);
 		free(ctx);
 		sms->pending_send = NULL;
 	}
@@ -3110,6 +3120,24 @@ OFono_Sent_SMS_State ofono_sent_sms_state_get(const OFono_Sent_SMS *sms)
 	return sms->state;
 }
 
+const char *ofono_sent_sms_destination_get(const OFono_Sent_SMS *sms)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, NULL);
+	return sms->destination;
+}
+
+const char *ofono_sent_sms_message_get(const OFono_Sent_SMS *sms)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, NULL);
+	return sms->message;
+}
+
+time_t ofono_sent_sms_timestamp_get(const OFono_Sent_SMS *sms)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(sms, 0);
+	return sms->timestamp;
+}
+
 OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb,
 					const void *data)
 {
@@ -3183,6 +3211,8 @@ static void _ofono_sms_send_reply(void *data, DBusMessage *msg, DBusError *err)
 	if (ctx->cb)
 		ctx->cb((void *)ctx->data, oe, sms);
 
+	eina_stringshare_del(ctx->destination);
+	eina_stringshare_del(ctx->message);
 	free(ctx);
 }
 
@@ -3207,6 +3237,8 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 	ctx->cb = cb;
 	ctx->data = data;
 	ctx->modem = m;
+	ctx->destination = eina_stringshare_add(number);
+	ctx->message = eina_stringshare_add(message);
 
 	msg = dbus_message_new_method_call(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_MSG_IFACE,
@@ -3228,6 +3260,8 @@ error_message:
 error:
 	if (cb)
 		cb((void *)data, err, NULL);
+	eina_stringshare_del(ctx->destination);
+	eina_stringshare_del(ctx->message);
 	free(ctx);
 	return NULL;
 }

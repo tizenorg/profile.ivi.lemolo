@@ -197,6 +197,10 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 				OFono_Sent_SMS_Cb cb, const void *data);
 
 OFono_Sent_SMS_State ofono_sent_sms_state_get(const OFono_Sent_SMS *sms);
+const char *ofono_sent_sms_destination_get(const OFono_Sent_SMS *sms);
+const char *ofono_sent_sms_message_get(const OFono_Sent_SMS *sms);
+time_t ofono_sent_sms_timestamp_get(const OFono_Sent_SMS *sms);
+
 OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb, const void *data);
 
 OFono_Callback_List_Sent_SMS_Node *ofono_sent_sms_changed_cb_add(OFono_Sent_SMS_Cb cb,
