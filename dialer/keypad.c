@@ -259,15 +259,10 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 	}
 
 	if ((err == OFONO_ERROR_NOT_RECOGNIZED) ||
+		(err == OFONO_ERROR_OFFLINE) ||
 		(err == OFONO_ERROR_INVALID_FORMAT)) {
 		_dial(ctx);
 		evas_object_del(ctx->ss_popup);
-	} else if (err == OFONO_ERROR_OFFLINE) {
-		simple_popup_title_set(ctx->ss_popup, "Offline");
-		simple_popup_message_set(ctx->ss_popup,
-						"System is Offline");
-		simple_popup_button_dismiss_set(ctx->ss_popup);
-		evas_object_show(ctx->ss_popup);
 	} else if (err != OFONO_ERROR_NONE) {
 		char buf[256];
 
