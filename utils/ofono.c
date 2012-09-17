@@ -1358,7 +1358,7 @@ static void _sent_sms_property_changed(void *data, DBusMessage *msg)
 }
 
 static void _notify_ofono_callbacks_incoming_sms(unsigned int sms_class,
-							double timestamp,
+							time_t timestamp,
 							const char *sender,
 							const char *message)
 {
@@ -1377,8 +1377,7 @@ static void _msg_notify(unsigned int sms_class, DBusMessageIter *iter)
 	const char *sender = NULL;
 	const char *orig_timestamp = NULL;
 	const char *local_timestamp = NULL;
-	time_t st, ut;
-	double lt, timestamp = 0.0;
+	time_t timestamp;
 
 	dbus_message_iter_get_basic(iter, &message);
 	EINA_SAFETY_ON_NULL_RETURN(message);
@@ -1412,11 +1411,7 @@ static void _msg_notify(unsigned int sms_class, DBusMessageIter *iter)
 
 	EINA_SAFETY_ON_NULL_RETURN(sender);
 	EINA_SAFETY_ON_NULL_RETURN(local_timestamp);
-
-	st = _ofono_time_parse(local_timestamp);
-	ut = time(NULL);
-	lt = ecore_loop_time_get();
-	timestamp = st - ut + lt;
+	timestamp = _ofono_time_parse(local_timestamp);
 
 	_notify_ofono_callbacks_incoming_sms(sms_class, timestamp, sender,
 						message);

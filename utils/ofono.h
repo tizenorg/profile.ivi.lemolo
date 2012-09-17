@@ -94,7 +94,7 @@ typedef void (*OFono_String_Cb)(void *data, OFono_Error error, const char *str);
 typedef void (*OFono_Call_Cb)(void *data, OFono_Error error, OFono_Call *call);
 
 typedef void (*OFono_Sent_SMS_Cb)(void *data, OFono_Error error, OFono_Sent_SMS *sms);
-typedef void (*OFono_Incoming_SMS_Cb)(void *data, unsigned int sms_class, double timestamp, const char *sender, const char *message);
+typedef void (*OFono_Incoming_SMS_Cb)(void *data, unsigned int sms_class, time_t timestamp, const char *sender, const char *message);
 
 /* Voice Call: */
 OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
