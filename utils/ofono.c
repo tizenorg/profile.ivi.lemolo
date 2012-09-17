@@ -816,8 +816,14 @@ static OFono_Modem *_modem_selected_get(void)
 			}
 		}
 
-		if (!found_api) {
-			DBG("m=%#x, mask=%#x", m->interfaces, modem_api_mask);
+		if ((!found_api) || ((!found_api->online) ||
+					(!found_api->powered))) {
+			DBG("m=%#x, mask=%#x, previous=%s "
+				"(online=%d, powered=%d)",
+				m->interfaces, modem_api_mask,
+				found_api ? found_api->base.path : "",
+				found_api ? found_api->online : 0,
+				found_api ? found_api->powered : 0);
 			if ((m->interfaces & modem_api_mask) == modem_api_mask)
 				found_api = m;
 		}
