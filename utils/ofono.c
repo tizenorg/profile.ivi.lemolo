@@ -1513,11 +1513,11 @@ static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 
 	if (sms->pending_send) {
 		OFono_Sent_SMS_Cb_Context *ctx = sms->pending_send;
-		if (ctx->cb)
-			ctx->cb((void *)ctx->data, OFONO_ERROR_NONE, sms);
 		sms->destination = ctx->destination;
 		sms->message = ctx->message;
 		sms->timestamp = time(NULL);
+		if (ctx->cb)
+			ctx->cb((void *)ctx->data, OFONO_ERROR_NONE, sms);
 		free(ctx);
 		sms->pending_send = NULL;
 	}
