@@ -3250,7 +3250,7 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 		bus_id, m->base.path, OFONO_PREFIX OFONO_MSG_IFACE,
 		"SendMessage");
 	if (!msg)
-		goto error;
+		goto error_setup;
 
 	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &number,
 					DBUS_TYPE_STRING, &message,
@@ -3263,11 +3263,12 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 
 error_message:
 	dbus_message_unref(msg);
+error_setup:
+	eina_stringshare_del(ctx->destination);
+	eina_stringshare_del(ctx->message);
 error:
 	if (cb)
 		cb((void *)data, err, NULL);
-	eina_stringshare_del(ctx->destination);
-	eina_stringshare_del(ctx->message);
 	free(ctx);
 	return NULL;
 }
