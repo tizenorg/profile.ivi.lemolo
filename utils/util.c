@@ -73,12 +73,12 @@ char *date_format(time_t date)
 
 	if (dt < 30)
 		r = asprintf(&buf, "Just now");
-	else if (dt < (MINUTE + 30))
+	else if (dt < (MINUTE * 2))
 		r = asprintf(&buf, "One minute ago");
-	else if (dt < (HOUR + 100))
-		r = asprintf(&buf, "%d minutes ago", (int)dt/60);
+	else if (dt < (HOUR * 2))
+		r = asprintf(&buf, "%dmin ago", (int)dt/60);
 	else if (dt < (HOUR * 4))
-		r = asprintf(&buf, "%d hours ago", (int)dt/3600);
+		r = asprintf(&buf, "%dh ago", (int)dt/3600);
 	else if (dt <= DAY) {
 		struct tm *f_time = gmtime(&date);
 		EINA_SAFETY_ON_NULL_GOTO(f_time, err_gmtime);
@@ -88,8 +88,7 @@ char *date_format(time_t date)
 		char tmp[256];
 		struct tm *tm = localtime(&date);
 		strftime(tmp, sizeof(tmp), "%A", tm);
-		int days = dt / DAY;
-		r = asprintf(&buf, "%s, %d days ago", tmp, days);
+		r = asprintf(&buf, "%s", tmp);
 	} else {
 		char tmp[256];
 		struct tm *tm = localtime(&date);
