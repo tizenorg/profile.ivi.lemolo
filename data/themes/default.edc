@@ -17,5 +17,6 @@ collections {
 
 #include "includes/messages.edc"
 #include "includes/compose.edc"
-
+#include "includes/messages-overview.edc"
+#include "includes/messages-overview-list.edc"
 }

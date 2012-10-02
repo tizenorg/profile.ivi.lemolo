@@ -33,6 +33,11 @@ typedef struct  _Contact_Number {
 	char number[];
 } Contact_Number;
 
+typedef struct _Contact_Name_Search {
+	const char *name;
+	Contact_Info *c_info;
+} Contact_Name_Search;
+
 typedef struct _Contact_Number_Entry {
 	Eina_List *contacts;
 	char number[];
@@ -68,12 +73,252 @@ typedef struct _Contact_Info_On_Changed_Ctx {
 	Eina_Bool deleted;
 } Contact_Info_On_Changed_Ctx;
 
+struct _Contact_Partial_Match
+{
+	const Contact_Info *info;
+	const char *type;
+	Eina_Bool name_match : 1;
+};
+
+typedef struct _Partial_Match_Search
+{
+	Eina_List *matches;
+	const Contacts *contacts;
+} Partial_Match_Search;
+
+
+static void _contact_number_entry_add(const char *number, Contact_Info *c_info);
+
 static const char *phone_type_get(contact_number_h number);
 static void _contact_info_free(Contact_Info *c_info);
 
 static void _contact_number_add(char *number,
 				Contact_Info *c_info,
 				contact_number_h number_h);
+
+const char *contact_info_number_check(const Contact_Info *c,
+					const char *number);
+
+static void _partial_match_add(Eina_List **p_list, const char *type,
+				const Contact_Info *c_info,
+				Eina_Bool name_match)
+{
+	Contact_Partial_Match *pm = malloc(sizeof(Contact_Partial_Match));
+	EINA_SAFETY_ON_NULL_RETURN(pm);
+	pm->info = c_info;
+	pm->type = type;
+	pm->name_match = name_match;
+	*p_list = eina_list_append(*p_list, pm);
+}
+
+static void _partial_number_match_add(Eina_List **p_list, const char *type,
+					const Contact_Info *c_info)
+{
+	_partial_match_add(p_list, type, c_info, EINA_FALSE);
+}
+
+static bool _number_partial_search(contact_query_number_s *query, void *data)
+{
+	Partial_Match_Search *pm_search = data;
+	const Contacts *contacts = pm_search->contacts;
+	char *n;
+	contact_h tizen_c;
+	const char *type;
+	contact_number_iterator_h it;
+	contact_number_h number_h;
+	Contact_Info *c_info;
+	Contact_Number *cn;
+
+	c_info = eina_hash_find(contacts->hash_ids, &query->contact_db_id);
+
+	if (c_info)
+		goto exit;
+
+	c_info = calloc(1, sizeof(Contact_Info));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c_info, true);
+	c_info->first_name = eina_stringshare_add(query->first_name);
+	c_info->last_name = eina_stringshare_add(query->last_name);
+	c_info->picture = eina_stringshare_add(query->contact_image_path);
+	c_info->id = query->contact_db_id;
+	if (contact_get_from_db(c_info->id, &tizen_c) != CONTACTS_ERROR_NONE)
+		return true;
+
+	if (contact_get_number_iterator(tizen_c, &it) !=
+		CONTACTS_ERROR_NONE)
+		return true;
+
+	while (contact_number_iterator_has_next(it)) {
+		if (contact_number_iterator_next(&it, &number_h) !=
+			CONTACTS_ERROR_NONE)
+			continue;
+		if (contact_number_get_number(number_h, &n) !=
+			CONTACTS_ERROR_NONE)
+			continue;
+		_contact_number_add(n, c_info, number_h);
+		free(n);
+	}
+	contact_destroy(tizen_c);
+
+	/* New contact */
+	c_info->contacts = (Contacts *)contacts;
+	eina_hash_add(contacts->hash_ids, &c_info->id, c_info);
+	EINA_INLIST_FOREACH(c_info->numbers, cn)
+		_contact_number_entry_add(cn->number, c_info);
+
+exit:
+	type = contact_info_number_check(c_info, query->phone_number);
+	_partial_number_match_add(&pm_search->matches, type,
+					c_info);
+	return true;
+
+}
+
+static bool _name_partial_search(contact_query_name_s *query, void *data)
+{
+	Partial_Match_Search *pm_search = data;
+	const Contacts *contacts = pm_search->contacts;
+	char *n;
+	contact_h tizen_c;
+	contact_number_iterator_h it;
+	contact_number_h number_h;
+	Contact_Info *c_info;
+	Contact_Number *cn;
+	Eina_Bool c_info_new = EINA_FALSE;
+
+
+	c_info = eina_hash_find(contacts->hash_ids, &query->contact_db_id);
+
+	if (c_info)
+		goto exit;
+
+	c_info = calloc(1, sizeof(Contact_Info));
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c_info, true);
+	c_info->first_name = eina_stringshare_add(query->first_name);
+	c_info->last_name = eina_stringshare_add(query->last_name);
+	c_info->picture = eina_stringshare_add(query->contact_image_path);
+	c_info->id = query->contact_db_id;
+	if (contact_get_from_db(c_info->id, &tizen_c) != CONTACTS_ERROR_NONE)
+		return true;
+
+	if (contact_get_number_iterator(tizen_c, &it) !=
+		CONTACTS_ERROR_NONE)
+		return true;
+
+	while (contact_number_iterator_has_next(it)) {
+		if (contact_number_iterator_next(&it, &number_h) !=
+			CONTACTS_ERROR_NONE)
+			continue;
+		if (contact_number_get_number(number_h, &n) !=
+			CONTACTS_ERROR_NONE)
+			continue;
+		_contact_number_add(n, c_info, number_h);
+		free(n);
+	}
+	contact_destroy(tizen_c);
+
+	/* New contact */
+	c_info->contacts = (Contacts *)contacts;
+	eina_hash_add(contacts->hash_ids, &c_info->id, c_info);
+	c_info_new = EINA_TRUE;
+exit:
+	EINA_INLIST_FOREACH(c_info->numbers, cn) {
+		if (c_info_new)
+			_contact_number_entry_add(cn->number, c_info);
+		_partial_match_add(&pm_search->matches, cn->type, c_info,
+					EINA_TRUE);
+	}
+	return true;
+}
+
+Eina_List *contact_partial_match_search(Evas_Object *obj, const char *query)
+{
+
+	const Contacts *contacts;
+	int i, j;
+	Eina_Bool name_search = EINA_FALSE;
+	char *query_number;
+	Partial_Match_Search pm_search;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(query, NULL);
+	contacts = evas_object_data_get(obj, "contacts.ctx");
+	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
+
+	if (!contacts->contacts_on)
+		return NULL;
+
+	/* Check if it is numeric */
+	query_number = alloca(strlen(query) + 1);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(query_number, NULL);
+	for (i = 0, j = 0; query[i] != '\0'; i++) {
+		if (isalpha(query[i])) {
+			name_search = EINA_TRUE;
+			break;
+		} else if (isdigit(query[i]))
+			query_number[j++] = query[i];
+	}
+
+	pm_search.contacts = contacts;
+	pm_search.matches = NULL;
+
+	if (name_search) {
+		if (contact_query_contact_by_name(_name_partial_search, query,
+							&pm_search) < 0) {
+			ERR("Could not search in contacts DB the name: %s",
+				query);
+			return NULL;
+		}
+	} else {
+		query_number[j] = '\0';
+		if (contact_query_contact_by_number(_number_partial_search,
+							query,
+							&pm_search) < 0) {
+			ERR("Could not search in contacts DB the number: %s",
+				query);
+			return NULL;
+		}
+	}
+
+	return pm_search.matches;
+}
+
+void contact_partial_match_search_free(Eina_List *results)
+{
+	Contact_Partial_Match *pm;
+	EINA_LIST_FREE(results, pm)
+		free(pm);
+}
+
+const char *contact_partial_match_type_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, NULL);
+	return pm->type;
+}
+
+const Contact_Info *contact_partial_match_info_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, NULL);
+	return pm->info;
+}
+
+Eina_Bool contact_partial_match_name_match_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, EINA_FALSE);
+	return pm->name_match;
+}
+
+Eina_List *contact_info_all_numbers_get(const Contact_Info *c)
+{
+	Eina_List *l = NULL;
+	Contact_Number *cn;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+
+	EINA_INLIST_FOREACH(c->numbers, cn)
+		l = eina_list_append(l, cn->number);
+
+	return l;
+}
 
 static void _contact_number_entry_add(const char *number,
 					Contact_Info *c_info)

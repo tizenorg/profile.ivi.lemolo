@@ -6,20 +6,53 @@ group {
     *
     * Parts:
     *
+    * TEXT: elm.text.name - Name of the contact/number.
+    * TEXT: elm.text.size - Size of the message (number of characters)
+    * SWALLOW: elm.swallow.destination - Text Entry - Contacts that the message will be sent
+    * SWALLOW: elm.swallow.message - Text Entry - Content of the message
+    * SWALLOW: elm.swallow.genlist - Where the message thread is going to appear
+    * IMAGE: elm.img.btn.send - A Button to send the message
+    *
     * Signals:
     *   Emit (source is "gui"):
+    *   clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *   clicked,edit - When the edit button is cliked
+    *   clicked,edit,done - When The Button "Done" while editing is clicked
+    *   clicked,send_msg - When elm.img.btn.send is clicked
+    *
     *   Listens (source is "gui"):
+    *   show,genlist  - Show the genlist with the current message thread
+    *   hidden,genlist - Hide the genlist
+    *   toggle,on,edit - User is editing
+    *   toggle,off,edit - User finished the editing
+    *
+    * Messages:
+    *   1 - INT_SET: tuple of message size and maximum size.
+    *
+    * Where <ID> is the name of the button
     *
     */
+
+   images {
+      image: "bg_keypad.jpg" COMP;
+      image: "ico_arrow_right.png" COMP;
+      image: "ico_ball.png" COMP;
+   }
 
    parts {
       part {
          name: "bg";
-         type: RECT;
+         type: IMAGE;
          mouse_events: 0;
          description {
             state: "default" 0.0;
-            color: 255 0 0 255; /* TODO */
+            color: 255 255 255 255;
+            color_class: "dark";
+            image {
+               normal: "bg_keypad.jpg";
+               scale_hint: STATIC;
+            }
+            fill.smooth: 1;
          }
       }
 
@@ -37,5 +70,2168 @@ group {
             }
          }
       }
+
+      part {
+         name: "button.area.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            rel1.to: "bg.buttons";
+            rel2 {
+               to: "bg.buttons";
+               offset: -1 SEPARATOR_HEIGHT;
+            }
+         }
+      }
+
+      part {
+         name: "button.clipper";
+         type: RECT;
+         clip_to: "button.area.clipper";
+         description {
+            state: "default" 0.0;
+            rel1.to: "button.area.clipper";
+            rel2.to: "button.area.clipper";
+         }
+         description {
+            state: "alternate" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "edit-button.clipper";
+         type: RECT;
+         clip_to: "button.area.clipper";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+            rel1.to: "button.area.clipper";
+            rel2.to: "button.area.clipper";
+         }
+         description {
+            state: "alternate" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "edit.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            rel1.to: "bg.edit";
+            rel2 {
+               to: "bg.edit";
+               offset: -1 SEPARATOR_HEIGHT;
+            }
+         }
+      }
+
+      part {
+         name: "bg.buttons";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "button.clipper";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            fixed: 1 1;
+            min: 0 (ACTION_HEIGHT / 2);
+            rel1 {
+               to: "notification.bar";
+               relative: 0.0 1.0;
+            }
+            rel2 {
+               to_x: "bg.edit";
+               to_y: "notification.bar";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - 1) (ACTION_HEIGHT / 2 - 1);
+            }
+         }
+         description {
+            state: "compose" 0.0;
+            inherit: "default" 0.0;
+            rel2 {
+               to: "notification.bar";
+               relative: 1.0 1.0;
+               offset: -1 (ACTION_HEIGHT / 2 - 1);
+            }
+         }
+      }
+
+      part {
+         name: "header.name.bg";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "button.clipper";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "bg.buttons";
+            rel2.to: "bg.buttons";
+         }
+      }
+
+      part {
+         name: "elm.text.name";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "button.clipper";
+         api: "name" "message destination name";
+         description {
+            state: "default" 0.0;
+            color: 16 16 16 255;
+            color_class: "action";
+            rel1 {
+               to: "bg.buttons";
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to: "bg.buttons";
+               offset: (-ITEM_PADDING - 1) -1;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               align: 0.5 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "bg.edit";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "edit.clipper";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 0 (ACTION_HEIGHT / 2);
+            rel1 {
+               to: "notification.bar";
+               relative: 1.0 1.0;
+               offset: (-LIST_ICON_SIZE - ITEM_PADDING - BORDER_PADDING) 0;
+            }
+            rel2 {
+               to: "notification.bar";
+               relative: 1.0 1.0;
+               offset: -1 (ACTION_HEIGHT / 2 - 1);
+            }
+         }
+      }
+
+#define SEPARATOR(id, clip, rely, offy, relto)                          \
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("button", "button.area.clipper", 1.0, 0, "bg.buttons");
+      SEPARATOR("edit-button", "button.area.clipper", 1.0, 0, "bg.buttons");
+      SEPARATOR("edit", "edit.clipper", 1.0, 0, "bg.edit");
+#undef SEPARATOR
+
+
+#define BUTTON(id, label, ccls, clip, r1, r2)                           \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.buttons";                                        \
+               relative: r2;                                            \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      programs {                                                        \
+         program {                                                      \
+            signal: "toggle,on,"##id;                                   \
+            source: "gui";                                              \
+            action: STATE_SET "pressed" 0.0;                            \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,off,"##id;                                  \
+            source: "gui";                                              \
+            action: STATE_SET "default" 0.0;                            \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("clear",     "Clear", "caution", "edit-button.clipper", 0.0 0.0, 0.5 1.0);
+      BUTTON("edit,done", "Done",  "action", "edit-button.clipper", 0.5 0.0, 1.0 1.0);
+#undef BUTTON
+
+      part {
+         name: "button.edit";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "edit.clipper";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "caution";
+            rel1.to: "bg.edit";
+            rel2.to: "bg.edit";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+         description {
+            state: "compose" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "ico.edit";
+         type: IMAGE;
+         mouse_events: 0;
+         clip_to: "edit.clipper";
+         description {
+            state: "default" 0.0;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 0.0 0.5;
+            color: 255 255 255 255;
+            color_class: "caution";
+            rel1 {
+               to: "button.edit";
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to: "button.edit";
+               offset: (-BORDER_PADDING - 1) -1;
+            }
+            image {
+               normal: "ico_del.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 16 16 16 255;
+         }
+         description {
+            state: "compose" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "button.over.edit";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "edit.clipper";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1.to: "bg.edit";
+            rel2.to: "bg.edit";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+         description {
+            state: "compose" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "ico.ball";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "bg.edit";
+            rel2.to: "bg.edit";
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            image {
+               normal: "ico_ball.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "elm.text.names_count";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+            visible: 0;
+            rel1.to: "ico.ball";
+            rel2.to: "ico.ball";
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               size_range: SIZE_SMALL SIZE_LARGE;
+               fit: 1 1;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "elm.swallow.destination";
+         type: SWALLOW;
+         api: "destination" "where to swallow destination field";
+         description {
+            state: "default" 0.0;
+            visible: 1;
+            rel1 {
+               to_y: "separator.bg.button";
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               to: "separator.bg.button";
+               relative: 0.0 1.0;
+               offset: (WIDTH -2 * BORDER_PADDING) ACTION_HEIGHT;
+            }
+         }
+         description {
+            state: "hidden" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "clipper.contacts.visible";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+            color: 255 255 255 0;
+         }
+      }
+
+      part {
+         name: "elm.swallow.genlist";
+         type: SWALLOW;
+         api: "genlist" "where to swallow list of messages";
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            rel1 {
+               to_y: "separator.bg.button";
+               relative: 0.0 1.0;
+            }
+            rel2 {
+               to: "bg.entry.msg";
+               relative: 1.0 0.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+
+      part {
+         name: "bg.entry.msg";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+            rel1 {
+               to: "separator.dark.back";
+               relative: 0.0 0.0;
+               offset: 0 (-ACTION_HEIGHT);
+            }
+            rel2 {
+               to: "separator.dark.back";
+               relative: 1.0 0.0;
+               offset: 0 -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.message";
+         type: SWALLOW;
+         api: "message" "where to swallow the message editor";
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            rel1 {
+               to: "bg.entry.msg";
+               relative: 0.0 0.0;
+            }
+            rel2 {
+               to_x: "elm.img.btn.send";
+               to_y: "bg.entry.msg";
+               relative: 0.0 0.6;
+               offset: -ITEM_PADDING -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.img.btn.send";
+         type: IMAGE;
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 1.0 0.5;
+            fixed: 1 1;
+            rel1 {
+               to: "bg.entry.msg";
+               relative: 1.0 0.0;
+               offset: -BORDER_PADDING 0;
+            }
+            rel2 {
+               to: "bg.entry.msg";
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -1;
+            }
+            image {
+               normal: "ico_arrow_right.png";
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.size";
+         type: TEXT;
+         mouse_events: 0;
+         api: "size" "message size (in characters)";
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            fixed: 1 1;
+            rel1 {
+               to: "elm.text.separator_size";
+               relative: 0.0 0.0;
+               offset: (-ITEM_PADDING - 1 - ITEM_PADDING) 0;
+            }
+            rel2 {
+               to: "elm.text.separator_size";
+               relative: 0.0 1.0;
+               offset: 0 -1;
+            }
+            text {
+               text: "999";
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               min: 1 0;
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.separator_size";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.contacts.visible";
+         api: "separator" "A separator for size and max size";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            fixed: 1 1;
+            rel1 {
+               to: "elm.img.btn.send";
+               relative: 0.5 1.0;
+               offset: 0 ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "elm.img.btn.send";
+               to_y: "bg.entry.msg";
+               relative: 0.5 1.0;
+            }
+            text {
+               text: "/";
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               min: 1 0;
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.max_size";
+         type: TEXT;
+         mouse_events: 0;
+         api: "max size" "max size of the SMS";
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            rel1 {
+               to: "elm.text.separator_size";
+               relative: 1.0 0.0;
+            }
+            rel2 {
+               to: "bg.entry.msg";
+               relative: 1.0 1.0;
+            }
+            text {
+               text: "160";
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               align: 0.0 0.5;
+            }
+         }
+      }
+
+#define SEPARATOR(id, rely, offy, relto)				\
+      part {                                                            \
+         name: "separator.dark."##id;                                   \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.contacts.visible";                           \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "dark";                                        \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         clip_to: "clipper.contacts.visible";                           \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+      SEPARATOR("back", 0.0, -SEPARATOR_HEIGHT, "bg.buttons.back");
+#undef SEPARATOR
+
+      part {
+         name: "bg.buttons.back";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.contacts.visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: WIDTH ACTION_HEIGHT;
+            max: 99999 99999; /* keep it tight centered */
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -ACTION_HEIGHT;
+            }
+         }
+      }
+#define BUTTON(id, label, ccls, r1, r2)                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         clip_to: "clipper.contacts.visible";                           \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+	    to: "bg.buttons.back";					\
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+	    to: "bg.buttons.back";					\
+               relative: r2;                                            \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         clip_to: "clipper.contacts.visible";                           \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_HUGE;                                         \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "keypad";               \
+            after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "keypad";                \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "gui";                   \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("back",    "Back",    "action", 0.0 0.0, 1.0 1.0);
+#undef BUTTON
+
+      part {
+         name: "elm.swallow.genlist.contacts";
+         type: SWALLOW;
+         api: "contacts genlist" "A genlist to be filled with contacts";
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            rel1 {
+               to_y: "elm.swallow.destination";
+               relative: 0.0 1.0;
+               offset: 0 ITEM_PADDING;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+         }
+      }
+   }
+   programs {
+
+      program {
+         signal: "contacts,hidden";
+         source: "gui";
+         action: STATE_SET "default" 0.0;
+         target: "elm.swallow.genlist.contacts";
+         target: "clipper.contacts.visible";
+      }
+      program {
+         signal: "contacts,show";
+         source: "gui";
+         action: STATE_SET "alternate" 0.0;
+         target: "elm.swallow.genlist.contacts";
+         target: "clipper.contacts.visible";
+      }
+      program {
+         signal: "show,genlist";
+         source: "gui";
+         after: "hide,entry,to";
+         after: "show,genlist";
+      }
+      program {
+         signal: "hidden,genlist";
+         source: "gui";
+         after: "show,entry,to";
+         after: "hide,genlist";
+      }
+      program {
+         name: "hide,entry,to";
+         action: STATE_SET "hidden" 0.0;
+         target: "elm.swallow.destination";
+      }
+      program {
+         name: "show,entry,to";
+         action: STATE_SET "default" 0.0;
+         target: "elm.swallow.destination";
+      }
+      program {
+         name: "hide,genlist";
+         action: STATE_SET "default" 0.0;
+         target: "elm.swallow.genlist";
+      }
+      program {
+         name: "show,genlist";
+         action: STATE_SET "visible" 0.0;
+         target: "elm.swallow.genlist";
+      }
+      program {
+         signal: "mouse,clicked,1";
+         source: "elm.img.btn.send";
+         action: SIGNAL_EMIT "clicked,send_msg" "gui";
+      }
+      program {
+         signal: "toggle,on,edit";
+         source: "gui";
+         action: STATE_SET "pressed" 0.0;
+         target: "button.edit";
+         target: "button.over.edit";
+         target: "ico.edit";
+         after: "show_edit_buttons";
+      }
+      program {
+         name: "show_edit_buttons";
+         action: STATE_SET "alternate" 0.0;
+         transition: ACCELERATE 0.3;
+         target: "button.clipper";
+         target: "edit-button.clipper";
+      }
+
+      program {
+         signal: "toggle,off,edit";
+         source: "gui";
+         action: STATE_SET "default" 0.0;
+         target: "button.edit";
+         target: "button.over.edit";
+         target: "ico.edit";
+         after: "hide_edit_buttons";
+      }
+      program {
+         name: "hide_edit_buttons";
+         action: STATE_SET "default" 0.0;
+         transition: ACCELERATE 0.3;
+         target: "button.clipper";
+         target: "edit-button.clipper";
+      }
+
+      program {
+         signal: "mouse,clicked,1";
+         source: "button.edit";
+         action: SIGNAL_EMIT "clicked,edit" "gui";
+         api: "edit was clicked";
+      }
+      program {
+         signal: "mouse,clicked,1";
+         source: "button.over.edit";
+         action: SIGNAL_EMIT "clicked,edit,done" "gui";
+         api: "edit_done was clicked";
+      }
+      program {
+         signal: "composing";
+         source: "gui";
+         action: STATE_SET "compose" 0.0;
+         target: "bg.buttons";
+         target: "button.edit";
+         target: "ico.edit";
+         target: "button.over.edit";
+      }
+      program {
+         signal: "viewing";
+         source: "gui";
+         action: STATE_SET "default" 0.0;
+         target: "bg.buttons";
+         target: "button.edit";
+         target: "ico.edit";
+         target: "button.over.edit";
+      }
+      program {
+         signal: "names_count,show";
+         source: "gui";
+         action: STATE_SET "default" 0.0;
+         target: "bg.buttons";
+         after: "names_count.visible";
+      }
+      program {
+         name: "names_count.visible";
+         action: STATE_SET "visible" 0.0;
+         target: "elm.text.names_count";
+         target: "ico.ball";
+      }
+      program {
+         signal: "names_count,hidden";
+         source: "gui";
+         action: STATE_SET "default" 0.0;
+         target: "elm.text.names_count";
+         target: "ico.ball";
+      }
+
    }
 }
+
+group {
+   name: "elm/genlist/item_compress/messages-outgoing/default";
+
+    data {
+       item: "texts" "text.msg.content text.msg.time";
+       item: "states" "sent failed";
+       item: "contents" "swallow.btn.resend";
+    }
+
+    images {
+       image: "bg_chat_outgoing.png" COMP;
+       image: "ico_msg_delivered.png" COMP;
+    }
+
+    styles {
+       style {
+          name: "entry_textblock_style_outgoing";
+          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_LIGHT" wrap=mixed valign=top align=right";
+          tag: "br" "\n";
+       }
+       style {
+          name: "entry_textblock_style_outgoing_failed";
+          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_CAUTION" wrap=mixed valign=top align=right";
+          tag: "br" "\n";
+       }
+    }
+
+    parts {
+       part {
+          name: "bg";
+          type: RECT;
+          mouse_events: 1;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 0;
+             color_class: "action";
+          }
+          description {
+             state: "selected" 0.0;
+             inherit: "default" 0.0;
+             color: 255 255 255 255;
+          }
+       }
+
+       part {
+          name: "text.msg.content";
+          type: TEXTBLOCK;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             align: 0.0 0.0;
+             rel1 {
+                relative: 0.25 0.0;
+                offset: 0 ITEM_PADDING;
+             }
+             rel2 {
+                offset: (-BORDER_PADDING - ITEM_PADDING - 1) (-MESSAGE_IMG_SENT_SIZE -MESSAGE_SEPARATOR_HEIGHT -ITEM_PADDING -1);
+             }
+             text {
+                style: "entry_textblock_style_outgoing";
+                min: 0 1;
+             }
+          }
+          description {
+             state: "failed" 0.0;
+             inherit: "default" 0.0;
+             text {
+                min: 0 1;
+                style: "entry_textblock_style_outgoing_failed";
+             }
+          }
+       }
+
+       part {
+          name: "img.msg.separator";
+          type: IMAGE;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 255;
+             color_class: "light";
+             min: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
+             max: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
+             align: 1.0 1.0;
+             rel1 {
+                relative: 1.0 1.0;
+                offset: (-ITEM_PADDING -ITEM_PADDING - 1) (-MESSAGE_IMG_SENT_SIZE - ITEM_PADDING - 1);
+             }
+             rel2 {
+                relative: 1.0 1.0;
+                offset: (-ITEM_PADDING -ITEM_PADDING - 1) (-MESSAGE_IMG_SENT_SIZE - ITEM_PADDING - 1);
+             }
+             image.normal: "bg_chat_outgoing.png";
+          }
+          description {
+             state: "failed" 0.0;
+             inherit: "default" 0.0;
+             color_class: "caution";
+          }
+       }
+
+       part {
+          name: "text.msg.time";
+          type: TEXT;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 128;
+             color_class: "light";
+             align: 0.0 0.0;
+             fixed: 1 1;
+             rel1 {
+                to_x: "img.msg.separator";
+                to_y: "text.msg.content";
+                relative: 0.0 1.0;
+                offset: 0 SEPARATOR_HEIGHT;
+             }
+             rel2 {
+                relative: 1.0 1.0;
+                offset: (-MESSAGE_IMG_SENT_SIZE - 2 * BORDER_PADDING - ITEM_PADDING - 1) (-ITEM_PADDING -1);
+             }
+             text {
+                text: "time";
+                font: FONT_NORMAL;
+                size: SIZE_MEDIUM;
+                align: 0.0 0.0;
+                max: 1 0;
+             }
+          }
+          description {
+             state: "failed" 0.0;
+             inherit: "default" 0.0;
+             visible: 0;
+          }
+       }
+
+       part {
+          name: "swallow.btn.resend";
+          type: SWALLOW;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 128;
+             color_class: "caution";
+             align: 0.0 0.0;
+             fixed: 1 1;
+             visible: 0;
+             rel1 {
+                to_x: "img.msg.separator";
+                to_y: "text.msg.content";
+                relative: 0.0 1.0;
+                offset: 0 SEPARATOR_HEIGHT;
+             }
+             rel2 {
+                to: "img.msg.separator";
+                relative: 1.0 1.0;
+                offset: -ITEM_PADDING ITEM_PADDING;
+             }
+          }
+          description {
+             state: "failed" 0.0;
+             inherit: "default" 0.0;
+             visible: 1;
+          }
+       }
+
+       part {
+          name: "img.sent";
+          type: IMAGE;
+          description {
+             color: 255 255 255 255;
+             color_class: "light";
+             min: MESSAGE_IMG_SENT_SIZE MESSAGE_IMG_SENT_SIZE;
+             max: MESSAGE_IMG_SENT_SIZE MESSAGE_IMG_SENT_SIZE;
+             visible: 0;
+             align: 0.0 0.0;
+             rel1 {
+                to: "text.msg.time";
+                relative: 1.0 0.0;
+                offset: ITEM_PADDING -MESSAGE_IMG_SENT_Y_OFFSET;
+             }
+             image.normal: "ico_msg_delivered.png";
+          }
+          description {
+             state: "visible" 0.0;
+             inherit: "default" 0.0;
+             visible: 1;
+          }
+       }
+    }
+
+    programs {
+       program {
+          signal: "elm,state,sent,active";
+          source: "elm";
+          action: STATE_SET "visible" 0.0;
+          target: "img.sent";
+       }
+       program {
+          signal: "elm,state,sent,passive";
+          source: "elm";
+          action: STATE_SET "default" 0.0;
+          target: "img.sent";
+       }
+       program {
+          signal: "elm,state,failed,active";
+          source: "elm";
+          action: STATE_SET "failed" 0.0;
+          target: "img.msg.separator";
+          target: "text.msg.content";
+          target: "swallow.btn.resend";
+          target: "text.msg.time";
+       }
+       program {
+          signal: "elm,state,failed,passive";
+          source: "elm";
+          action: STATE_SET "default" 0.0;
+          target: "img.msg.separator";
+          target: "text.msg.content";
+          target: "swallow.btn.resend";
+          target: "text.msg.time";
+       }
+    }
+}
+
+group {
+   name: "elm/genlist/item_compress/messages-incoming/default";
+    data {
+       item: "texts" "text.msg.content text.msg.time";
+    }
+    images {
+       image: "bg_chat_incoming.png" COMP;
+    }
+
+    styles {
+       style {
+          name: "entry_textblock_style_incoming";
+          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=mixed valign=top align=left";
+          tag: "br" "\n";
+       }
+    }
+
+    parts {
+       part {
+          name: "bg";
+          type: RECT;
+          mouse_events: 1;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 0;
+             color_class: "action";
+          }
+          description {
+             state: "selected" 0.0;
+             inherit: "default" 0.0;
+             color: 255 255 255 255;
+          }
+       }
+
+       part {
+          name: "text.msg.content";
+          type: TEXTBLOCK;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             align: 0.0 0.0;
+             rel1.offset: BORDER_PADDING ITEM_PADDING;
+             rel2 {
+                relative: 0.75 1.0;
+                offset: 0 (-MESSAGE_IMG_SENT_SIZE -MESSAGE_SEPARATOR_HEIGHT -ITEM_PADDING -1);
+             }
+             text {
+                style: "entry_textblock_style_incoming";
+                min: 0 1;
+             }
+          }
+       }
+
+       part {
+          name: "img.msg.separator";
+          type: IMAGE;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 255;
+             color_class: "action";
+             min: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
+             max: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
+             align: 0.0 0.0;
+             rel1 {
+                to_y: "text.msg.content";
+                relative: 0.0 1.0;
+                offset: ITEM_PADDING 0;
+             }
+             rel2 {
+                relative: 0.0 1.0;
+                offset: (ITEM_PADDING + MESSAGE_SEPARATOR_WIDTH) -1;
+             }
+             image.normal: "bg_chat_incoming.png";
+          }
+       }
+
+       part {
+          name: "text.msg.time";
+          type: TEXT;
+          mouse_events: 0;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 128;
+             color_class: "action";
+             align: 1.0 0.0;
+             fixed: 1 1;
+             rel1 {
+                to_x: "img.msg.separator";
+                to_y: "text.msg.content";
+                relative: 0.0 1.0;
+                offset: BORDER_PADDING SEPARATOR_HEIGHT;
+             }
+             rel2.to_x: "img.msg.separator";
+             text {
+                text: "time";
+                font: FONT_NORMAL;
+                size: SIZE_MEDIUM;
+                align: 1.0 0.0;
+                max: 1 0;
+             }
+          }
+       }
+    }
+}
+
+group {
+   name: "elm/genlist/item/contacts-compose/default";
+   data.item: "texts" "text.contact.name text.contact.number text.contact.type";
+
+   parts {
+      part {
+          name: "bg";
+          type: RECT;
+          mouse_events: 1;
+          description {
+             state: "default" 0.0;
+             color: 255 255 255 0;
+             color_class: "action";
+             min: ACTION_WIDTH LIST_ITEM_HEIGHT;
+          }
+          description {
+             state: "selected" 0.0;
+             inherit: "default" 0.0;
+             color: 255 255 255 255;
+          }
+       }
+
+      part{
+         name: "text.contact.name";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               relative: 1.0 0.5;
+               offset: (-BORDER_PADDING - 1) 0;
+            }
+            text {
+               text: "James Bond";
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               align: 0.0 0.5;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part{
+         name: "text.contact.number";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            color: 255 255 255 255;
+            color_class: "light";
+            rel1 {
+               to: "text.contact.name";
+               relative: 0.0 1.0;
+               offset: 0 (ITEM_PADDING + 1);
+            }
+            rel2 {
+               to_y: "bg";
+               to_x: "text.contact.type";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - 1) (-ITEM_PADDING - 1);
+            }
+            text {
+               text: "0000007";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.0 0.5;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part{
+         name: "text.contact.type";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            color: 255 255 255 255;
+            color_class: "light";
+            align: 1.0 0.5;
+            fixed: 1 1;
+            rel1 {
+               to_y: "text.contact.name";
+               to_x: "bg";
+               relative: 1.0 1.0;
+               offset: (-BORDER_PADDING - 1) ITEM_PADDING;
+            }
+            rel2 {
+               to: "bg";
+               relative: 1.0 1.0;
+               offset: (-BORDER_PADDING - 1) (-ITEM_PADDING - 1);
+            }
+            text {
+               text: "0000007";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 1 0;
+               align: 1.0 0.5;
+            }
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+   }
+
+   programs {
+      program {
+         signal:  "elm,state,selected";
+         source:  "elm";
+         after: "show_selected";
+      }
+      program {
+         signal:  "elm,state,unselected";
+         source:  "elm";
+         after: "show_default";
+      }
+      program {
+         name: "show_selected";
+         action: STATE_SET "selected" 0.0;
+         target: "text.contact.number";
+         target: "text.contact.name";
+         target: "text.contact.type";
+         target: "bg";
+      }
+      program {
+         name: "show_default";
+         action: STATE_SET "default" 0.0;
+         target: "text.contact.number";
+         target: "text.contact.name";
+         target: "text.contact.type";
+         target: "bg";
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item_compress/outgoing-delete/default";
+   alias: "elm/genlist/item_compress_odd/outoing-delete/default";
+
+   data {
+      item: "contents" "msg.swallow.delete";
+      item: "mode_part" "elm.swallow.decorate.content";
+   }
+
+   parts {
+      part {
+         name: "content.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            rel1 {
+               offset: (-BORDER_PADDING - LIST_ICON_SIZE - ITEM_PADDING - 1) -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.decorate.content";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         clip_to: "content.clipper";
+         description {
+            state: "default" 0.0;
+         }
+      }
+
+      part {
+         name: "msg.swallow.delete";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            fixed: 1 0;
+            align: 1.0 0.0;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 0 0;
+            }
+            rel2 {
+               relative: 0.0 1.0;
+               offset: 0 0;
+            }
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            align: 0.0 0.0;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING 0;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "animate_decorated";
+            signal: "elm,state,decorate,enabled,effect";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            after: "animate_decorated2";
+         }
+         program {
+            name: "animate_decorated2";
+            action: STATE_SET "decorated" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "msg.swallow.delete";
+         }
+
+         program {
+            name: "animate_default";
+            signal: "elm,state,decorate,disabled,effect";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "msg.swallow.delete";
+            after: "animate_default2";
+         }
+         program {
+            name: "animate_default2";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+         }
+
+         program {
+            signal: "elm,state,decorate,enabled";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            target: "msg.swallow.delete";
+         }
+         program {
+            signal: "elm,state,decorate,disabled";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+            target: "msg.swallow.delete";
+         }
+
+         program {
+            signal: "elm,state,slide,active";
+            source: "elm";
+            after: "animate_decorated";
+         }
+         program {
+            signal: "elm,state,slide,passive";
+            source: "elm";
+            after: "animate_default";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item_compress/incoming-delete/default";
+   alias: "elm/genlist/item_compress_odd/incoming-delete/default";
+
+   data {
+      item: "contents" "msg.swallow.delete";
+      item: "mode_part" "elm.swallow.decorate.content";
+   }
+
+   parts {
+      part {
+         name: "content.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            rel2 {
+               offset: (-BORDER_PADDING - LIST_ICON_SIZE - ITEM_PADDING - 1) -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.decorate.content";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         clip_to: "content.clipper";
+         description {
+            state: "default" 0.0;
+         }
+      }
+
+      part {
+         name: "msg.swallow.delete";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            fixed: 1 0;
+            align: 0.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+            }
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            align: 1.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: -BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -1;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "animate_decorated";
+            signal: "elm,state,decorate,enabled,effect";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            after: "animate_decorated2";
+         }
+         program {
+            name: "animate_decorated2";
+            action: STATE_SET "decorated" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "msg.swallow.delete";
+         }
+
+         program {
+            name: "animate_default";
+            signal: "elm,state,decorate,disabled,effect";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "msg.swallow.delete";
+            after: "animate_default2";
+         }
+         program {
+            name: "animate_default2";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+         }
+
+         program {
+            signal: "elm,state,decorate,enabled";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            target: "msg.swallow.delete";
+         }
+         program {
+            signal: "elm,state,decorate,disabled";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+            target: "msg.swallow.delete";
+         }
+
+         program {
+            signal: "elm,state,slide,active";
+            source: "elm";
+            after: "animate_decorated";
+         }
+         program {
+            signal: "elm,state,slide,passive";
+            source: "elm";
+            after: "animate_default";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/entry/base/compose";
+
+   styles {
+      style {
+         name: "compose_textblock_style";
+         base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=mixed valign=top align=auto";
+         tag: "br" "\n";
+      }
+      style {
+         name: "compose_textblock_disabled_style";
+         base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=mixed valign=top align=auto";
+         tag: "br" "\n";
+      }
+   }
+
+   parts {
+      part {
+         name: "elm.text";
+         type: TEXTBLOCK;
+         mouse_events: 1;
+         scale: 1;
+         entry_mode: EDITABLE;
+         select_mode: EXPLICIT;
+         source: "elm/entry/selection/dialer";
+         source4: "elm/entry/cursor/dialer";
+         multiline: 1;
+         description {
+            state: "default" 0.0;
+            align: 0.0 0.0;
+            rel1.offset: BORDER_PADDING 0;
+            text {
+               style: "compose_textblock_style";
+               min: 0 1;
+               max: 1 1;
+               align: -1.0 0.0;
+            }
+         }
+         description {
+            state: "disabled" 0.0;
+            inherit: "default" 0.0;
+            text {
+               style: "compose_textblock_disabled_style";
+            }
+         }
+      }
+   }
+
+   programs {
+      program {
+         signal: "load";
+         source: "";
+         action: FOCUS_SET;
+         target: "elm.text";
+      }
+      program {
+         signal: "elm,state,disabled";
+         source: "elm";
+         action: STATE_SET "disabled" 0.0;
+         target: "elm.text";
+      }
+      program {
+         signal: "elm,state,enabled";
+         source: "elm";
+         action: STATE_SET "default" 0.0;
+         target: "elm.text";
+      }
+   }
+}
+
+group {
+   name: "elm/button/base/compose-resend";
+
+   parts {
+      part {
+         name: "elm.text";
+         type: TEXT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "caution";
+            text {
+               text: "A Label";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_MEDIUM SIZE_HUGE;
+               fit: 1 1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 128;
+         }
+      }
+   }
+   programs {
+      program {
+         signal: "mouse,down,1";
+         source: "elm.text";
+         action: SIGNAL_EMIT "elm,action,press" "";
+      }
+      program {
+         signal: "mouse,up,1";
+         source: "elm.text";
+         action: SIGNAL_EMIT "elm,action,unpress" "";
+      }
+      program {
+         signal: "mouse,clicked,1";
+         source: "elm.text";
+         action: SIGNAL_EMIT "elm,action,click" "";
+      }
+
+      program {
+         signal: "mouse,up,1";
+         source: "elm.text";
+         action: STATE_SET "default" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "elm.text";
+      }
+
+      program {
+         signal: "mouse,down,1";
+         source: "elm.text";
+         action: STATE_SET "pressed" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "elm.text";
+      }
+   }
+}
+
+group {
+   name: "elm/entry/base-single/default";
+   inherit: "elm/entry/base/compose";
+   styles
+   {
+      style {
+         name: "entry_single_textblock_compose_guide_style";
+         base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" wrap=mixed text_class=entry left_margin=2 right_margin=2 ellipsis=0.0";
+      }
+   }
+   parts {
+      part {
+         name: "elm.guide";
+         type: TEXTBLOCK;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            rel1.to: "elm.text";
+            rel2.to: "elm.text";
+            text {
+               style: "entry_single_textblock_compose_guide_style";
+               min: 0 1;
+               align: 0.0 0.0;
+            }
+         }
+         description {
+            state: "hidden" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "elm.text";
+         multiline: 0;
+         description {
+            state: "default" 0.0;
+            text {
+               style: "compose_textblock_style";
+               min: 1 1;
+               max: 0 0;
+               align: 0.0 0.5;
+            }
+         }
+         description {
+            state: "disabled" 0.0;
+            inherit: "default" 0.0;
+            text {
+               style: "compose_textblock_disabled_style";
+            }
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/multibuttonentry/base/compose";
+   data.item: "closed_button_type" "image"; /* image, label, default : label */
+   data.item: "closed_height" 46;
+   parts {
+      part {
+         name: "box.swallow";
+         type: SWALLOW;
+         description {
+            state: "default" 0.0;
+            align: 0.0 0.0;
+         }
+      }
+   }
+}
+
+
+group {
+   name: "elm/multibuttonentry/guidetext/compose";
+   parts {
+      part {
+         name: "elm.text.bg";
+         type: RECT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1.to: "elm.text";
+            rel2.to: "elm.text";
+         }
+      }
+      part {
+         name: "elm.text";
+         type: TEXT;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "light";
+            rel1.offset: BORDER_PADDING 0;
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 0 1;
+               align: 0.0 0.5;
+            }
+         }
+      }
+   }
+}
+
+
+group {
+   name: "elm/multibuttonentry/btn/compose";
+   data.item: "button_max_size" MULTI_BUTTON_ENTRY_MAX_SIZE;
+   styles {
+      style { name: "multibuttonentry_textblock_style";
+         base: "font="FONT_NORMAL" align=0.5 font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_ACTION" text_class=label ellipsis=1.0";
+         tag:	"br" "\n";
+         tag:	"ps" "ps";
+         tag:	"hilight" "+ font="FONT_BOLD"";
+         tag:	"b" "+ font="FONT_BOLD"";
+         tag:	"tab" "\t";
+      }
+   }
+
+   parts {
+      part {
+         name: "elm.base";
+         type: RECT;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: 0 LIST_ICON_SIZE;
+            max: 5000 LIST_ICON_SIZE;
+            fixed: 1 1;
+            color: 0 0 0 0;
+         }
+      }
+      part {
+         name: "right.padding";
+         type: RECT;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min : ITEM_PADDING 0;
+            rel1.relative: 1.0 0.0;
+            rel2.relative: 1.0 1.0;
+            color: 0 0 0 0;
+            align: 1 1;
+         }
+      }
+      part {
+         name: "elm.btn.bg";
+         type: RECT;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min : ITEM_PADDING LIST_ICON_SIZE;
+            rel2 {
+               relative: 0.0 1.0;
+               to_x: "right.padding";
+            }
+            color: 255 255 255 0;
+            color_class: "light";
+         }
+         description {
+            state: "focused" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "elm.btn.text";
+         type: TEXTBLOCK;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            min: ITEM_PADDING LIST_ICON_SIZE;
+            max: (MULTI_BUTTON_ENTRY_MAX_SIZE -2 * ITEM_PADDING) LIST_ICON_SIZE;
+            fixed: 0 1;
+            text {
+               text: "Auto Resized textblock";
+               style: "multibuttonentry_textblock_style";
+               min: 1 0;
+               align: 0.5 0.5;
+            }
+            rel1 {
+               to: "elm.btn.bg";
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to: "elm.btn.bg";
+               offset: (-ITEM_PADDING -1) -1;
+            }
+
+         }
+      }
+   }
+   programs {
+      program {
+         name: "clicked";
+         signal: "mouse,clicked,1";
+         source: "elm.btn.bg";
+         action: SIGNAL_EMIT "clicked" "elm";
+      }
+      program {
+         name: "default";
+         signal: "default";
+         action: STATE_SET "default" 0.0;
+         target: "elm.btn.bg";
+      }
+      program {
+         name: "focused";
+         signal: "focused";
+         action: STATE_SET "focused" 0.0;
+         target: "elm.btn.bg";
+      }
+   }
+}
+
+
+group {
+   name: "elm/multibuttonentry/label/default";
+   parts {
+      part {
+         name: "mbe.label.bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 0 0;
+            fixed: 1 1;
+         }
+         description {
+            state: "no_text" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "mbe.label.left.padding";
+         type: RECT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 3 0;
+            fixed: 1 1;
+            rel1.to: "mbe.label.bg";
+            rel2 {
+               to: "mbe.label.bg";
+               relative: 0.0 1.0;
+            }
+            align: 0 0.5;
+         }
+         description {
+            state: "no_text" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "mbe.label.right.padding";
+         type: RECT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: 3 0;
+            fixed: 1 1;
+            rel1 {
+               to: "mbe.label.bg";
+               relative: 1.0 0.0;
+            }
+            rel2.to: "mbe.label.bg";
+            align: 1 1.0;
+         }
+         description {
+            state: "no_text" 0.0;
+            inherit: "default" 0.0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "mbe.label";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: 0 33;
+            fixed: 1 1;
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 1 1;
+               align: 0.0 0.428;
+            }
+            rel1 { relative: 1.0 1.0; to: "mbe.label.left.padding"; }
+            rel2 { relative: 0.0 0.0; to: "mbe.label.right.padding"; }
+         }
+         description {
+            state: "no_text" 0.0;
+            inherit: "default" 0.0;
+            min: 6 33;
+         }
+      }
+   }
+   programs {
+      program {
+         name: "has_text";
+         signal: "elm,mbe,set_text";
+         source: "";
+         action: STATE_SET "default" 0.0;
+         target: "mbe.label.bg";
+         target: "mbe.label.left.padding";
+         target: "mbe.label.right.padding";
+         target: "mbe.label";
+      }
+      program {
+         name: "no_text";
+         signal: "elm,mbe,clear_text";
+         source: "";
+         action: STATE_SET "no_text" 0.0;
+         target: "mbe.label.bg";
+         target: "mbe.label.left.padding";
+         target: "mbe.label.right.padding";
+         target: "mbe.label";
+      }
+   }
+}
+
+

@@ -78,6 +78,8 @@ messages_messages_SOURCES = \
 	messages/main.c \
 	messages/rc.c \
 	messages/rc.h \
+	messages/overview.c \
+	messages/overview.h \
 	messages/gui.c \
 	messages/gui.h \
 	messages/compose.c \
@@ -92,6 +94,7 @@ tizen_answer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
 
 if HAVE_TIZEN
 bin_PROGRAMS += \
+	tizen/message_daemon \
 	tizen/dialer_open \
 	tizen/dialer_daemon
 
@@ -100,6 +103,9 @@ tizen_dialer_open_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
 
 tizen_dialer_daemon_SOURCES = tizen/dialer_daemon.c
 tizen_dialer_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@
+
+tizen_message_daemon_SOURCES = tizen/message_daemon.c
+tizen_message_daemon_LDADD = @EFL_LIBS@ @TIZEN_LIBS@ utils/libofono-efl-utils.la
 
 %.service: %.service.in Makefile
 	sed 's:@bindir[@]:$(bindir):g' $< > $@
@@ -161,14 +167,17 @@ am__v_EDJ_ = $(am__v_EDJ_$(AM_DEFAULT_VERBOSITY))
 am__v_EDJ_0 = @echo "  EDJ   " $@;
 
 THEME_IMAGES = \
-data/themes/images/bg_call.jpg \
-data/themes/images/arrow_right.png \
 data/themes/images/arrow_left.png \
+data/themes/images/arrow_right.png \
+data/themes/images/bg_call.jpg \
+data/themes/images/bg_chat_incoming.png \
+data/themes/images/bg_chat_outgoing.png \
 data/themes/images/bg_keypad.jpg \
 data/themes/images/ico_add_call.png \
 data/themes/images/ico_add_contact.png \
 data/themes/images/ico_arrow_right.png \
 data/themes/images/ico_backspace.png \
+data/themes/images/ico_ball.png \
 data/themes/images/ico_call.png \
 data/themes/images/ico_contacts.png \
 data/themes/images/ico_del.png \
@@ -176,6 +185,7 @@ data/themes/images/ico_edit.png \
 data/themes/images/ico_history.png \
 data/themes/images/ico_keypad.png \
 data/themes/images/ico_merge.png \
+data/themes/images/ico_msg_delivered.png \
 data/themes/images/ico_multiparty.png \
 data/themes/images/ico_multiparty_hangup.png \
 data/themes/images/ico_multiparty_private.png \
@@ -206,6 +216,8 @@ data/themes/includes/dialer.edc \
 data/themes/includes/history-bg.edc \
 data/themes/includes/history.edc \
 data/themes/includes/keypad.edc \
+data/themes/includes/messages-overview-list.edc \
+data/themes/includes/messages-overview.edc \
 data/themes/includes/messages.edc \
 data/themes/includes/multiparty-list.edc \
 data/themes/includes/popup.edc \

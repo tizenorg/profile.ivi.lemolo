@@ -8,6 +8,7 @@
 #include "compose.h"
 #include "util.h"
 #include "simple-popup.h"
+#include "contacts-ofono-efl.h"
 
 #ifdef HAVE_TIZEN
 #include <appcore-efl.h>
@@ -19,10 +20,42 @@ static Evas_Object *win = NULL;
 static Evas_Object *main_layout = NULL;
 static Evas_Object *cs = NULL;
 static Evas_Object *flip = NULL;
+static Evas_Object *ov = NULL;
+static Evas_Object *contacts = NULL;
 
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_compose = EINA_FALSE;
 static Eina_Bool in_flip_anim = EINA_FALSE;
+
+Eina_List * gui_contact_partial_match_search(const char *query)
+{
+	return contact_partial_match_search(contacts, query);
+}
+
+void gui_overview_genlist_update(Message *msg, const char *contact)
+{
+	overview_genlist_update(ov, msg, contact);
+}
+
+void gui_overview_all_contact_messages_clear(const char *contact)
+{
+	overview_all_contact_messages_clear(ov, contact);
+}
+
+void gui_message_from_file_delete(Message *msg, const char *contact)
+{
+	overview_message_from_file_delete(ov, msg, contact);
+}
+
+void gui_compose_messages_set(Eina_List *list, const char *number)
+{
+	compose_messages_set(cs, list, number);
+}
+
+Contact_Info *gui_contact_search(const char *number, const char **type)
+{
+	return contact_search(contacts, number, type);
+}
 
 Evas_Object *gui_simple_popup(const char *title, const char *message)
 {
@@ -86,13 +119,11 @@ static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 
 	EINA_SAFETY_ON_FALSE_RETURN(eina_str_has_prefix(emission, "clicked,"));
 	emission += strlen("clicked,");
-
-	ERR("TODO: %s", emission);
 }
 
 Eina_Bool gui_init(void)
 {
-	Evas_Object *lay, *obj;
+	Evas_Object *lay, *obj, *conform;
 	Evas_Coord w, h;
 
 	/* messages should never, ever quit */
@@ -101,6 +132,7 @@ Eina_Bool gui_init(void)
 	win = elm_win_util_standard_add("ofono-messages", "oFono Messages");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
 	elm_win_autodel_set(win, EINA_FALSE);
+	elm_win_conformant_set(win, EINA_TRUE);
 
 #ifdef HAVE_TIZEN
 	appcore_set_i18n("ofono-efl", "en-US");
@@ -127,13 +159,28 @@ Eina_Bool gui_init(void)
 	elm_object_signal_callback_add(lay, "clicked,*", "gui",
 					_on_clicked, NULL);
 
+	contacts = obj = contacts_add(win);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, EINA_FALSE);
+
 	cs = obj = compose_add(win);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
 	evas_object_size_hint_weight_set(obj,
 				EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
 	evas_object_size_hint_align_set(obj, EVAS_HINT_FILL, EVAS_HINT_FILL);
-	elm_object_part_content_set(flip, "back", obj);
 	evas_object_show(obj);
+
+	ov = obj = overview_add(win);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
+	elm_object_part_content_set(lay, "elm.swallow.overview", obj);
+	evas_object_show(ov);
+
+	conform = elm_conformant_add(win);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(conform, EINA_FALSE);
+	elm_win_resize_object_add(win, conform);
+	evas_object_size_hint_weight_set(conform, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+	evas_object_show(conform);
+	elm_object_content_set(conform, cs);
+	elm_object_part_content_set(flip, "back", conform);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);

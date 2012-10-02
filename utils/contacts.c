@@ -4,6 +4,7 @@
 #include <Elementary.h>
 #include <Eet.h>
 #include <Eina.h>
+#include <string.h>
 
 #include "log.h"
 #include "ofono.h"
@@ -64,6 +65,144 @@ typedef struct _Contact_Info_On_Changed_Ctx {
 	const void *data;
 	Eina_Bool deleted;
 } Contact_Info_On_Changed_Ctx;
+
+Eina_List *contact_info_all_numbers_get(const Contact_Info *c)
+{
+	Eina_List *l = NULL;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+
+	if (c->mobile)
+		l = eina_list_append(l, c->mobile);
+	if (c->work)
+		l = eina_list_append(l, c->work);
+	if (c->home)
+		l = eina_list_append(l, c->home);
+
+	return l;
+}
+
+static Eina_Bool _number_match(const char *n1, const char *n2)
+{
+	if (eina_str_has_suffix(n1, n2))
+		return EINA_TRUE;
+
+	return EINA_FALSE;
+}
+
+struct _Contact_Partial_Match
+{
+	const Contact_Info *info;
+	const char *type;
+	Eina_Bool name_match : 1;
+};
+
+static void _partial_match_add(Eina_List **p_list, const char *type,
+				const Contact_Info *c_info,
+				Eina_Bool name_match)
+{
+	Contact_Partial_Match *pm = malloc(sizeof(Contact_Partial_Match));
+	EINA_SAFETY_ON_NULL_RETURN(pm);
+	pm->info = c_info;
+	pm->type = type;
+	pm->name_match = name_match;
+	*p_list = eina_list_append(*p_list, pm);
+}
+
+static void _partial_name_match_add(Eina_List **p_list,
+					const Contact_Info *c_info)
+{
+	if (c_info->mobile)
+		_partial_match_add(p_list, "Mobile", c_info, EINA_TRUE);
+	if (c_info->work)
+		_partial_match_add(p_list, "Work", c_info, EINA_TRUE);
+	if (c_info->home)
+		_partial_match_add(p_list, "Home", c_info, EINA_TRUE);
+}
+
+static void _partial_number_match_add(Eina_List **p_list, const char *type,
+					const Contact_Info *c_info)
+{
+	_partial_match_add(p_list, type, c_info, EINA_FALSE);
+}
+
+Eina_List *contact_partial_match_search(Evas_Object *obj, const char *query)
+{
+	const Contact_Info *c_info;
+	const Contacts *contacts;
+	Eina_List *ret = NULL, *l;
+	int i, j;
+	Eina_Bool name_search = EINA_FALSE;
+	char *query_number;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, NULL);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(query, NULL);
+	contacts = evas_object_data_get(obj, "contacts.ctx");
+	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
+
+	/* Check if it is numeric */
+	query_number = alloca(strlen(query) + 1);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(query_number, NULL);
+	for (i = 0, j = 0; query[i] != '\0'; i++) {
+		if (isalpha(query[i])) {
+			name_search = EINA_TRUE;
+			break;
+		} else if (isdigit(query[i]))
+			query_number[j++] = query[i];
+	}
+
+	if (name_search) {
+		EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
+			const char *full_name;
+
+			full_name = contact_info_full_name_get(c_info);
+			if (strcasestr(full_name, query))
+				_partial_name_match_add(&ret, c_info);
+		}
+	} else {
+		query_number[j] = '\0';
+		EINA_LIST_FOREACH(contacts->c_list->list, l, c_info) {
+			if (_number_match(c_info->mobile, query_number))
+				_partial_number_match_add(&ret, "Mobile",
+								c_info);
+
+			if (_number_match(c_info->work, query_number))
+				_partial_number_match_add(&ret, "Work",
+								c_info);
+
+			if (_number_match(c_info->home, query_number))
+				_partial_number_match_add(&ret, "Home",
+								c_info);
+		}
+	}
+
+	return ret;
+}
+
+void contact_partial_match_search_free(Eina_List *results)
+{
+	Contact_Partial_Match *pm;
+	EINA_LIST_FREE(results, pm)
+		free(pm);
+}
+
+const char *contact_partial_match_type_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, NULL);
+	return pm->type;
+}
+
+const Contact_Info *contact_partial_match_info_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, NULL);
+	return pm->info;
+}
+
+Eina_Bool contact_partial_match_name_match_get(const Contact_Partial_Match *pm)
+{
+	EINA_SAFETY_ON_NULL_RETURN_VAL(pm, EINA_FALSE);
+	return pm->name_match;
+}
 
 Contact_Info *contact_search(Evas_Object *obj, const char *number, const char **type)
 {
@@ -144,8 +283,8 @@ const char *contact_info_detail_get(const Contact_Info *c, const char *type)
 
 const char *contact_info_number_check(const Contact_Info *c, const char *number)
 {
-	EINA_SAFETY_ON_NULL_RETURN_VAL(c, EINA_FALSE);
-	EINA_SAFETY_ON_NULL_RETURN_VAL(number, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(number, NULL);
 
 	if (strcmp(number, c->mobile) == 0)
 		return "Mobile";

@@ -80,8 +80,7 @@ char *date_format(time_t date)
 	else if (dt < (HOUR * 4))
 		r = asprintf(&buf, "%dh ago", (int)dt/3600);
 	else if (dt <= DAY) {
-		struct tm *f_time = gmtime(&date);
-		EINA_SAFETY_ON_NULL_GOTO(f_time, err_gmtime);
+		struct tm *f_time = localtime(&date);
 		r = asprintf(&buf,  "%02d:%02d", f_time->tm_hour,
 				f_time->tm_min);
 	} else if (dt < WEEK) {
@@ -100,9 +99,35 @@ char *date_format(time_t date)
 		buf = strdup("");
 
 	return buf;
+}
 
-err_gmtime:
-	return strdup("");
+char *date_short_format(time_t date)
+{
+	time_t now = time(NULL);
+	double dt = difftime(now, date);
+	char *buf;
+	int r;
+
+	if (dt <= DAY) {
+		struct tm *f_time = localtime(&date);
+		r = asprintf(&buf,  "%02d:%02d", f_time->tm_hour,
+				f_time->tm_min);
+	} else if (dt < WEEK) {
+		char tmp[256];
+		struct tm *tm = localtime(&date);
+		strftime(tmp, sizeof(tmp), "%A", tm);
+		r = asprintf(&buf, "%s", tmp);
+	} else {
+		char tmp[256];
+		struct tm *tm = localtime(&date);
+		strftime(tmp, sizeof(tmp), "%x", tm);
+		r = asprintf(&buf, "%s", tmp);
+	}
+
+	if (r < 0)
+		buf = strdup("");
+
+	return buf;
 }
 
 Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture)

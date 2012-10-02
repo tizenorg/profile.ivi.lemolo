@@ -11,6 +11,7 @@
 char *phone_format(const char *number);
 
 char *date_format(time_t date);
+char *date_short_format(time_t date);
 
 Evas_Object *picture_icon_get(Evas_Object *parent, const char *picture);
 

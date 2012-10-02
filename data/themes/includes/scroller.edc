@@ -2,6 +2,9 @@ group {
    name: "elm/scroller/base/multiparty-details";
    alias: "elm/genlist/base/history";
    alias: "elm/genlist/base/contacts";
+   alias: "elm/genlist/base/messages-overview";
+   alias: "elm/scroller/entry/compose";
+   alias: "elm/genlist/base/compose";
 
    script {
       public sbvis_v, sbalways_v, sbvis_timer;
@@ -27,6 +30,16 @@ group {
          mouse_events: 0;
          description {
             state: "default" 0.0;
+         }
+      }
+
+      part {
+         name: "bg";
+         type: RECT;
+         clip_to: "clipper";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
          }
       }
 

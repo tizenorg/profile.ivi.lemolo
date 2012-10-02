@@ -14,6 +14,10 @@ group {
     *
     */
 
+   images {
+      image: "ico_edit.png" COMP;
+   }
+
    parts {
       part {
          name: "bg";
@@ -36,6 +40,18 @@ group {
             rel2 {
                relative: 1.0 0.0;
                offset: -1 NOTIFICATION_BAR_HEIGHT;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.overview";
+         type: SWALLOW;
+         description {
+            state: "default" 0.0;
+            rel1 {
+               to_y: "notification.bar";
+               relative: 0.0 1.0;
             }
          }
       }
