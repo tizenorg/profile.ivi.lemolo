@@ -1,6 +1,6 @@
 Name:       ivi-dialer
 Summary:    IVI Dialer
-Version:    0.1
+Version:    0.1.0
 Release:    1
 Group:      System/Libraries
 License:    MIT
