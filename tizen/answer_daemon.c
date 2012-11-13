@@ -55,7 +55,7 @@ static void _set_notification_type(Evas_Object *win, Eina_Bool high)
 						ECORE_X_WINDOW_TYPE_NOTIFICATION);
 		utilx_set_system_notification_level(ecore_x_display_get(), xwin,
 							UTILX_NOTIFICATION_LEVEL_HIGH);
-		power_wakeup();
+		power_wakeup(EINA_TRUE);
 	} else
 		ecore_x_netwm_window_type_set(xwin, ECORE_X_WINDOW_TYPE_NORMAL);
 #else

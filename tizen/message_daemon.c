@@ -81,7 +81,7 @@ static void _inc_sms_cb(void *data __UNUSED__, unsigned int sms_class,
 		return;
 
 	if (_phone_locked())
-		power_wakeup();
+		power_wakeup(EINA_TRUE);
 
 	_notification_create(sender, message);
 }

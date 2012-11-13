@@ -38,11 +38,11 @@ utils_libofono_efl_utils_la_LIBADD = \
 	@EFL_LIBS@ \
 	@TIZEN_LIBS@
 
-if HAVE_TIZEN
-utils_libofono_efl_utils_la_SOURCES += utils/contacts-tizen.c
-else
+#if HAVE_TIZEN
+#utils_libofono_efl_utils_la_SOURCES += utils/contacts-tizen.c
+#else
 utils_libofono_efl_utils_la_SOURCES += utils/contacts.c
-endif
+#endif
 
 bin_PROGRAMS = \
 	dialer/dialer \
