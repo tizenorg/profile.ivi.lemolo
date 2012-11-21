@@ -7,6 +7,7 @@
 #include <ui-gadget.h>
 #include <contacts-ug.h>
 #include <contacts.h>
+#include <aul.h>
 
 #include "log.h"
 #include "ofono.h"

@@ -20,6 +20,7 @@ BuildRequires:  pkgconfig(utilX)
 BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
+BuildRequires:  libug-contacts-devel
 BuildRequires:  edje-tools
 
 
