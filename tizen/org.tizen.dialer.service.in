@@ -1,4 +1,4 @@
 [D-BUS Service]
 Name=org.tizen.dialer
-Exec=@bindir@/dialer
+Exec=@bindir@/dialer -t=hfp
 User=root
