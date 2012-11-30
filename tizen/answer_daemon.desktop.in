@@ -7,5 +7,6 @@ Name[en]=answer_daemon
 Exec=@bindir@/answer_daemon
 Terminal=false
 Type=Application
+Nodisplay=True
 Categories=
 GenericName=

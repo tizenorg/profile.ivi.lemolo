@@ -7,5 +7,6 @@ Name[en]=Dialer
 Exec=@bindir@/dialer
 Terminal=false
 Type=Application
+Nodisplay=True
 Categories=
 GenericName=
