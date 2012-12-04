@@ -1,9 +1,9 @@
-Name:       ivi-dialer
-Summary:    IVI Dialer
+Name:       lemolo
+Summary:    Ofono EFL Dialer
 Version:    0.1.0
 Release:    1
 Group:      System/Libraries
-License:    MIT
+License:    Apache 2.0
 URL:        http://www.tizen.org
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(ecore)
@@ -27,9 +27,7 @@ BuildRequires:  edje-tools
 %description
 Provides a dialer application for an In-Vehicle Infotainment (IVI) system, where
 the primary modem access is via a mobile device connected to the head unit via the
-handsfree profile over bluetooth.  In addition to basic phone calls, this dialer will
-also expose the contacts from the connected mobile device via the Phone Book Access
-Protocol (PBAP) over bluetooth when supported.
+handsfree profile over bluetooth.
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -52,12 +50,12 @@ rm -rf %{buildroot}
 %{_bindir}/dialer_daemon
 %{_bindir}/dialer_open
 %{_bindir}/message_daemon
-%{_datadir}/ofono-efl/examples/contacts.csv
-%{_datadir}/ofono-efl/scripts/ofono-efl-contacts-db-create.py
-%{_datadir}/ofono-efl/themes/default-sd.edj
-%{_datadir}/ofono-efl/themes/default.edj
+%{_datadir}/lemolo/examples/contacts.csv
+%{_datadir}/lemolo/scripts/ofono-efl-contacts-db-create.py
+%{_datadir}/lemolo/themes/default-sd.edj
+%{_datadir}/lemolo/themes/default.edj
 %{_datadir}/dbus-1/services/org.tizen.dialer.service
-%{_datadir}/ofono-efl/tizen-examples/order
+%{_datadir}/lemolo/tizen-examples/order
 /opt/share/applications/answer_daemon.desktop
 /opt/share/applications/dialer.desktop
 /opt/share/applications/org.tizen.call.desktop
