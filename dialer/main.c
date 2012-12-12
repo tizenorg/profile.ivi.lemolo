@@ -23,7 +23,7 @@ static const char def_modem_hfp_api[] =
 	"VoiceCallManager";
 
 static const char def_modem_type[] =
-	"hardware";
+	"hfp";
 
 static const char def_rc_service[] = "org.tizen.dialer";
 
@@ -145,7 +145,7 @@ EAPI int elm_main(int argc, char **argv)
 	} else {
 		const char *api;
 		if (!modem_type)
-			api = def_modem_hardware_api;
+			api = def_modem_hfp_api;
 		else if (strstr(modem_type, "hfp"))
 			api = def_modem_hfp_api;
 		else if (strcmp(modem_type, "hardware"))
