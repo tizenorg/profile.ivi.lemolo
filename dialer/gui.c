@@ -81,6 +81,11 @@ void gui_activate(void)
 	elm_win_raise(win);
 	elm_win_activate(win);
 	evas_object_show(win);
+
+	/* Automatically enable hfp modem if app is in the foreground */
+	if (!ofono_voice_is_online()) {
+		ofono_powered_set(EINA_TRUE, NULL, NULL);
+	}
 }
 
 void gui_number_set(const char *number, Eina_Bool auto_dial)

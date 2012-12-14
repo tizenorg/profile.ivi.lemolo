@@ -163,6 +163,9 @@ OFono_Pending *ofono_release_and_swap(OFono_Simple_Cb cb, const void *data);
 OFono_Pending *ofono_hold_and_answer(OFono_Simple_Cb cb, const void *data);
 OFono_Pending *ofono_hangup_all(OFono_Simple_Cb cb, const void *data);
 
+OFono_Pending *ofono_powered_set(Eina_Bool powered, OFono_Simple_Cb cb, const void *data);
+Eina_Bool ofono_powered_get(void);
+
 /* Call Volume: */
 
 OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb, const void *data);

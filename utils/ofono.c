@@ -1986,6 +1986,11 @@ static void _ofono_modems_get_reply(void *data __UNUSED__, DBusMessage *msg,
 
 		_modem_add(path, &properties);
 	}
+
+	if (!ofono_voice_is_online()) {
+		ofono_powered_set(EINA_TRUE, NULL, NULL);
+		return;
+	}
 }
 
 static void _modem_added(void *data __UNUSED__, DBusMessage *msg)
@@ -2277,6 +2282,115 @@ error:
 		cb((void *)data, err);
 	free(ctx);
 	return NULL;
+}
+
+static OFono_Pending *_ofono_modem_property_set(char *property,
+                                                int type, void *value,
+                                                OFono_Simple_Cb cb,
+                                                const void *data)
+{
+	OFono_Pending *p;
+	OFono_Simple_Cb_Context *ctx = NULL;
+	DBusMessage *msg;
+	DBusMessageIter iter, variant;
+	OFono_Modem *found_path = NULL, *found_hfp = NULL, *m;
+	Eina_Iterator *itr;
+
+	if (modem_selected)
+		m = modem_selected;
+	else {
+		itr = eina_hash_iterator_data_new(modems);
+		EINA_ITERATOR_FOREACH(itr, m) {
+			if (m->ignored)
+				continue;
+
+		    if ((modem_path_wanted) && (!found_path)) {
+				DBG("m=%s, wanted=%s", m->base.path, modem_path_wanted);
+				if (m->base.path == modem_path_wanted) {
+					found_path = m;
+					break;
+				}
+			}
+
+			if (!found_hfp) {
+				DBG("m=%#x, mask=%#x, previous=%s "
+					"(online=%d, powered=%d)",
+					m->interfaces, modem_api_mask,
+					found_hfp ? found_hfp->base.path : "",
+					found_hfp ? found_hfp->online : 0,
+					found_hfp ? found_hfp->powered : 0);
+					if (strncmp(m->base.path, "/hfp", 4) == 0)
+						found_hfp = m;
+			}
+		}
+		eina_iterator_free(itr);
+		m = found_path ? found_path : found_hfp;
+	}
+
+	if (!m)
+		return;
+
+	char type_to_send[2] = { type , DBUS_TYPE_INVALID };
+
+	EINA_SAFETY_ON_NULL_GOTO(m, error_no_dbus_message);
+
+	if (cb) {
+		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
+		EINA_SAFETY_ON_NULL_GOTO(ctx, error_no_dbus_message);
+		ctx->cb = cb;
+		ctx->data = data;
+	}
+
+	msg = dbus_message_new_method_call(bus_id, m->base.path,
+										OFONO_PREFIX OFONO_MODEM_IFACE,
+										"SetProperty");
+	if (!msg)
+		goto error_no_dbus_message;
+
+	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &property,
+									DBUS_TYPE_INVALID))
+		goto error_message_args;
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+											type_to_send, &variant))
+		goto error_message_args;
+
+	if (!dbus_message_iter_append_basic(&variant, type, value) ||
+			!dbus_message_iter_close_container(&iter, &variant)) {
+		dbus_message_iter_abandon_container(&iter, &variant);
+		goto error_message_args;
+	}
+
+ 	INF("%s.SetProperty(%s)", OFONO_MODEM_IFACE, property);
+	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
+	return p;
+
+error_message_args:
+	dbus_message_unref(msg);
+
+error_no_dbus_message:
+	if (cb)
+		cb((void *)data, OFONO_ERROR_FAILED);
+	free(ctx);
+	return NULL;
+}
+
+OFono_Pending *ofono_powered_set(Eina_Bool powered, OFono_Simple_Cb cb,
+                                const void *data)
+{
+	dbus_bool_t dbus_powered = !!powered;
+
+	return  _ofono_modem_property_set("Powered", DBUS_TYPE_BOOLEAN,
+		&dbus_powered, cb, data);
+}
+
+Eina_Bool ofono_powered_get(void)
+{
+	OFono_Modem *m = _modem_selected_get();
+	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
+	return m->powered;
 }
 
 static char *_ss_initiate_convert_ussd(const char *type __UNUSED__,
