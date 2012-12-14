@@ -1,3 +1,10 @@
+* Fri Dec 14 2012 Jimmy Huang <jimmy.huang@linux.intel.com>
+- Fixed bug TIVI-391
+
+* Wed Dec 12 2012 Jimmy Huang <jimmy.huang@linux.intel.com>
+- Fixes bug TIVI-398
+- Default to hfp modem when no args are passed
+
 * Tue Dec 04 2012 Jimmy Huang <jimmy.huang@linux.intel.com> 90ad5d0
 - Initial project creation 0.1.0
 
