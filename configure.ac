@@ -80,6 +80,12 @@ AC_ARG_WITH(dbusservicesdir,
    [with_dbusservicesdir="${withval}"], [:])
 AC_SUBST(with_dbusservicesdir)
 
+with_desktopicondir="/usr/share/icons/default/small"
+AC_ARG_WITH(desktopicondir,
+   [AC_HELP_STRING([--with-desktopicondir=PATH],
+      [Where to place desktop icon file. Default=/usr/share/icons/default/small/])],
+   [with_desktopicondir="${withval}"], [:])
+AC_SUBST(with_desktopicondir)
 
 with_desktopdir="/opt/share/applications"
 AC_ARG_WITH(desktopdir,
@@ -87,6 +93,12 @@ AC_ARG_WITH(desktopdir,
       [Where to place desktop files. Default=/opt/share/applications/])],
    [with_desktopdir="${withval}"], [:])
 AC_SUBST(with_desktopdir)
+
+eval "eval BIN_DIR=$bindir"
+AC_SUBST(BIN_DIR)
+
+eval "eval DATA_DIR=$datadir"
+AC_SUBST(DATA_DIR)
 
 AC_CONFIG_FILES([
 Makefile

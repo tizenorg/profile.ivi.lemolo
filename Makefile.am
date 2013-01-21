@@ -117,21 +117,18 @@ tizen/org.tizen.dialer.service
 EXTRA_DIST += \
 tizen/org.tizen.dialer.service.in
 
+desktopicondir = @with_desktopicondir@
+desktopicon_DATA = org.tizen.dialer.png
+
 %.desktop: %.desktop.in Makefile
 	$(AM_V_SED)sed 's:@bindir[@]:$(bindir):g' $< > $@
 
 desktopdir = @with_desktopdir@
 desktop_DATA = \
-tizen/answer_daemon.desktop \
-tizen/dialer.desktop \
-tizen/org.tizen.call.desktop \
-tizen/org.tizen.phone.desktop
+tizen/org.tizen.dialer.desktop
 
 EXTRA_DIST += \
-tizen/answer_daemon.desktop.in \
-tizen/dialer.desktop.in \
-tizen/org.tizen.call.desktop.in \
-tizen/org.tizen.phone.desktop.in
+tizen/org.tizen.dialer.desktop.in
 
 
 tizen/order: tizen/order.in Makefile

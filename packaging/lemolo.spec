@@ -34,7 +34,9 @@ handsfree profile over bluetooth.
 
 %build
 
-%autogen --enable-tizen
+%autogen --enable-tizen \
+         --bindir=/opt/apps/org.tizen.dialer/bin/ \
+         --datadir=/opt/apps/org.tizen.dialer/data/ 
 
 make %{?jobs:-j%jobs}
 
@@ -44,19 +46,20 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-%{_bindir}/answer_daemon
-%{_bindir}/dialer
-%{_bindir}/messages
-%{_bindir}/dialer_daemon
-%{_bindir}/dialer_open
-%{_bindir}/message_daemon
-%{_datadir}/lemolo/examples/contacts.csv
-%{_datadir}/lemolo/scripts/ofono-efl-contacts-db-create.py
-%{_datadir}/lemolo/themes/default-sd.edj
-%{_datadir}/lemolo/themes/default.edj
+/opt/apps/org.tizen.dialer/bin/answer_daemon
+/opt/apps/org.tizen.dialer/bin/dialer
+/opt/apps/org.tizen.dialer/bin/messages
+/opt/apps/org.tizen.dialer/bin/dialer_daemon
+/opt/apps/org.tizen.dialer/bin/dialer_open
+/opt/apps/org.tizen.dialer/bin/message_daemon
+/opt/apps/org.tizen.dialer/data/lemolo/examples/contacts.csv
+/opt/apps/org.tizen.dialer/data/lemolo/scripts/ofono-efl-contacts-db-create.py
+/opt/apps/org.tizen.dialer/data/lemolo/themes/default-sd.edj
+/opt/apps/org.tizen.dialer/data/lemolo/themes/default.edj
+/opt/apps/org.tizen.dialer/data/lemolo/tizen-examples/order
+#/opt/share/applications/answer_daemon.desktop
+#/opt/share/applications/dialer.desktop
+#/opt/share/applications/org.tizen.call.desktop
+/opt/share/applications/org.tizen.dialer.desktop
+%{_datadir}/icons/default/small/org.tizen.dialer.png
 %{_datadir}/dbus-1/services/org.tizen.dialer.service
-%{_datadir}/lemolo/tizen-examples/order
-/opt/share/applications/answer_daemon.desktop
-/opt/share/applications/dialer.desktop
-/opt/share/applications/org.tizen.call.desktop
-/opt/share/applications/org.tizen.phone.desktop

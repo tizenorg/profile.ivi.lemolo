@@ -1,6 +1,6 @@
-Name=Phone
+Name=Dialer
 Exec=@bindir@/dialer
-Icon=org.tizen.phone.png
+Icon=org.tizen.dialer.png
 Type=Application
 MimeType=
 Nodisplay=False
