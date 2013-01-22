@@ -49,7 +49,6 @@ if test "$want_tizen" != "no"; then
                         capi-social-contacts
                         vconf
                         capi-system-power
-                        utilX
                         aul
                         appsvc
                         notification

@@ -13,7 +13,9 @@
 #include <Ecore_X.h>
 #include <vconf.h>
 #include <vconf-keys.h>
+#if 0
 #include <utilX.h>
+#endif
 #include <power.h>
 #include <aul.h>
 #endif
@@ -45,7 +47,7 @@ typedef struct _Call_Screen {
 
 static void _set_notification_type(Evas_Object *win, Eina_Bool high)
 {
-#ifdef HAVE_TIZEN
+#if 0
 	Ecore_X_Window xwin;
 
 	xwin = elm_win_xwindow_get(win);
