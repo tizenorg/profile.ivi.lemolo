@@ -1,3 +1,6 @@
+* Wed Jan 30 2013 Hao Li <hao.h.li@intel.com>
+- Run appcore_efl_main rather than elm_run directly to ensure it will call aul initialization to create socket on /tmp/alaunch to fix TIVI-421
+
 * Fri Dec 14 2012 Jimmy Huang <jimmy.huang@linux.intel.com>
 - Fixed bug TIVI-391
 
