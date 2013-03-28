@@ -1044,14 +1044,8 @@ Evas_Object *overview_add(Evas_Object *parent)
 	elm_object_style_set(genlist, "messages-overview");
 	elm_genlist_homogeneous_set(genlist, EINA_TRUE);
 
-
-#ifdef HAVE_TIZEN
-	elm_genlist_scroller_policy_set(genlist, ELM_SCROLLER_POLICY_OFF,
-					ELM_SCROLLER_POLICY_AUTO);
-#else
 	elm_scroller_policy_set(genlist, ELM_SCROLLER_POLICY_OFF,
 				ELM_SCROLLER_POLICY_AUTO);
-#endif
 
 	itc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(itc, err_itc);
