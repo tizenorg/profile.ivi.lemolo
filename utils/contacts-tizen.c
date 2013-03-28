@@ -90,12 +90,12 @@ typedef struct _Partial_Match_Search
 
 static void _contact_number_entry_add(const char *number, Contact_Info *c_info);
 
-static const char *phone_type_get(contact_number_h number);
+static const char *_contact_number_type_get(contacts_record_h contact_number_h);
 static void _contact_info_free(Contact_Info *c_info);
 
 static void _contact_number_add(char *number,
 				Contact_Info *c_info,
-				contact_number_h number_h);
+				contacts_record_h contact_number_h);
 
 const char *contact_info_number_check(const Contact_Info *c,
 					const char *number);
@@ -118,117 +118,145 @@ static void _partial_number_match_add(Eina_List **p_list, const char *type,
 	_partial_match_add(p_list, type, c_info, EINA_FALSE);
 }
 
-static bool _number_partial_search(contact_query_number_s *query, void *data)
+static int _db_query_partial_search(const char *name_or_number,
+									Partial_Match_Search *pm_search,
+									Eina_Bool name_match)
 {
-	Partial_Match_Search *pm_search = data;
 	const Contacts *contacts = pm_search->contacts;
-	char *n;
-	contact_h tizen_c;
+	Contact_Info *c_info;
+	contacts_error_e err = CONTACTS_ERROR_NONE;
+	contacts_list_h list = NULL;
+	contacts_query_h query = NULL;
+	contacts_filter_h filter = NULL;
+	unsigned int contact_count = 0;
+	contacts_record_h contact_h = NULL;
+	contacts_record_h contact_name_h = NULL;
+	contacts_record_h contact_number_h = NULL;
+	int contact_id;
+	char *f_name = NULL, *l_name = NULL, *img = NULL;
 	const char *type;
-	contact_number_iterator_h it;
-	contact_number_h number_h;
-	Contact_Info *c_info;
-	Contact_Number *cn;
+	int idx = 0;
 
-	c_info = eina_hash_find(contacts->hash_ids, &query->contact_db_id);
+	if (name_match) {
+		err = contacts_query_create(_contacts_number._uri, &query);
 
-	if (c_info)
-		goto exit;
-
-	c_info = calloc(1, sizeof(Contact_Info));
-	EINA_SAFETY_ON_NULL_RETURN_VAL(c_info, true);
-	c_info->first_name = eina_stringshare_add(query->first_name);
-	c_info->last_name = eina_stringshare_add(query->last_name);
-	c_info->picture = eina_stringshare_add(query->contact_image_path);
-	c_info->id = query->contact_db_id;
-	if (contact_get_from_db(c_info->id, &tizen_c) != CONTACTS_ERROR_NONE)
-		return true;
-
-	if (contact_get_number_iterator(tizen_c, &it) !=
-		CONTACTS_ERROR_NONE)
-		return true;
-
-	while (contact_number_iterator_has_next(it)) {
-		if (contact_number_iterator_next(&it, &number_h) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		if (contact_number_get_number(number_h, &n) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		_contact_number_add(n, c_info, number_h);
-		free(n);
+		do {
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_create(_contacts_name._uri, &filter)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_add_str(filter, _contacts_name.first, CONTACTS_MATCH_EXACTLY, name_or_number)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_add_operator( filter, CONTACTS_FILTER_OPERATOR_OR)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_add_str(filter, _contacts_name.last, CONTACTS_MATCH_EXACTLY, name_or_number)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_query_set_filter(query, filter)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_db_get_records_with_query(query, 0, 0, &list)))
+				break;
+		} while (0);
 	}
-	contact_destroy(tizen_c);
+	else {
+		err = contacts_query_create(_contacts_number._uri, &query);
 
-	/* New contact */
-	c_info->contacts = (Contacts *)contacts;
-	eina_hash_add(contacts->hash_ids, &c_info->id, c_info);
-	EINA_INLIST_FOREACH(c_info->numbers, cn)
-		_contact_number_entry_add(cn->number, c_info);
-
-exit:
-	type = contact_info_number_check(c_info, query->phone_number);
-	_partial_number_match_add(&pm_search->matches, type,
-					c_info);
-	return true;
-
-}
-
-static bool _name_partial_search(contact_query_name_s *query, void *data)
-{
-	Partial_Match_Search *pm_search = data;
-	const Contacts *contacts = pm_search->contacts;
-	char *n;
-	contact_h tizen_c;
-	contact_number_iterator_h it;
-	contact_number_h number_h;
-	Contact_Info *c_info;
-	Contact_Number *cn;
-	Eina_Bool c_info_new = EINA_FALSE;
-
-
-	c_info = eina_hash_find(contacts->hash_ids, &query->contact_db_id);
-
-	if (c_info)
-		goto exit;
-
-	c_info = calloc(1, sizeof(Contact_Info));
-	EINA_SAFETY_ON_NULL_RETURN_VAL(c_info, true);
-	c_info->first_name = eina_stringshare_add(query->first_name);
-	c_info->last_name = eina_stringshare_add(query->last_name);
-	c_info->picture = eina_stringshare_add(query->contact_image_path);
-	c_info->id = query->contact_db_id;
-	if (contact_get_from_db(c_info->id, &tizen_c) != CONTACTS_ERROR_NONE)
-		return true;
-
-	if (contact_get_number_iterator(tizen_c, &it) !=
-		CONTACTS_ERROR_NONE)
-		return true;
-
-	while (contact_number_iterator_has_next(it)) {
-		if (contact_number_iterator_next(&it, &number_h) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		if (contact_number_get_number(number_h, &n) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		_contact_number_add(n, c_info, number_h);
-		free(n);
+		do {
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_create(_contacts_number._uri, &filter)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_filter_add_str(filter, _contacts_number.number, CONTACTS_MATCH_EXACTLY, name_or_number)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_query_set_filter(query, filter)))
+				break;
+			if (CONTACTS_ERROR_NONE != (err = contacts_db_get_records_with_query(query, 0, 0, &list)))
+				break;
+		} while (0);
 	}
-	contact_destroy(tizen_c);
 
-	/* New contact */
-	c_info->contacts = (Contacts *)contacts;
-	eina_hash_add(contacts->hash_ids, &c_info->id, c_info);
-	c_info_new = EINA_TRUE;
-exit:
-	EINA_INLIST_FOREACH(c_info->numbers, cn) {
-		if (c_info_new)
-			_contact_number_entry_add(cn->number, c_info);
-		_partial_match_add(&pm_search->matches, cn->type, c_info,
-					EINA_TRUE);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_query_create() Failed(%d)", err);
+		return -1;
 	}
-	return true;
+	contacts_filter_destroy(filter);
+	contacts_query_destroy(query);
+
+	contacts_list_get_count(list, &contact_count);
+	if (contact_count == 0)
+		return 0;
+
+	while (CONTACTS_ERROR_NONE == err) {
+		c_info = calloc(1, sizeof(Contact_Info));
+		EINA_SAFETY_ON_NULL_RETURN_VAL(c_info, -1);
+		err = contacts_list_get_current_record_p(list, &contact_number_h);
+		if (CONTACTS_ERROR_NONE != err) {
+			ERR("contacts_list_get_current_record_p() Failed(%d)", err);
+			return -1;
+		}
+
+		contacts_record_get_int(contact_number_h, _contacts_number.contact_id, &contact_id);
+		err = contacts_db_get_record(_contacts_contact._uri, contact_id, &contact_h);
+		if (CONTACTS_ERROR_NONE != err) {
+			ERR("contacts_db_get_record() Failed(%d)", err);
+			return -1;
+		}
+
+		err = contacts_record_get_child_record_at_p(contact_h, _contacts_contact.name, 0, &contact_name_h);
+		if (CONTACTS_ERROR_NONE != err) {
+			ERR("contacts_record_get_child_record_at_p() Failed(%d)", err);
+			return -1;
+		}
+
+		contacts_record_get_str(contact_h, _contacts_contact.image_thumbnail_path, &img);
+		contacts_record_get_str(contact_name_h, _contacts_name.first, &f_name);
+		contacts_record_get_str(contact_name_h, _contacts_name.last, &l_name);
+
+        c_info->id = contact_id;
+        c_info->picture = eina_stringshare_add(img);
+        c_info->first_name = eina_stringshare_add(f_name);
+        c_info->last_name = eina_stringshare_add(l_name);
+
+        idx = 0;
+        while (CONTACTS_ERROR_NONE == contacts_record_get_child_record_at_p(contact_h,
+																	_contacts_contact.number,
+																	idx++,
+																	&contact_number_h)) {
+			char *number;
+			contacts_record_get_str(contact_number_h, _contacts_number.number, &number);
+			_contact_number_add(number, c_info, contact_number_h);
+
+			Contact_Info *c_info_found;
+			c_info_found = eina_hash_find(contacts->hash_ids, &c_info->id);
+			if (c_info_found) {
+				/* Destroy and use old contact info */
+				_contact_info_free(c_info);
+				c_info = c_info_found;
+			}
+			else {
+				/* New contact info */
+				eina_hash_add(contacts->hash_ids, &c_info->id, c_info);
+			}
+
+			type = contact_info_number_check(c_info, number);
+			if (name_match) {
+				_partial_match_add(&pm_search->matches, type, c_info, EINA_TRUE);
+			}
+			else {
+				_partial_number_match_add(&pm_search->matches, type, c_info);
+			}
+			free(number);
+		}
+
+		contacts_record_destroy(contact_h, true);
+		free(img);
+		free(l_name);
+		free(f_name);
+
+        err = contacts_list_next(list);
+	}
+
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_list_next() Failed(%d)", err);
+		return -1;
+	}
+
+	return 1;
 }
 
 Eina_List *contact_partial_match_search(Evas_Object *obj, const char *query)
@@ -263,17 +291,14 @@ Eina_List *contact_partial_match_search(Evas_Object *obj, const char *query)
 	pm_search.matches = NULL;
 
 	if (name_search) {
-		if (contact_query_contact_by_name(_name_partial_search, query,
-							&pm_search) < 0) {
+		if (_db_query_partial_search(query, &pm_search, name_search) < 0) {
 			ERR("Could not search in contacts DB the name: %s",
 				query);
 			return NULL;
 		}
 	} else {
 		query_number[j] = '\0';
-		if (contact_query_contact_by_number(_number_partial_search,
-							query,
-							&pm_search) < 0) {
+		if (_db_query_partial_search(query, &pm_search, name_search) < 0) {
 			ERR("Could not search in contacts DB the number: %s",
 				query);
 			return NULL;
@@ -389,30 +414,27 @@ static void _alias_delete(Contact_Number *cn, Contact_Info *c_info)
 }
 
 static Eina_Bool _contact_phone_changed(Contact_Info *c_info,
-						contact_h contact)
+						contacts_record_h contact_h)
 {
 	Contact_Number *cn;
 	Eina_Bool ret = EINA_FALSE;
 	Eina_List *deleted_list = NULL;
+	int idx = 0;
 
 	/* Looking for deleted phones */
 	EINA_INLIST_FOREACH(c_info->numbers, cn) {
 		Eina_Bool deleted = EINA_TRUE;
-		contact_number_iterator_h it;
-		contact_number_h number_h;
-		char *number;
-		if (contact_get_number_iterator(contact, &it) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		while (contact_number_iterator_has_next(it)) {
-			if (contact_number_iterator_next(&it, &number_h) !=
-				CONTACTS_ERROR_NONE)
-				continue;
-			if (contact_number_get_number(number_h, &number) !=
+		idx = 0;
+		contacts_record_h contact_number_h;
+		while (CONTACTS_ERROR_NONE == contacts_record_get_child_record_at_p(contact_h,
+																	_contacts_contact.number,
+																	idx++,
+																	&contact_number_h)) {
+			char *number;
+			if (contacts_record_get_str_p(contact_number_h, _contacts_number.number, &number) !=
 				CONTACTS_ERROR_NONE)
 				continue;
 			Eina_Bool equal = _contact_number_is_equal(cn, number);
-			free(number);
 			if (equal) {
 				deleted = EINA_FALSE;
 				break;
@@ -425,19 +447,20 @@ static Eina_Bool _contact_phone_changed(Contact_Info *c_info,
 		}
 	}
 
-	contact_number_iterator_h it;
-	if (contact_get_number_iterator(contact, &it) != CONTACTS_ERROR_NONE)
+	idx = 0;
+	contacts_record_h contact_number_h;
+	if (contacts_record_get_child_record_at_p(contact_h, _contacts_contact.number, 0, &contact_number_h) !=
+		CONTACTS_ERROR_NONE)
 		return ret;
 
 	/* Looking for new phones */
-	while (contact_number_iterator_has_next(it)) {
+	while (CONTACTS_ERROR_NONE == contacts_record_get_child_record_at_p(contact_h,
+																_contacts_contact.number,
+																idx++,
+																&contact_number_h)) {
 		Eina_Bool added = EINA_TRUE;
-		contact_number_h number_h;
 		char *number;
-		if (contact_number_iterator_next(&it, &number_h) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		if (contact_number_get_number(number_h, &number) !=
+		if (contacts_record_get_str(contact_number_h, _contacts_number.number, &number) !=
 			CONTACTS_ERROR_NONE)
 			continue;
 		EINA_INLIST_FOREACH(c_info->numbers, cn) {
@@ -447,7 +470,7 @@ static Eina_Bool _contact_phone_changed(Contact_Info *c_info,
 			}
 		}
 		if (added)
-			_contact_number_add(number, c_info, number_h);
+			_contact_number_add(number, c_info, contact_number_h);
 		free(number);
 	}
 
@@ -502,23 +525,33 @@ static Eina_Bool _hash_foreach(const Eina_Hash *hash __UNUSED__,
 				const void *key __UNUSED__, void *data,
 				void *fdata)
 {
+	contacts_error_e err = CONTACTS_ERROR_NONE;
 	Eina_List **deleted = fdata;
 	Eina_Bool disp = EINA_FALSE;
 	Contact_Info *c_info = data;
-	contact_h contact = NULL;
-	contact_name_h name_h = NULL;
+	contacts_record_h contact_h = NULL;
+	contacts_record_h contact_name_h = NULL;
 	char *f_name = NULL, *l_name = NULL, *img = NULL;
 
-	contact_get_from_db(c_info->id, &contact);
-	/* Contact no longer exists. */
-	if (!contact)
-		goto deleted;
-	contact_get_name(contact, &name_h);
-	EINA_SAFETY_ON_NULL_GOTO(name_h, err_contact);
+	err = contacts_db_get_record( _contacts_contact._uri, c_info->id, &contact_h);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_db_get_record() Failed(%d)", err);
+		return false;
+	}
 
-	contact_name_get_detail(name_h, CONTACT_NAME_DETAIL_FIRST, &f_name);
-	contact_name_get_detail(name_h, CONTACT_NAME_DETAIL_LAST, &l_name);
-	contact_get_image(contact, &img);
+	/* Contact no longer exists. */
+	if (!contact_h)
+		goto deleted;
+	err = contacts_record_get_child_record_at_p(contact_h, _contacts_contact.name, 0, &contact_name_h);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_record_get_child_record_at_p(%d)", err);
+	}
+
+	EINA_SAFETY_ON_NULL_GOTO(contact_name_h, err_contact);
+
+	contacts_record_get_str(contact_name_h, _contacts_name.first, &f_name);
+	contacts_record_get_str(contact_name_h, _contacts_name.last, &l_name);
+	contacts_record_get_str(contact_h, _contacts_contact.image_thumbnail_path, &img);
 
 	if (eina_stringshare_replace(&c_info->first_name, f_name)) {
 		disp = EINA_TRUE;
@@ -534,16 +567,17 @@ static Eina_Bool _hash_foreach(const Eina_Hash *hash __UNUSED__,
 
 	disp |= eina_stringshare_replace(&c_info->picture, img);
 
-	disp |= _contact_phone_changed(c_info, contact);
+	disp |= _contact_phone_changed(c_info, contact_h);
 
 	if (disp)
 		_contact_info_on_changed_dispatch(c_info);
 
+	contacts_record_destroy(contact_name_h, true);
 	free(img);
 	free(l_name);
 	free(f_name);
 err_contact:
-	contact_destroy(contact);
+	contacts_record_destroy(contact_h, true);
 	return EINA_TRUE;
 
 deleted:
@@ -551,7 +585,7 @@ deleted:
 	return EINA_TRUE;
 }
 
-static void _contact_db_changed(void *data)
+static void _contact_db_changed(const char *view_uri __UNUSED__, void *data)
 {
 	Contacts *contacts = data;
 	Contact_Info *c_info;
@@ -573,7 +607,7 @@ static void _contact_db_changed(void *data)
 
 static void _contact_number_add(char *number,
 				Contact_Info *c_info,
-				contact_number_h number_h)
+				contacts_record_h contact_number_h)
 {
 	unsigned int numberlen = strlen(number);
 	Contact_Number *cn = malloc(sizeof(Contact_Number) + numberlen + 1);
@@ -581,87 +615,154 @@ static void _contact_number_add(char *number,
 	memcpy(cn->number, number, numberlen);
 	cn->numberlen = numberlen;
 	cn->number[numberlen] = '\0';
-	cn->type = phone_type_get(number_h);
+	cn->type = _contact_number_type_get(contact_number_h);
 	c_info->numbers = eina_inlist_append(c_info->numbers,
 						EINA_INLIST_GET(cn));
 }
 
-bool _search_cb(contact_query_number_s *query, void *data)
+static int _db_query_search_number(const char *number, Contact_Info **c_info)
 {
-	Contact_Info **c_info = data;
-	char *n;
-	contact_h tizen_c;
-	contact_number_iterator_h it;
-	contact_number_h number_h;
+	contacts_error_e err = CONTACTS_ERROR_NONE;
+	contacts_list_h list = NULL;
+	contacts_query_h query = NULL;
+	contacts_filter_h filter = NULL;
+	unsigned int contact_count = 0;
+	contacts_record_h contact_h = NULL;
+	contacts_record_h contact_name_h = NULL;
+	contacts_record_h contact_number_h = NULL;
+	int contact_id;
+	char *f_name = NULL, *l_name = NULL, *img = NULL;
+	int idx = 0;
 
 	*c_info = calloc(1, sizeof(Contact_Info));
-	EINA_SAFETY_ON_NULL_RETURN_VAL((*c_info), false);
-	(*c_info)->first_name = eina_stringshare_add(query->first_name);
-	(*c_info)->last_name = eina_stringshare_add(query->last_name);
-	(*c_info)->picture = eina_stringshare_add(query->contact_image_path);
-	(*c_info)->id = query->contact_db_id;
-	if (contact_get_from_db((*c_info)->id, &tizen_c) != CONTACTS_ERROR_NONE)
-		return false;
+	EINA_SAFETY_ON_NULL_RETURN_VAL((*c_info), -1);
 
-	if (contact_get_number_iterator(tizen_c, &it) !=
-		CONTACTS_ERROR_NONE)
-		return false;
+	err = contacts_query_create(_contacts_number._uri, &query);
 
-	while (contact_number_iterator_has_next(it)) {
-		if (contact_number_iterator_next(&it, &number_h) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		if (contact_number_get_number(number_h, &n) !=
-			CONTACTS_ERROR_NONE)
-			continue;
-		_contact_number_add(n, (*c_info), number_h);
-		free(n);
+	do {
+		if (CONTACTS_ERROR_NONE != (err = contacts_filter_create(_contacts_number._uri, &filter)))
+			break;
+		if (CONTACTS_ERROR_NONE != (err = contacts_filter_add_str(filter, _contacts_number.number, CONTACTS_MATCH_EXACTLY, number)))
+			break;
+		if (CONTACTS_ERROR_NONE != (err = contacts_query_set_filter(query, filter)))
+			break;
+		if (CONTACTS_ERROR_NONE != (err = contacts_db_get_records_with_query(query, 0, 0, &list)))
+			break;
+	} while (0);
+
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_query_create() Failed(%d)", err);
+		return -1;
 	}
-	contact_destroy(tizen_c);
-	return false;
+	contacts_filter_destroy(filter);
+	contacts_query_destroy(query);
+
+	contacts_list_get_count(list, &contact_count);
+	if (contact_count == 0)
+		return 0;
+
+	err = contacts_list_get_current_record_p(list, &contact_number_h);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_list_get_current_record_p() Failed(%d)", err);
+		return -1;
+	}
+
+	contacts_record_get_int(contact_number_h, _contacts_number.contact_id, &contact_id);
+	err = contacts_db_get_record(_contacts_contact._uri, contact_id, &contact_h);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_db_get_record() Failed(%d)", err);
+		return -1;
+	}
+
+	err = contacts_record_get_child_record_at_p(contact_h, _contacts_contact.name, 0, &contact_name_h);
+	if (CONTACTS_ERROR_NONE != err) {
+		ERR("contacts_record_get_child_record_at_p() Failed(%d)", err);
+		return -1;
+	}
+
+	contacts_record_get_str(contact_h, _contacts_contact.image_thumbnail_path, &img);
+	contacts_record_get_str(contact_name_h, _contacts_name.first, &f_name);
+	contacts_record_get_str(contact_name_h, _contacts_name.last, &l_name);
+
+	(*c_info)->id = contact_id;
+	(*c_info)->picture = eina_stringshare_add(img);
+	(*c_info)->first_name = eina_stringshare_add(f_name);
+	(*c_info)->last_name = eina_stringshare_add(l_name);
+
+	idx = 0;
+	while (CONTACTS_ERROR_NONE == contacts_record_get_child_record_at_p(contact_h,
+																_contacts_contact.number,
+																idx++,
+																&contact_number_h)) {
+		char *number_str;
+		contacts_record_get_str(contact_number_h, _contacts_number.number, &number_str);
+		_contact_number_add(number_str, (*c_info), contact_number_h);
+		free(number_str);
+	}
+
+	contacts_record_destroy(contact_h, true);
+	free(img);
+	free(l_name);
+	free(f_name);
+	return 1;
 }
 
-static const char *phone_type_get(contact_number_h number)
+static const char *_contact_number_type_get(contacts_record_h contact_number_h)
 {
-	contact_number_type_e type_e;
+	int number_type;
 
-	if (contact_number_get_type(number, &type_e) < 0)
+	if (contacts_record_get_int(contact_number_h, _contacts_number.type, &number_type) < 0)
 		return NULL;
 
-	switch (type_e) {
-	case CONTACT_NUMBER_TYPE_NONE:
-		return "None";
-	case CONTACT_NUMBER_TYPE_HOME:
+	if (number_type & CONTACTS_NUMBER_TYPE_OTHER) {
+		return "Other";
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_HOME) {
 		return "Home";
-	case CONTACT_NUMBER_TYPE_WORK:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_WORK) {
 		return "Work";
-	case CONTACT_NUMBER_TYPE_VOICE:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_VOICE) {
 		return "Home";
-	case CONTACT_NUMBER_TYPE_FAX:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_FAX) {
 		return "Fax";
-	case CONTACT_NUMBER_TYPE_MSG:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_MSG) {
 		return "Message";
-	case CONTACT_NUMBER_TYPE_CELL:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_CELL) {
 		return "Mobile";
-	case CONTACT_NUMBER_TYPE_PAGER:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_PAGER) {
 		return "Pager";
-	case CONTACT_NUMBER_TYPE_BBS:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_BBS) {
 		return "Bulletin board";
-	case CONTACT_NUMBER_TYPE_MODEM:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_MODEM) {
 		return "Modem";
-	case CONTACT_NUMBER_TYPE_CAR:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_CAR) {
 		return "Car phone";
-	case CONTACT_NUMBER_TYPE_ISDN:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_ISDN) {
 		return "ISDN";
-	case CONTACT_NUMBER_TYPE_VIDEO:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_VIDEO) {
 		return "Video conference";
-	case CONTACT_NUMBER_TYPE_PCS:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_PCS) {
 		return "Personal communicatior";
-	case CONTACT_NUMBER_TYPE_ASSISTANT:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_ASSISTANT) {
 		return "Assistant telephone";
-	case CONTACT_NUMBER_TYPE_CUSTOM:
+	}
+	else if (number_type & CONTACTS_NUMBER_TYPE_CUSTOM) {
 		return "Custom";
-	default:
+	}
+	else {
 		return "Unknown";
 	}
 }
@@ -715,7 +816,7 @@ Contact_Info *contact_search(Evas_Object *obj, const char *number,
 		goto get_type;
 	}
 
-	if (contact_query_contact_by_number(_search_cb, number, &c_info) < 0) {
+	if (_db_query_search_number(number, &c_info) < 0) {
 		ERR("Could not fetch phone number: %s from DB", number);
 		return NULL;
 	}
@@ -1022,7 +1123,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	if (contacts->reconnect)
 		ecore_timer_del(contacts->reconnect);
 	free(contacts);
-	contacts_disconnect();
+	contacts_disconnect2();
 }
 
 static void _create_contacts_ug(Contacts *contacts)
@@ -1059,12 +1160,12 @@ static Eina_Bool _contacts_reconnect(void *data)
 {
 	Contacts *contacts = data;
 
-	if (contacts_connect() != CONTACTS_ERROR_NONE)
+	if (contacts_connect2() != CONTACTS_ERROR_NONE)
 		return ECORE_CALLBACK_RENEW;
 
 	contacts->contacts_on = EINA_TRUE;
 	contacts->reconnect = NULL;
-	contacts_add_contact_db_changed_cb(_contact_db_changed, contacts);
+	contacts_db_add_changed_cb(_contacts_contact._uri, _contact_db_changed, contacts);
 	_create_contacts_ug(contacts);
 	return ECORE_CALLBACK_DONE;
 }
@@ -1080,14 +1181,13 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	evas_object_event_callback_add(contacts->self, EVAS_CALLBACK_DEL,
 					_on_del, contacts);
 
-	if (contacts_connect() != CONTACTS_ERROR_NONE) {
+	if (contacts_connect2() != CONTACTS_ERROR_NONE) {
 		WRN("Could not connect to the contacts DB");
 		contacts->contacts_on = EINA_FALSE;
 		contacts->reconnect = ecore_timer_add(1.0, _contacts_reconnect,
 							contacts);
 	} else {
-		contacts_add_contact_db_changed_cb(_contact_db_changed,
-							contacts);
+		contacts_db_add_changed_cb(_contacts_contact._uri, _contact_db_changed, contacts);
 		contacts->contacts_on = EINA_TRUE;
 		_create_contacts_ug(contacts);
 	}
