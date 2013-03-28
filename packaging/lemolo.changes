@@ -1,3 +1,10 @@
+* Thu Mar 28 2013 Jimmy Huang <jimmy.huang@intel.com> submit/2.0/20130306.222908@f71890c
+- Fixed TIVI-564, TIVI-569
+- Fixed keypad layout issue in landscape mode
+- Removed deprecated api calls
+- Ported contacts search to use new contacts api
+- Changed to build againist new contacts-service2 api
+
 * Wed Jan 30 2013 Hao Li <hao.h.li@intel.com>
 - Run appcore_efl_main rather than elm_run directly to ensure it will call aul initialization to create socket on /tmp/alaunch to fix TIVI-421
 
