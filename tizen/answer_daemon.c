@@ -143,11 +143,7 @@ static void _call_screen_show(Call_Screen *cs)
 	icon = elm_icon_add(cs->layout);
 
 	if (strcmp("", c->img) != 0) {
-#ifdef HAVE_TIZEN
-		elm_icon_file_set(icon, c->img, NULL);
-#else
 		elm_image_file_set(icon, c->img, NULL);
-#endif
 	} else
 		elm_icon_standard_set(icon, "no-picture");
 
