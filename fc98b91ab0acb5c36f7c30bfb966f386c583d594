@@ -1,0 +1,8 @@
+Change-Id: Ifc98b91ab0acb5c36f7c30bfb966f386c583d594
+Code-Review+2: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-at: Fri, 29 Mar 2013 07:55:12 +0900
+Reviewed-on: https://review.tizen.org/gerrit/3252
+Project: profile/ivi/lemolo
+Branch: refs/heads/2.0
