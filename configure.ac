@@ -46,7 +46,7 @@ if test "$want_tizen" != "no"; then
                         ecore-x
                         appcore-efl
                         ui-gadget-1
-                        capi-social-contacts
+                        contacts-service2
                         vconf
                         capi-system-power
                         aul
