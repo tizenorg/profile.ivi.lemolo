@@ -86,10 +86,10 @@ AC_ARG_WITH(desktopicondir,
    [with_desktopicondir="${withval}"], [:])
 AC_SUBST(with_desktopicondir)
 
-with_desktopdir="/opt/share/applications"
+with_desktopdir="/usr/share/applications"
 AC_ARG_WITH(desktopdir,
    [AC_HELP_STRING([--with-desktopdir=PATH],
-      [Where to place desktop files. Default=/opt/share/applications/])],
+      [Where to place desktop files. Default=/usr/share/applications/])],
    [with_desktopdir="${withval}"], [:])
 AC_SUBST(with_desktopdir)
 

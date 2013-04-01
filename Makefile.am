@@ -123,9 +123,15 @@ desktopicon_DATA = org.tizen.dialer.png
 %.desktop: %.desktop.in Makefile
 	$(AM_V_SED)sed 's:@bindir[@]:$(bindir):g' $< > $@
 
+if HAVE_TIZEN
+desktopdir = /usr/share/packages
+desktop_DATA = \
+org.tizen.dialer.xml
+else
 desktopdir = @with_desktopdir@
 desktop_DATA = \
 tizen/org.tizen.dialer.desktop
+endif
 
 EXTRA_DIST += \
 tizen/org.tizen.dialer.desktop.in

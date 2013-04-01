@@ -34,8 +34,8 @@ handsfree profile over bluetooth.
 %build
 
 %autogen --enable-tizen \
-         --bindir=/opt/apps/org.tizen.dialer/bin/ \
-         --datadir=/opt/apps/org.tizen.dialer/data/ 
+         --bindir=/usr/apps/org.tizen.dialer/bin/ \
+         --datadir=/usr/apps/org.tizen.dialer/data/ 
 
 make %{?jobs:-j%jobs}
 
@@ -45,20 +45,17 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-/opt/apps/org.tizen.dialer/bin/answer_daemon
-/opt/apps/org.tizen.dialer/bin/dialer
-/opt/apps/org.tizen.dialer/bin/messages
-/opt/apps/org.tizen.dialer/bin/dialer_daemon
-/opt/apps/org.tizen.dialer/bin/dialer_open
-/opt/apps/org.tizen.dialer/bin/message_daemon
-/opt/apps/org.tizen.dialer/data/lemolo/examples/contacts.csv
-/opt/apps/org.tizen.dialer/data/lemolo/scripts/ofono-efl-contacts-db-create.py
-/opt/apps/org.tizen.dialer/data/lemolo/themes/default-sd.edj
-/opt/apps/org.tizen.dialer/data/lemolo/themes/default.edj
-/opt/apps/org.tizen.dialer/data/lemolo/tizen-examples/order
-#/opt/share/applications/answer_daemon.desktop
-#/opt/share/applications/dialer.desktop
-#/opt/share/applications/org.tizen.call.desktop
-/opt/share/applications/org.tizen.dialer.desktop
+/usr/apps/org.tizen.dialer/bin/answer_daemon
+/usr/apps/org.tizen.dialer/bin/dialer
+/usr/apps/org.tizen.dialer/bin/messages
+/usr/apps/org.tizen.dialer/bin/dialer_daemon
+/usr/apps/org.tizen.dialer/bin/dialer_open
+/usr/apps/org.tizen.dialer/bin/message_daemon
+/usr/apps/org.tizen.dialer/data/lemolo/examples/contacts.csv
+/usr/apps/org.tizen.dialer/data/lemolo/scripts/ofono-efl-contacts-db-create.py
+/usr/apps/org.tizen.dialer/data/lemolo/themes/default-sd.edj
+/usr/apps/org.tizen.dialer/data/lemolo/themes/default.edj
+/usr/apps/org.tizen.dialer/data/lemolo/tizen-examples/order
+/usr/share/packages/org.tizen.dialer.xml
 %{_datadir}/icons/default/small/org.tizen.dialer.png
 %{_datadir}/dbus-1/services/org.tizen.dialer.service

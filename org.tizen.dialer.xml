@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://tizen.org/ns/packages" package="org.tizen.dialer" version="0.1.1" install-location="internal-only">
+	<label>Dialer</label>
+  	<description>Handsfree Dialer Application</description>
+	<ui-application appid="org.tizen.dialer" exec="/usr/apps/org.tizen.dialer/bin/dialer" nodisplay="false" multiple="false" type="capp" taskmanage="true">
+		<icon>org.tizen.dialer.png</icon>
+		<label>Dialer</label>
+		<label xml:lang="en-gb">Dialer</label>
+		<label xml:lang="en-us">Dialer</label>
+
+	</ui-application>
+</manifest>
