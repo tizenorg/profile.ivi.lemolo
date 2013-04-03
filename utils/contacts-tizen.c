@@ -658,12 +658,17 @@ static int _db_query_search_number(const char *number, Contact_Info **c_info)
 	contacts_query_destroy(query);
 
 	contacts_list_get_count(list, &contact_count);
-	if (contact_count == 0)
+	if (contact_count == 0) {
+		free(*c_info);
+		*c_info = NULL;
 		return 0;
+	}
 
 	err = contacts_list_get_current_record_p(list, &contact_number_h);
 	if (CONTACTS_ERROR_NONE != err) {
 		ERR("contacts_list_get_current_record_p() Failed(%d)", err);
+		free(*c_info);
+		*c_info = NULL;
 		return -1;
 	}
 
@@ -671,12 +676,16 @@ static int _db_query_search_number(const char *number, Contact_Info **c_info)
 	err = contacts_db_get_record(_contacts_contact._uri, contact_id, &contact_h);
 	if (CONTACTS_ERROR_NONE != err) {
 		ERR("contacts_db_get_record() Failed(%d)", err);
+		free(*c_info);
+		*c_info = NULL;
 		return -1;
 	}
 
 	err = contacts_record_get_child_record_at_p(contact_h, _contacts_contact.name, 0, &contact_name_h);
 	if (CONTACTS_ERROR_NONE != err) {
 		ERR("contacts_record_get_child_record_at_p() Failed(%d)", err);
+		free(*c_info);
+		*c_info = NULL;
 		return -1;
 	}
 
