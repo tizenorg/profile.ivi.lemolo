@@ -1,3 +1,9 @@
+* Fri Apr 05 2013 Jimmy Huang <jimmy.huang@intel.com> submit/2.0/20130401.230158@3e0b764
+- Updated version to 0.1.2
+- Adding a quit button to dialer so you can exit from app
+- Fixed TIVI-644, incoming and outgoing numbers are "null"
+- Fixed packaging
+
 * Thu Mar 28 2013 Jimmy Huang <jimmy.huang@intel.com> submit/2.0/20130306.222908@f71890c
 - Fixed TIVI-564, TIVI-569
 - Fixed keypad layout issue in landscape mode
