@@ -194,6 +194,7 @@ data/themes/images/ico_multiparty_hangup.png \
 data/themes/images/ico_multiparty_private.png \
 data/themes/images/ico_mute.png \
 data/themes/images/ico_person.png \
+data/themes/images/ico_quit.png \
 data/themes/images/ico_speaker.png \
 data/themes/images/ico_swap.png \
 data/themes/images/ico_voicemail.png \

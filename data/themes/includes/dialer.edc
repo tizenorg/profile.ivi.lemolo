@@ -30,6 +30,7 @@ group {
       image: "ico_contacts.png" COMP;
       image: "ico_history.png" COMP;
       image: "ico_voicemail.png" COMP;
+      image: "ico_quit.png" COMP;
    }
 
    parts {
@@ -187,8 +188,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: (WIDTH / 4) ACTION_HEIGHT;                             \
-            max: (WIDTH / 4) ACTION_HEIGHT;                             \
+            min: (WIDTH / 5) ACTION_HEIGHT;                             \
+            max: (WIDTH / 5) ACTION_HEIGHT;                             \
             fixed: 1 1;                                                 \
             rel1 {                                                      \
                to: "bg.actions";                                        \
@@ -252,8 +253,8 @@ group {
             state: "default" 0.0;                                       \
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
-            min: (WIDTH / 4) ACTION_HEIGHT;                             \
-            max: (WIDTH / 4) ACTION_HEIGHT;                             \
+            min: (WIDTH / 5) ACTION_HEIGHT;                             \
+            max: (WIDTH / 5) ACTION_HEIGHT;                             \
             fixed: 1 1;                                                 \
             visible: 0;                                                 \
             rel1 {                                                      \
@@ -370,9 +371,10 @@ group {
          }                                                              \
       }
 
-      ACTION_TOGGLE("keypad",    0.00, 0.25);
-      ACTION_TOGGLE("contacts",  0.25, 0.50);
-      ACTION_TOGGLE("history",   0.50, 0.75);
+      ACTION_TOGGLE("quit",      0.00, 0.20);
+      ACTION_TOGGLE("keypad",    0.20, 0.40);
+      ACTION_TOGGLE("contacts",  0.40, 0.60);
+      ACTION_TOGGLE("history",   0.60, 0.80);
 #undef ACTION_TOGGLE
 
       part {
@@ -398,8 +400,8 @@ group {
             state: "default" 0.0;
             color: 255 255 255 0;
             color_class: "action";
-            min: (WIDTH / 4) ACTION_HEIGHT;
-            max: (WIDTH / 4) ACTION_HEIGHT;
+            min: (WIDTH / 5) ACTION_HEIGHT;
+            max: (WIDTH / 5) ACTION_HEIGHT;
             fixed: 1 1;
             rel1 {
                to: "bg.actions";
@@ -482,8 +484,8 @@ group {
             state: "default" 0.0;
             color: 255 255 255 0;
             color_class: "caution";
-            min: (WIDTH / 4) ACTION_HEIGHT;
-            max: (WIDTH / 4) ACTION_HEIGHT;
+            min: (WIDTH / 5) ACTION_HEIGHT;
+            max: (WIDTH / 5) ACTION_HEIGHT;
             fixed: 1 1;
             rel1 {
                to: "bg.actions";

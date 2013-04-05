@@ -161,6 +161,11 @@ static void _gui_voicemail(void)
 	gui_dial(number);
 }
 
+static void _gui_quit(void)
+{
+	elm_exit();
+}
+
 static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
@@ -177,6 +182,8 @@ static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 		_gui_show(history);
 	else if (strcmp(emission, "voicemail") == 0)
 		_gui_voicemail();
+	else if (strcmp(emission, "quit") == 0)
+		_gui_quit();
 }
 
 static void _ofono_changed(void *data __UNUSED__)
