@@ -1,0 +1,10 @@
+Change-Id: I747a9f4623521bf4d72e9c76d07e1452bf82a7ea
+Code-Review+1: Mikko Ylinen <mikko.ylinen@intel.com>
+Verified+1: Mikko Ylinen <mikko.ylinen@intel.com>
+Code-Review+2: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-at: Sat, 06 Apr 2013 05:10:37 +0900
+Reviewed-on: https://review.tizen.org/gerrit/3272
+Project: profile/ivi/lemolo
+Branch: refs/heads/2.0
