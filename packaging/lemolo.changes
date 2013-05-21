@@ -1,3 +1,6 @@
+* Tue May 21 2013 Jimmy Huang <jimmy.huang@intel.com> submit/2.0/20130306.222908@430c2c9
+- Fixes TIVI-978, where touch calibration is off
+
 * Wed Jan 30 2013 Hao Li <hao.h.li@intel.com>
 - Run appcore_efl_main rather than elm_run directly to ensure it will call aul initialization to create socket on /tmp/alaunch to fix TIVI-421
 
