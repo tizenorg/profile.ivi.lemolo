@@ -2,7 +2,7 @@
 #define HEIGHT 640
 
 #define ACTION_WIDTH 120
-#define ACTION_HEIGHT 85
+#define ACTION_HEIGHT 40
 
 #define CALL_HEIGHT 100
 
