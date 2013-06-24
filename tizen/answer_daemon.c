@@ -371,17 +371,8 @@ static Eina_Bool _dbus_init(Call_Screen *cs)
 	DBusMessage *msg;
 	char *bus_name = BUS_NAME;
 
-#ifdef HAVE_TIZEN
-	/* NOTE: Tizen is stupid and does not have a session bus.  at
-	 * least not for user "app". Moreover the dialer is started by
-	 * user "root" :-(
-	 */
-	INF("Running on System bus");
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
-#else
 	INF("Running on Session bus");
 	bus_conn = e_dbus_bus_get(DBUS_BUS_SESSION);
-#endif
 
 	if (!bus_conn) {
 		ERR("Could not fetch the DBus session");
