@@ -858,21 +858,12 @@ Evas_Object *compose_add(Evas_Object *parent)
 	compose->genlist_contacts = genlist;
 	elm_object_focus_allow_set(genlist, EINA_FALSE);
 
-#ifdef HAVE_TIZEN
-	elm_genlist_scroller_policy_set(compose->genlist,
-					ELM_SCROLLER_POLICY_OFF,
-					ELM_SCROLLER_POLICY_AUTO);
-	elm_genlist_scroller_policy_set(compose->genlist_contacts,
-					ELM_SCROLLER_POLICY_OFF,
-					ELM_SCROLLER_POLICY_AUTO);
-#else
 	elm_scroller_policy_set(compose->genlist,
 				ELM_SCROLLER_POLICY_OFF,
 				ELM_SCROLLER_POLICY_AUTO);
 	elm_scroller_policy_set(compose->genlist_contacts,
 				ELM_SCROLLER_POLICY_OFF,
 				ELM_SCROLLER_POLICY_AUTO);
-#endif
 
 	compose->itc_inc = elm_genlist_item_class_new();
 	EINA_SAFETY_ON_NULL_GOTO(compose->itc_inc, err_itc);
