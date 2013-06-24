@@ -77,7 +77,9 @@ static void _number_display(Keypad *ctx)
 	elm_object_part_text_set(ctx->self, "elm.text.display", s);
 	free(s);
 
+#if 0
 	elm_object_signal_emit(ctx->self, "enable,save", "keypad");
+#endif
 	elm_object_signal_emit(ctx->self, "enable,backspace", "keypad");
 }
 
