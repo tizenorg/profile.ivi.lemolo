@@ -14,7 +14,9 @@
 
 #ifdef HAVE_TIZEN
 #include <appcore-efl.h>
+#ifdef HAVE_UI_GADGET
 #include <ui-gadget.h>
+#endif
 #include <Ecore_X.h>
 #endif
 
@@ -259,7 +261,9 @@ Eina_Bool gui_init(void)
 
 #ifdef HAVE_TIZEN
 	appcore_set_i18n("ofono-efl", "en-US");
+#ifdef HAVE_UI_GADGET
 	UG_INIT_EFL(win, UG_OPT_INDICATOR_PORTRAIT_ONLY);
+#endif
 #endif
 
 	flip = elm_flip_add(win);

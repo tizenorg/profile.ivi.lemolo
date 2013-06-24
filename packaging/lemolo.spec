@@ -12,14 +12,12 @@ BuildRequires:  pkgconfig(elementary)
 BuildRequires:  pkgconfig(ofono)
 BuildRequires:  pkgconfig(ecore-x)
 BuildRequires:  pkgconfig(appcore-efl)
-BuildRequires:  pkgconfig(ui-gadget-1)
 BuildRequires:  pkgconfig(contacts-service2)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(capi-system-power)
 BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
-BuildRequires:  libug-contacts-devel
 BuildRequires:  edje-tools
 
 

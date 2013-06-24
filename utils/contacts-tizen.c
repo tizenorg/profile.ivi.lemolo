@@ -4,8 +4,10 @@
 #include <Elementary.h>
 #include <Eet.h>
 #include <Eina.h>
+#ifdef HAVE_UI_GADGET
 #include <ui-gadget.h>
 #include <contacts-ug.h>
+#endif
 #include <contacts.h>
 #include <aul.h>
 
@@ -1049,6 +1051,7 @@ void contact_info_del(Contact_Info *c_info __UNUSED__)
 	ERR("TODO");
 }
 
+#ifdef HAVE_UI_GADGET 
 static void _contacts_ug_layout_create(struct ui_gadget *ug,
 					enum ug_mode mode __UNUSED__,
 					void *priv)
@@ -1058,6 +1061,7 @@ static void _contacts_ug_layout_create(struct ui_gadget *ug,
 	elm_object_part_content_set(contacts->self, "elm.swallow.genlist",
 					ug_get_layout(ug));
 }
+#endif
 
 static void _contact_info_free(Contact_Info *c_info)
 {
@@ -1128,13 +1132,16 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	Contacts *contacts = data;
 	eina_hash_free(contacts->hash_ids);
 	eina_hash_free(contacts->numbers);
+#ifdef HAVE_UI_GADGET
 	ug_destroy(contacts->ug_all);
+#endif
 	if (contacts->reconnect)
 		ecore_timer_del(contacts->reconnect);
 	free(contacts);
 	contacts_disconnect2();
 }
 
+#ifdef HAVE_UI_GADGET
 static void _create_contacts_ug(Contacts *contacts)
 {
 	char buf[PATH_MAX];
@@ -1164,6 +1171,7 @@ err_ug:
 	bundle_free(bd);
 	bd = NULL;
 }
+#endif
 
 static Eina_Bool _contacts_reconnect(void *data)
 {
@@ -1175,7 +1183,9 @@ static Eina_Bool _contacts_reconnect(void *data)
 	contacts->contacts_on = EINA_TRUE;
 	contacts->reconnect = NULL;
 	contacts_db_add_changed_cb(_contacts_contact._uri, _contact_db_changed, contacts);
+#ifdef HAVE_UI_GADGET
 	_create_contacts_ug(contacts);
+#endif
 	return ECORE_CALLBACK_DONE;
 }
 
@@ -1198,7 +1208,9 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	} else {
 		contacts_db_add_changed_cb(_contacts_contact._uri, _contact_db_changed, contacts);
 		contacts->contacts_on = EINA_TRUE;
+#ifdef HAVE_UI_GADGET
 		_create_contacts_ug(contacts);
+#endif
 	}
 
 	contacts->numbers = eina_hash_string_superfast_new(
