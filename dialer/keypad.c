@@ -34,6 +34,8 @@ typedef struct _Keypad
 	const char *last;
 	Ecore_Timer *mod_timeout;
 	Ecore_Timer *rep_timeout;
+	Eina_Bool callPending;
+	OFono_Callback_List_Modem_Node *cb_changed;
 } Keypad;
 
 static void _number_display(Keypad *ctx)
@@ -287,6 +289,23 @@ static void _ss_initiate_reply(void *data, OFono_Error err, const char *str)
 	}
 }
 
+static void _call(Keypad *ctx, Eina_Bool modem_check);
+
+static void _ofono_powered_reply(void *data, OFono_Error err)
+{
+	Keypad *ctx = data;
+
+	DBG("ctx=%p", ctx);
+
+	if (err != OFONO_ERROR_NONE) {
+		DBG("Enable ofono modem unsuccessful");
+		_call(ctx, EINA_FALSE);
+	}
+	else {
+		DBG("Enable ofono modem successful");
+	}
+}
+
 static Eina_Bool _on_ss_popup_show_timeout(void *data)
 {
 	Keypad *ctx = data;
@@ -321,7 +340,7 @@ static void _on_ss_popup_del(void *data, Evas *e __UNUSED__,
  * - send number to SupplementaryServices.Initiate()
  * - if NotRecognized is returned, then forward VoiceCallManager.Dial()
  */
-static void _call(Keypad *ctx)
+static void _call(Keypad *ctx, Eina_Bool modem_check)
 {
 	const char *number = eina_strbuf_string_get(ctx->number);
 	int len = eina_strbuf_length_get(ctx->number);
@@ -331,6 +350,17 @@ static void _call(Keypad *ctx)
 	if (len < 1)
 		return;
 
+	/* enable hfp modem if it is powered off,
+	   wait for modem_changed() event to indicate 
+	   that voice call is ready */
+	if (!ofono_voice_is_online() && modem_check) {
+		DBG("Ofono modem is not powered");
+		ctx->callPending = EINA_TRUE;
+		ofono_powered_set(EINA_TRUE, _ofono_powered_reply, ctx);
+		return;
+        }
+
+	ctx->callPending = EINA_FALSE;
 	if (ctx->ss_popup)
 		evas_object_del(ctx->ss_popup);
 
@@ -467,8 +497,9 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	emission += strlen("clicked,");
 
 	if (strcmp(emission, "call") == 0) {
-		if (eina_strbuf_length_get(ctx->number) > 0)
-			_call(ctx);
+		if (eina_strbuf_length_get(ctx->number) > 0) {
+			_call(ctx, EINA_TRUE);
+		}
 		else if (ctx->last) {
 			eina_strbuf_append(ctx->number, ctx->last);
 			_number_display(ctx);
@@ -476,6 +507,19 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 	} else if (strcmp(emission, "save") == 0) {
 		ERR("TODO save contact %s!",
 			eina_strbuf_string_get(ctx->number));
+	}
+}
+
+static void _ofono_modem_changed(void *data)
+{
+        Keypad *ctx = data;
+	if (ofono_voice_is_online())
+		DBG("voice call is available");
+	else
+		DBG("voice call is not available");
+
+	if (ofono_voice_is_online() && ctx->callPending) {
+		_call(ctx, EINA_FALSE);
 	}
 }
 
@@ -494,6 +538,7 @@ static void _on_del(void *data, Evas *e __UNUSED__,
 	if (ctx->ss_popup_show_timeout)
 		ecore_timer_del(ctx->ss_popup_show_timeout);
 
+	ofono_modem_changed_cb_del(ctx->cb_changed);
 	eina_strbuf_free(ctx->number);
 	eina_stringshare_del(ctx->last);
 	free(ctx);
@@ -510,6 +555,8 @@ Evas_Object *keypad_add(Evas_Object *parent)
 	ctx->number = eina_strbuf_new();
 
 	evas_object_data_set(obj, "keypad.ctx", ctx);
+
+	ctx->cb_changed = ofono_modem_changed_cb_add(_ofono_modem_changed, ctx);
 
 	evas_object_event_callback_add(obj, EVAS_CALLBACK_DEL,
 					_on_del, ctx);
@@ -547,5 +594,5 @@ void keypad_number_set(Evas_Object *obj, const char *number,
 	eina_strbuf_append(ctx->number, number);
 	_number_display(ctx);
 	if (auto_dial)
-		_call(ctx);
+		_call(ctx, EINA_TRUE);
 }
