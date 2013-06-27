@@ -39,7 +39,7 @@ utils_libofono_efl_utils_la_LIBADD = \
 	@TIZEN_LIBS@
 
 if HAVE_TIZEN
-utils_libofono_efl_utils_la_SOURCES += utils/contacts-tizen.c
+utils_libofono_efl_utils_la_SOURCES += utils/contacts.c
 else
 utils_libofono_efl_utils_la_SOURCES += utils/contacts.c
 endif
