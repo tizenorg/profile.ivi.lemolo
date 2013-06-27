@@ -1,0 +1,10 @@
+Change-Id: I4bf74c90bdaa4ec2e5474d8438e1535998e69bd1
+Code-Review+2: Rusty Lynch <rusty.lynch@intel.com>
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Code-Review+1: Jimmy Huang <jimmy.huang@intel.com>
+Verified+1: Jimmy Huang <jimmy.huang@intel.com>
+Submitted-by: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-at: Thu, 27 Jun 2013 15:11:34 -0700
+Reviewed-on: https://review.tizen.org/gerrit/4349
+Project: profile/ivi/lemolo
+Branch: refs/heads/tizen
