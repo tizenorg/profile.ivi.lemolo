@@ -92,6 +92,7 @@ static int _terminate(void *data __UNUSED__)
 EAPI int elm_main(int argc, char **argv)
 {
 	int args;
+	int iReturn = 0;
 	char *modem_path = NULL;
 	char *modem_api = NULL;
 	char *modem_type = NULL;
@@ -220,7 +221,7 @@ EAPI int elm_main(int argc, char **argv)
 	};
 	ops.data = NULL;
 	//elm_run();
-	int iReturn = appcore_efl_main("org.tizen.dialer", &argc, &argv, &ops);
+	iReturn = appcore_efl_main("org.tizen.dialer", &argc, &argv, &ops);
 	INF("Quit main loop");
 
 	gui_shutdown();

@@ -2328,7 +2328,7 @@ static OFono_Pending *_ofono_modem_property_set(char *property,
 	}
 
 	if (!m)
-		return;
+		return NULL;
 
 	char type_to_send[2] = { type , DBUS_TYPE_INVALID };
 
