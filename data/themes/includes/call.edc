@@ -323,8 +323,8 @@ group {
             text {                                                      \
                text: "Gustavo Barbieri";                                \
                font: FONT_NORMAL;                                       \
-               size: SIZE_HUGE;                                         \
-               size_range: SIZE_MEDIUM SIZE_HUGE;                       \
+               size: SIZE_MEDIUM;                                       \
+               size_range: SIZE_MEDIUM SIZE_MEDIUM;                     \
                fit: 1 1;                                                \
                max: 0 1;                                                \
                align: 0.0 1.0;                                          \
@@ -1230,7 +1230,7 @@ group {
             text {                                                      \
                text: label;                                             \
                font: FONT_NORMAL;                                       \
-               size: SIZE_HUGE;                                         \
+               size: SIZE_MEDIUM;                                       \
                align: 0.5 0.5;                                          \
             }                                                           \
          }                                                              \
@@ -1392,7 +1392,7 @@ group {
             text {
                text: "Hide Keypad";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
+               size: SIZE_MEDIUM;
                align: 0.5 0.5;
             }
          }
@@ -1561,7 +1561,7 @@ group {
             text {
                text: "Answer";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
+               size: SIZE_MEDIUM;
                align: 0.5 0.5;
             }
          }
@@ -1663,7 +1663,7 @@ group {
             text {
                text: "Hangup";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
+               size: SIZE_MEDIUM;
                align: 0.5 0.5;
             }
          }
@@ -1762,8 +1762,8 @@ group {
             text {
                text: "Conference";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
-               size_range: SIZE_TINY SIZE_HUGE;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_MEDIUM;
                fit: 1 1;
                align: 0.5 0.5;
                ellipsis: 0.0;
@@ -1844,7 +1844,7 @@ group {
             text {
                text: "Back";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
+               size: SIZE_MEDIUM;
                align: 0.5 0.5;
             }
          }
@@ -2133,8 +2133,8 @@ group {
             text {
                text: "Someone";
                font: FONT_NORMAL;
-               size: SIZE_HUGE;
-               size_range: SIZE_TINY SIZE_HUGE;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_MEDIUM;
                fit: 1 1;
                align: 0.0 0.5;
                ellipsis: 0.0;
