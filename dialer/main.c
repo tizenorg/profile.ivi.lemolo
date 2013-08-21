@@ -11,6 +11,7 @@
 
 #ifndef ELM_LIB_QUICKLAUNCH
 
+#include "amb.h"
 #include "gui.h"
 #include "log.h"
 #include "ofono.h"
@@ -207,6 +208,14 @@ EAPI int elm_main(int argc, char **argv)
 		goto end_ofono;
 	}
 
+#ifdef HAVE_TIZEN
+	if (!amb_init()) {
+		CRITICAL("Could not setup automotive-message-broker");
+		_app_exit_code = EXIT_FAILURE;
+		goto end_amb;
+	}
+#endif
+
 	if (!gui_init()) {
 		CRITICAL("Could not setup graphical user interface");
 		_app_exit_code = EXIT_FAILURE;
@@ -235,6 +244,10 @@ EAPI int elm_main(int argc, char **argv)
 
 end_util:
 	util_shutdown();
+#ifdef HAVE_TIZEN
+end_amb:
+	amb_shutdown();
+#endif
 end_ofono:
 	ofono_shutdown();
 end_rc:
