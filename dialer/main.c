@@ -1,17 +1,19 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <Elementary.h>
+#ifdef HAVE_TIZEN
 #include <appcore-efl.h>
+#endif
+#include <Elementary.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <Evas.h>
 
 #ifndef ELM_LIB_QUICKLAUNCH
 
+#include "gui.h"
 #include "log.h"
 #include "ofono.h"
-#include "gui.h"
 #include "rc.h"
 #include "util.h"
 
@@ -64,6 +66,7 @@ static const Ecore_Getopt options = {
 int _log_domain = -1;
 int _app_exit_code = EXIT_SUCCESS;
 
+#ifdef HAVE_TIZEN
 static int _create(void *data __UNUSED__)
 {
 	return 0;
@@ -88,11 +91,11 @@ static int _terminate(void *data __UNUSED__)
 {
 	return 0;
 }
+#endif
 
 EAPI int elm_main(int argc, char **argv)
 {
 	int args;
-	int iReturn = 0;
 	char *modem_path = NULL;
 	char *modem_api = NULL;
 	char *modem_type = NULL;
@@ -212,6 +215,8 @@ EAPI int elm_main(int argc, char **argv)
 
 	INF("Entering main loop");
 
+#ifdef HAVE_TIZEN
+	int iReturn = 0;
 	struct appcore_ops ops = {
 		.create = _create,
 		.resume = _resume,
@@ -220,8 +225,10 @@ EAPI int elm_main(int argc, char **argv)
 		.terminate = _terminate,
 	};
 	ops.data = NULL;
-	//elm_run();
 	iReturn = appcore_efl_main("org.tizen.dialer", &argc, &argv, &ops);
+#else
+	elm_run();
+#endif
 	INF("Quit main loop");
 
 	gui_shutdown();
@@ -235,8 +242,11 @@ end_rc:
 end:
 	elm_shutdown();
 
+#ifdef HAVE_TIZEN
 	return iReturn;
-	//return _app_exit_code;
+#else
+	return _app_exit_code;
+#endif
 }
 
 #endif
