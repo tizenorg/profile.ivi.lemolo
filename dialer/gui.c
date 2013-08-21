@@ -27,13 +27,17 @@ static Evas_Object *contacts = NULL;
 static Evas_Object *history = NULL;
 static Evas_Object *cs = NULL;
 static Evas_Object *flip = NULL;
+static Evas_Object *current_view = NULL;
 
 static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
 static OFono_Callback_List_USSD_Notify_Node *callback_node_ussd_notify = NULL;
+static AMB_Callback_List_Node *callback_node_night_mode_changed = NULL;
 
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
 static Eina_Bool in_flip_anim = EINA_FALSE;
+
+static Eina_Bool night_mode = EINA_FALSE;
 
 Contact_Info *gui_contact_search(const char *number, const char **type)
 {
@@ -71,6 +75,7 @@ static void _gui_show(Evas_Object *o)
 	else if (o == history)
 		elm_object_signal_emit(main_layout, "show,history", "gui");
 	elm_object_focus_set(o, EINA_TRUE);
+	current_view = o;
 }
 
 Evas_Object *gui_simple_popup(const char *title, const char *message)
@@ -231,6 +236,21 @@ static void _ofono_changed(void *data __UNUSED__)
 	elm_object_part_text_set(main_layout, "elm.text.voicemail", buf);
 }
 
+static void _night_mode_changed(void *data __UNUSED__)
+{
+	DBG("Night mode changed");
+	Eina_Bool changed = amb_night_mode_get();
+	if (night_mode != changed)
+	{
+		DBG("Nightmode changed to %d", changed);
+		night_mode = changed;
+		util_set_night_mode(night_mode);
+
+		if (current_view)
+			_gui_show(current_view);
+	}
+}
+
 static void _ofono_ussd_notify(void *data __UNUSED__, Eina_Bool needs_reply,
 				const char *message)
 {
@@ -314,6 +334,8 @@ Eina_Bool gui_init(void)
 		ofono_modem_changed_cb_add(_ofono_changed, NULL);
 	callback_node_ussd_notify =
 		ofono_ussd_notify_cb_add(_ofono_ussd_notify, NULL);
+	callback_node_night_mode_changed =
+		amb_properties_changed_cb_add(_night_mode_changed, NULL);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);

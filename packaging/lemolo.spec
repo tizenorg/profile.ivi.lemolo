@@ -20,6 +20,7 @@ BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
 BuildRequires:  edje-tools
 Requires: ofono
+Requires: automotive-message-broker
 
 %description
 Provides a dialer application for an In-Vehicle Infotainment (IVI) system, where
