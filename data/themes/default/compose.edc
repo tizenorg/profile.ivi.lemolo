@@ -42,17 +42,12 @@ group {
    parts {
       part {
          name: "bg";
-         type: IMAGE;
+         type: RECT;
          mouse_events: 0;
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "dark";
-            image {
-               normal: "bg_keypad.jpg";
-               scale_hint: STATIC;
-            }
-            fill.smooth: 1;
+            color_class: "primary";
          }
       }
 
@@ -62,7 +57,7 @@ group {
          mouse_events: 0;
          description {
             state: "default" 0.0;
-            color: 0 0 0 255;
+            color: 255 255 255 255;
             rel1.relative: 0.0 0.0;
             rel2 {
                relative: 1.0 0.0;
@@ -185,7 +180,7 @@ group {
          api: "name" "message destination name";
          description {
             state: "default" 0.0;
-            color: 16 16 16 255;
+            color: 240 240 240 255;
             color_class: "action";
             rel1 {
                to: "bg.buttons";
@@ -228,14 +223,14 @@ group {
 
 #define SEPARATOR(id, clip, rely, offy, relto)                          \
       part {                                                            \
-         name: "separator.dark."##id;                                   \
+         name: "separator.primary."##id;                                \
          type: RECT;                                                    \
          mouse_events: 0;                                               \
          clip_to: clip;                                                 \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
-            color_class: "dark";                                        \
+            color_class: "primary";                                     \
             rel1 {                                                      \
                relative: 0.0 rely;                                      \
                offset: 0 offy;                                          \
@@ -324,7 +319,7 @@ group {
          description {                                                  \
             state: "pressed" 0.0;                                       \
             inherit: "default" 0.0;                                     \
-            color: 16 16 16 255;                                        \
+            color: 240 240 240 255;                                     \
          }                                                              \
       }                                                                 \
                                                                         \
@@ -406,7 +401,7 @@ group {
          description {
             state: "pressed" 0.0;
             inherit: "default" 0.0;
-            color: 16 16 16 255;
+            color: 240 240 240 255;
          }
          description {
             state: "compose" 0.0;
@@ -469,7 +464,7 @@ group {
          mouse_events: 0;
          description {
             state: "default" 0.0;
-            color: 0 0 0 255;
+            color: 255 255 255 255;
             visible: 0;
             rel1.to: "ico.ball";
             rel2.to: "ico.ball";
@@ -562,14 +557,14 @@ group {
          clip_to: "clipper.contacts.visible";
          description {
             state: "default" 0.0;
-            color: 0 0 0 255;
+            color: 255 255 255 255;
             rel1 {
-               to: "separator.dark.back";
+               to: "separator.primary.back";
                relative: 0.0 0.0;
                offset: 0 (-ACTION_HEIGHT);
             }
             rel2 {
-               to: "separator.dark.back";
+               to: "separator.primary.back";
                relative: 1.0 0.0;
                offset: 0 -1;
             }
@@ -633,7 +628,7 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             fixed: 1 1;
             rel1 {
                to: "elm.text.separator_size";
@@ -663,7 +658,7 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             fixed: 1 1;
             rel1 {
                to: "elm.img.btn.send";
@@ -693,7 +688,7 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             rel1 {
                to: "elm.text.separator_size";
                relative: 1.0 0.0;
@@ -711,16 +706,16 @@ group {
          }
       }
 
-#define SEPARATOR(id, rely, offy, relto)				\
+#define SEPARATOR(id, rely, offy, relto)				                \
       part {                                                            \
-         name: "separator.dark."##id;                                   \
+         name: "separator.primary."##id;                                \
          type: RECT;                                                    \
          mouse_events: 0;                                               \
          clip_to: "clipper.contacts.visible";                           \
          description {                                                  \
             state: "default" 0.0;                                       \
             color: 255 255 255 255;                                     \
-            color_class: "dark";                                        \
+            color_class: "primary";                                     \
             rel1 {                                                      \
                relative: 0.0 rely;                                      \
                offset: 0 offy;                                          \
@@ -785,11 +780,11 @@ group {
             color: 255 255 255 0;                                       \
             color_class: "action";                                      \
             rel1 {                                                      \
-	    to: "bg.buttons.back";					\
+	    to: "bg.buttons.back";					                        \
                relative: r1;                                            \
             }                                                           \
             rel2 {                                                      \
-	    to: "bg.buttons.back";					\
+	    to: "bg.buttons.back";                                          \
                relative: r2;                                            \
             }                                                           \
          }                                                              \
@@ -822,7 +817,7 @@ group {
          description {                                                  \
             state: "pressed" 0.0;                                       \
             inherit: "default" 0.0;                                     \
-            color: 16 16 16 255;                                        \
+            color: 240 240 240 255;                                     \
          }                                                              \
       }                                                                 \
                                                                         \
@@ -1044,7 +1039,7 @@ group {
     styles {
        style {
           name: "entry_textblock_style_outgoing";
-          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_LIGHT" wrap=mixed valign=top align=right";
+          base: "font="FONT_NORMAL" font_size="SIZE_MEDIUM" color="TEXTBLOCK_COLOR_SECONDARY" wrap=mixed valign=top align=right";
           tag: "br" "\n";
        }
        style {
@@ -1107,7 +1102,7 @@ group {
           description {
              state: "default" 0.0;
              color: 255 255 255 255;
-             color_class: "light";
+             color_class: "secondary";
              min: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
              max: MESSAGE_SEPARATOR_WIDTH MESSAGE_SEPARATOR_HEIGHT;
              align: 1.0 1.0;
@@ -1135,7 +1130,7 @@ group {
           description {
              state: "default" 0.0;
              color: 255 255 255 128;
-             color_class: "light";
+             color_class: "secondary";
              align: 0.0 0.0;
              fixed: 1 1;
              rel1 {
@@ -1197,7 +1192,7 @@ group {
           type: IMAGE;
           description {
              color: 255 255 255 255;
-             color_class: "light";
+             color_class: "secondary";
              min: MESSAGE_IMG_SENT_SIZE MESSAGE_IMG_SENT_SIZE;
              max: MESSAGE_IMG_SENT_SIZE MESSAGE_IMG_SENT_SIZE;
              visible: 0;
@@ -1414,7 +1409,7 @@ group {
          mouse_events: 0;
          description {
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             rel1 {
                to: "text.contact.name";
                relative: 0.0 1.0;
@@ -1446,7 +1441,7 @@ group {
          mouse_events: 0;
          description {
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             align: 1.0 0.5;
             fixed: 1 1;
             rel1 {
@@ -1990,7 +1985,7 @@ group {
          description {
             state: "default" 0.0;
             color: 255 255 255 255;
-            color_class: "light";
+            color_class: "secondary";
             rel1.offset: BORDER_PADDING 0;
             text {
                font: FONT_NORMAL;
@@ -2058,7 +2053,7 @@ group {
                to_x: "right.padding";
             }
             color: 255 255 255 0;
-            color_class: "light";
+            color_class: "secondary";
          }
          description {
             state: "focused" 0.0;

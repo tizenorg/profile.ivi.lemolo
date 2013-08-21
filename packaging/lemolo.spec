@@ -51,8 +51,8 @@ rm -rf %{buildroot}
 /usr/apps/org.tizen.dialer/bin/message_daemon
 /usr/apps/org.tizen.dialer/data/lemolo/examples/contacts.csv
 /usr/apps/org.tizen.dialer/data/lemolo/scripts/ofono-efl-contacts-db-create.py
-/usr/apps/org.tizen.dialer/data/lemolo/themes/default-sd.edj
 /usr/apps/org.tizen.dialer/data/lemolo/themes/default.edj
+/usr/apps/org.tizen.dialer/data/lemolo/themes/night.edj
 /usr/apps/org.tizen.dialer/data/lemolo/tizen-examples/order
 /usr/share/packages/org.tizen.dialer.xml
 %{_datadir}/icons/default/small/org.tizen.dialer.png

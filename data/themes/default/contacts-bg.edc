@@ -9,19 +9,14 @@ group {
 
       part {
          name: "bg";
-         type: IMAGE;
+         type: RECT;
          mouse_events: 0;
          description {
             state: "default" 0.0;
             rel1.relative: 0.0 0.0;
             rel2.relative: 1.0 1.0;
             color: 255 255 255 255;
-            color_class: "dark";
-            image {
-               normal: "bg_keypad.jpg";
-               scale_hint: STATIC;
-            }
-            fill.smooth: 1;
+            color_class: "primary";
          }
       }
 

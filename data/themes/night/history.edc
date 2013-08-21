@@ -1,0 +1,547 @@
+group {
+   name: "elm/layout/ofono-efl/history/img";
+
+   parts {
+      part {
+         name: "rect";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            color: 0 0 0 0;
+         }
+      }
+   }
+   programs {
+      program {
+         signal: "mouse,clicked,1";
+         source: "rect";
+         action: SIGNAL_EMIT "clicked,more" "gui";
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item/history/default";
+
+   data {
+      item: "texts" "text.call.name text.call.time text.call.type";
+      item: "contents" "call.swallow.more";
+      item: "states" "missed";
+   }
+
+   script {
+      public missed;
+      public selected;
+      public not_first; /* can't call it 'first' as globals start as 0 */
+
+      public anim_states() {
+         new m = get_int(missed);
+         new s = get_int(selected);
+
+         if (m) {
+            if (s)
+               run_program(PROGRAM:"show_selected");
+            else
+               run_program(PROGRAM:"show_missed");
+         } else {
+            if (s)
+               run_program(PROGRAM:"show_selected");
+            else
+               run_program(PROGRAM:"show_default");
+         }
+      }
+
+      public set_missed(val) {
+         new m = get_int(missed);
+         new s = get_int(selected);
+
+         if (m == val) return;
+         set_int(missed, val);
+         m = val;
+
+         if (get_int(not_first)) {
+            if (m) {
+               if (s)
+                  run_program(PROGRAM:"animate_selected");
+               else
+                  run_program(PROGRAM:"animate_missed");
+            } else {
+               if (s)
+                  run_program(PROGRAM:"animate_selected");
+               else
+                  run_program(PROGRAM:"animate_default");
+            }
+         } else {
+            set_int(not_first, 1);
+            anim_states();
+         }
+      }
+
+      public set_selected(val) {
+         new s = get_int(selected);
+
+         if (s == val) return;
+         set_int(selected, val);
+
+         anim_states();
+      }
+   }
+
+   images {
+      image: "ico_arrow_right.png" COMP;
+      image: "ico_del.png" COMP;
+   }
+
+   parts{
+      part {
+         name: "bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            min: ACTION_WIDTH LIST_ITEM_HEIGHT;
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "text.call.name";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "call.swallow.more";
+               relative: 0.0 0.5;
+               offset: -ITEM_PADDING -1;
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.0 1.0;
+               ellipsis: 0.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "text.call.time";
+         type: TEXT;
+         scale: 1;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               relative: 0.0 0.5;
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 0.5 1.0;
+               offset: (-BORDER_PADDING - 1) (-ITEM_PADDING - 1);
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               align: 0.0 0.0;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "text.call.type";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 128;
+            color_class: "action";
+            rel1 {
+               relative: 0.5 0.5;
+               offset: 0 0;
+            }
+            rel2 {
+               to_x: "call.swallow.more";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - ITEM_PADDING) (-ITEM_PADDING - 1);
+            }
+            text {
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               align: 0.0 0.0;
+               ellipsis: 1.0;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "caution";
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "call.img.more";
+         type: IMAGE;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            rel1.to: "call.swallow.more";
+            rel2.to: "call.swallow.more";
+            color_class: "action";
+            image {
+               normal: "ico_arrow_right.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "missed" 0.0;
+            inherit: "default" 0.0;
+         }
+         description {
+            state: "selected" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+
+      part {
+         name: "call.swallow.more";
+         type: SWALLOW;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 1.0 0.5;
+            fixed: 1 1;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: -BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -1;
+            }
+         }
+      }
+   }
+
+   programs {
+      program {
+         signal: "elm,state,missed,active";
+         source: "elm";
+         script {
+            set_missed(1);
+         }
+      }
+      program {
+         signal: "elm,state,missed,passive";
+         source: "elm";
+         script {
+            set_missed(0);
+         }
+      }
+      program {
+         signal:  "elm,state,selected";
+         source:  "elm";
+         script {
+            set_selected(1);
+         }
+      }
+      program {
+         signal:  "elm,state,unselected";
+         source:  "elm";
+         script {
+            set_selected(0);
+         }
+      }
+
+      program {
+         name: "show_missed";
+         action: STATE_SET "missed" 0.0;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "show_default";
+         action: STATE_SET "default" 0.0;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "show_selected";
+         action: STATE_SET "selected" 0.0;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+
+      program {
+         name: "animate_missed";
+         action: STATE_SET "missed" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "animate_default";
+         action: STATE_SET "default" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+      program {
+         name: "animate_selected";
+         action: STATE_SET "selected" 0.0;
+         transition: DECELERATE 0.1;
+         target: "bg";
+         target: "text.call.name";
+         target: "text.call.time";
+         target: "text.call.type";
+         target: "call.img.more";
+      }
+   }
+}
+
+group {
+   name: "elm/genlist/item/history-delete/default";
+   alias: "elm/genlist/item_odd/history-delete/default";
+
+   data {
+      item: "contents" "call.swallow.delete";
+      item: "mode_part" "elm.swallow.decorate.content";
+   }
+
+   parts {
+      part {
+         name: "content.clipper";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            rel2 {
+               offset: (-BORDER_PADDING - LIST_ICON_SIZE - ITEM_PADDING - 1) -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.decorate.content";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         clip_to: "content.clipper";
+         description {
+            state: "default" 0.0;
+         }
+      }
+
+      part {
+         name: "call.swallow.delete";
+         type: SWALLOW;
+         mouse_events: 1;
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            fixed: 1 0;
+            align: 0.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+            }
+         }
+         description {
+            state: "decorated" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            align: 1.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: -BORDER_PADDING 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING -1;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "animate_decorated";
+            signal: "elm,state,decorate,enabled,effect";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            after: "animate_decorated2";
+         }
+         program {
+            name: "animate_decorated2";
+            action: STATE_SET "decorated" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "call.swallow.delete";
+         }
+
+         program {
+            name: "animate_default";
+            signal: "elm,state,decorate,disabled,effect";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.15;
+            target: "call.swallow.delete";
+            after: "animate_default2";
+         }
+         program {
+            name: "animate_default2";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+         }
+
+         program {
+            signal: "elm,state,decorate,enabled";
+            source: "elm";
+            action: STATE_SET "decorated" 0.0;
+            target: "content.clipper";
+            target: "call.swallow.delete";
+         }
+         program {
+            signal: "elm,state,decorate,disabled";
+            source: "elm";
+            action: STATE_SET "default" 0.0;
+            target: "content.clipper";
+            target: "call.swallow.delete";
+         }
+
+         program {
+            signal: "elm,state,slide,active";
+            source: "elm";
+            after: "animate_decorated";
+         }
+         program {
+            signal: "elm,state,slide,passive";
+            source: "elm";
+            after: "animate_default";
+         }
+      }
+   }
+}
+
+group {
+   name: "elm/button/base/history-delete";
+
+   parts {
+      part {
+         name: "area";
+         type: IMAGE;
+         description {
+            state: "default" 0.0;
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            color: 255 255 255 255;
+            color_class: "caution";
+            image {
+               normal: "ico_del.png";
+               scale_hint: STATIC;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 128;
+         }
+      }
+   }
+   programs {
+      program {
+         signal: "mouse,down,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,press" "";
+      }
+      program {
+         signal: "mouse,up,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,unpress" "";
+      }
+      program {
+         signal: "mouse,clicked,1";
+         source: "area";
+         action: SIGNAL_EMIT "elm,action,click" "";
+      }
+
+      program {
+         signal: "mouse,up,1";
+         source: "area";
+         action: STATE_SET "default" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "area";
+      }
+
+      program {
+         signal: "mouse,down,1";
+         source: "area";
+         action: STATE_SET "pressed" 0.0;
+         transition: ACCELERATE 0.1;
+         target: "area";
+      }
+   }
+}

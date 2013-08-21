@@ -1,22 +1,53 @@
-collections {
+#define WIDTH 600
+#define HEIGHT 720
 
-#include "includes/colors.edc"
-#include "includes/dialer.edc"
-#include "includes/keypad.edc"
-#include "includes/call.edc"
-#include "includes/contacts-bg.edc"
-#include "includes/contacts.edc"
-#include "includes/multiparty-list.edc"
-#include "includes/history.edc"
-#include "includes/history-bg.edc"
-#include "includes/scroller.edc"
-#include "includes/popup.edc"
-#include "includes/buttons.edc"
-#include "includes/answer_screen.edc"
-#include "includes/action_answer.edc"
+#define ACTION_WIDTH 240
+#define ACTION_HEIGHT 80
 
-#include "includes/messages.edc"
-#include "includes/compose.edc"
-#include "includes/messages-overview.edc"
-#include "includes/messages-overview-list.edc"
-}
+#define CALL_HEIGHT 130
+
+#define BORDER_PADDING 46
+#define ITEM_PADDING 16
+
+#define SEPARATOR_HEIGHT 2
+
+#define SCROLLBAR_WIDTH 16
+#define SCROLLBAR_HEIGHT 16
+
+#define LIST_ICON_SIZE 36
+#define LIST_ITEM_HEIGHT 120
+
+#define FONT_NORMAL "Verdana"
+#define FONT_BOLD "Verdana:style=Bold"
+#define SIZE_HUGE 99
+#define SIZE_LARGE 58
+#define SIZE_MEDIUM 43
+#define SIZE_SMALL 30
+#define SIZE_TINY 16
+
+#define CONTACT_PHOTO_SIZE 64
+#define LIST_CONTACT_HEIGHT 90
+
+#define GROUP_HEIGHT 30
+
+#define LOADING_SIZE 128
+
+#ifdef HAVE_TIZEN
+#define NOTIFICATION_BAR_HEIGHT 50
+#else
+#define NOTIFICATION_BAR_HEIGHT 0
+#endif
+
+#define CALL_TEXT_OFFSET 16
+#define CALL_PHOTO_SIZE 90
+
+#define MESSAGE_IMG_SENT_SIZE 40
+
+#define MESSAGE_IMG_SENT_Y_OFFSET 0
+
+#define MESSAGE_SEPARATOR_WIDTH 344
+#define MESSAGE_SEPARATOR_HEIGHT 32
+
+#define MULTI_BUTTON_ENTRY_MAX_SIZE 300
+
+#include "default/include.edc"

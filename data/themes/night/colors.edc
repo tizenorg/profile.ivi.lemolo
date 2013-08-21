@@ -5,15 +5,15 @@ color_classes {
    }
 
    color_class {
-      name: "dark";
+      name: "primary";
       color: 25 45 51 255;
    }
 
    color_class {
-      name: "light";
+      name: "secondary";
       color: 55 88 84 255;
    }
-#define TEXTBLOCK_COLOR_LIGHT "#375854"
+#define TEXTBLOCK_COLOR_SECONDARY "#375854"
 
    color_class {
       name: "action";

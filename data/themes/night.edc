@@ -4,17 +4,17 @@
 #define ACTION_WIDTH 240
 #define ACTION_HEIGHT 80
 
-#define CALL_HEIGHT 110
+#define CALL_HEIGHT 130
 
 #define BORDER_PADDING 46
 #define ITEM_PADDING 16
 
-#define SEPARATOR_HEIGHT 8
+#define SEPARATOR_HEIGHT 2
 
 #define SCROLLBAR_WIDTH 16
 #define SCROLLBAR_HEIGHT 16
 
-#define LIST_ICON_SIZE 56
+#define LIST_ICON_SIZE 36
 #define LIST_ITEM_HEIGHT 120
 
 #define FONT_NORMAL "Verdana"
@@ -50,4 +50,4 @@
 
 #define MULTI_BUTTON_ENTRY_MAX_SIZE 300
 
-#include "default.edc"
+#include "night/include.edc"

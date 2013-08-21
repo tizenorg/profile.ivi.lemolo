@@ -1,0 +1,21 @@
+collections {
+#include "colors.edc"
+#include "dialer.edc"
+#include "keypad.edc"
+#include "call.edc"
+#include "contacts-bg.edc"
+#include "contacts.edc"
+#include "multiparty-list.edc"
+#include "history.edc"
+#include "history-bg.edc"
+#include "scroller.edc"
+#include "popup.edc"
+#include "buttons.edc"
+#include "answer_screen.edc"
+#include "action_answer.edc"
+
+#include "messages.edc"
+#include "compose.edc"
+#include "messages-overview.edc"
+#include "messages-overview-list.edc"
+}

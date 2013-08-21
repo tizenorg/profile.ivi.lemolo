@@ -1,0 +1,306 @@
+group {
+   name: "elm/layout/ofono-efl/multiparty-details";
+
+   images {
+      image: "ico_multiparty_hangup.png" COMP;
+      image: "ico_multiparty_private.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: ACTION_WIDTH LIST_ITEM_HEIGHT;
+         }
+      }
+
+      part {
+         name: "hangup.ico";
+         type: IMAGE;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 0.0 0.5;
+            rel1.offset: BORDER_PADDING 0;
+            rel2 {
+               relative: 0.0 1.0;
+               offset: (LIST_ICON_SIZE + BORDER_PADDING - 1) -1;
+            }
+            image.normal: "ico_multiparty_hangup.png";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "secondary";
+         }
+      }
+
+      programs {
+         program {
+            signal: "mouse,down,1";
+            source: "hangup.ico";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "hangup.ico";
+         }
+
+         program {
+            signal: "mouse,up,1";
+            source: "hangup.ico";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "hangup.ico";
+         }
+
+         program {
+            signal: "mouse,clicked,1";
+            source: "hangup.ico";
+            action: SIGNAL_EMIT "clicked,hangup" "call";
+         }
+      }
+
+      part {
+         name: "private.clipper";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+         }
+         description {
+            state: "hidden" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "private.ico";
+         type: IMAGE;
+         mouse_events: 1;
+         clip_to: "private.clipper";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;
+            align: 0.0 0.5;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: (-LIST_ICON_SIZE -BORDER_PADDING - 1) 0;
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: (-BORDER_PADDING - 1) -1;
+            }
+            image.normal: "ico_multiparty_private.png";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "secondary";
+         }
+      }
+
+      part {
+         name: "private.label";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "private.clipper";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            align: 0.5 0.0;
+            fixed: 1 1;
+            rel1 {
+               to: "private.ico";
+               relative: 0.5 1.0;
+               offset: 0 2;
+            }
+            rel2 {
+               to_x: "private.ico";
+               relative: 0.5 1.0;
+               offset: -1 -1;
+            }
+            text {
+               text: "PRIVATE";
+               font: FONT_NORMAL;
+               size: SIZE_SMALL;
+               min: 1 1;
+               align: 0.5 0.0;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "secondary";
+         }
+      }
+
+      programs {
+         program {
+            signal: "mouse,down,1";
+            source: "private.ico";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "private.ico";
+            target: "private.label";
+         }
+
+         program {
+            signal: "mouse,up,1";
+            source: "private.ico";
+            action: STATE_SET "default" 0.0;
+            in: 0.1 0.0;
+            transition: DECELERATE 0.1;
+            target: "private.ico";
+            target: "private.label";
+         }
+
+         program {
+            name: "clicked_private_ico_phase1";
+            signal: "mouse,clicked,1";
+            source: "private.ico";
+            action: SIGNAL_EMIT "clicked,private" "call";
+         }
+
+         program {
+            signal: "show,private";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "private.clipper";
+         }
+         program {
+            signal: "hide,private";
+            source: "call";
+            action: STATE_SET "hidden" 0.0;
+            target: "private.clipper";
+         }
+      }
+
+      part {
+         name: "elm.text.name";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         api: "name" "party name";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to_x: "hangup.ico";
+               relative: 1.0 0.0;
+               offset: ITEM_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "private.ico";
+               relative: 0.0 0.5;
+               offset: (-ITEM_PADDING - 1) 0;
+            }
+            text {
+               text: "Name Here";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.0 1.0;
+               ellipsis: 0.0;
+               min: 0 1;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 0 0 255;
+            visible: 0;
+         }
+      }
+
+      part {
+         name: "elm.text.number";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         api: "number" "party number";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "secondary";
+            rel1 {
+               to_x: "hangup.ico";
+               relative: 1.0 0.5;
+               offset: ITEM_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "private.ico";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - 1) (-ITEM_PADDING - 1);
+            }
+            text {
+               text: "3333-4444";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_SMALL SIZE_MEDIUM;
+               ellipsis: 1.0;
+               min: 0 1;
+               fit: 1 0;
+               align: -1.0 0.0;
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color_class: "action";
+            rel1 {
+               to_x: "hangup.ico";
+               relative: 1.0 0.0;
+               offset: ITEM_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to_x: "private.ico";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - 1) (-ITEM_PADDING - 1);
+            }
+            text {
+               text: "3333-4444";
+               font: FONT_NORMAL;
+               size: SIZE_LARGE;
+               size_range: SIZE_SMALL SIZE_LARGE;
+               ellipsis: 1.0;
+               min: 0 1;
+               fit: 1 0;
+               align: -1.0 0.5;
+            }
+         }
+      }
+
+      programs {
+         program {
+            signal: "show,name";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "elm.text.name";
+            target: "elm.text.number";
+         }
+
+         program {
+            signal: "hide,name";
+            source: "call";
+            action: STATE_SET "alternate" 0.0;
+            target: "elm.text.name";
+            target: "elm.text.number";
+         }
+      }
+   }
+}

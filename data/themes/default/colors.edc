@@ -1,0 +1,34 @@
+color_classes {
+   color_class {
+      name: "bg";
+      color: 255 255 255 255;
+   }
+
+   color_class {
+      name: "primary";
+      color: 225 225 225 255;
+   }
+
+   color_class {
+      name: "secondary";
+      color: 120 120 120 255;
+   }
+#define TEXTBLOCK_COLOR_SECONDARY "#787878"
+
+   color_class {
+      name: "action";
+      color: 36 36 36 255;
+   }
+#define TEXTBLOCK_COLOR_ACTION "#242424"
+
+   color_class {
+      name: "caution";
+      color: 193 39 44 255;
+   }
+#define TEXTBLOCK_COLOR_CAUTION "#c1272c"
+
+   color_class {
+      name: "disabled";
+      color: 255 255 255 64;
+   }
+}

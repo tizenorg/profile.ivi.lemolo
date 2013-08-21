@@ -163,7 +163,7 @@ endif
 filesdir = $(pkgdatadir)/themes
 files_DATA = \
 data/themes/default.edj \
-data/themes/default-sd.edj
+data/themes/night.edj
 
 AM_V_EDJ = $(am__v_EDJ_$(V))
 am__v_EDJ_ = $(am__v_EDJ_$(AM_DEFAULT_VERBOSITY))
@@ -208,48 +208,70 @@ data/themes/images/loading_6.png \
 data/themes/images/loading_7.png
 
 THEME_INCLUDES = \
-data/themes/includes/action_answer.edc \
-data/themes/includes/answer_screen.edc \
-data/themes/includes/buttons.edc \
-data/themes/includes/call.edc \
-data/themes/includes/colors.edc \
-data/themes/includes/compose.edc \
-data/themes/includes/contacts-bg.edc \
-data/themes/includes/contacts.edc \
-data/themes/includes/dialer.edc \
-data/themes/includes/history-bg.edc \
-data/themes/includes/history.edc \
-data/themes/includes/keypad.edc \
-data/themes/includes/messages-overview-list.edc \
-data/themes/includes/messages-overview.edc \
-data/themes/includes/messages.edc \
-data/themes/includes/multiparty-list.edc \
-data/themes/includes/popup.edc \
-data/themes/includes/scroller.edc
+data/themes/default/action_answer.edc \
+data/themes/default/answer_screen.edc \
+data/themes/default/buttons.edc \
+data/themes/default/call.edc \
+data/themes/default/colors.edc \
+data/themes/default/compose.edc \
+data/themes/default/contacts-bg.edc \
+data/themes/default/contacts.edc \
+data/themes/default/dialer.edc \
+data/themes/default/history-bg.edc \
+data/themes/default/history.edc \
+data/themes/default/include.edc \
+data/themes/default/keypad.edc \
+data/themes/default/messages-overview-list.edc \
+data/themes/default/messages-overview.edc \
+data/themes/default/messages.edc \
+data/themes/default/multiparty-list.edc \
+data/themes/default/popup.edc \
+data/themes/default/scroller.edc
 
+NIGHT_THEME_INCLUDES = \
+data/themes/night/action_answer.edc \
+data/themes/night/answer_screen.edc \
+data/themes/night/buttons.edc \
+data/themes/night/call.edc \
+data/themes/night/colors.edc \
+data/themes/night/compose.edc \
+data/themes/night/contacts-bg.edc \
+data/themes/night/contacts.edc \
+data/themes/night/dialer.edc \
+data/themes/night/history-bg.edc \
+data/themes/night/history.edc \
+data/themes/night/include.edc \
+data/themes/night/keypad.edc \
+data/themes/night/messages-overview-list.edc \
+data/themes/night/messages-overview.edc \
+data/themes/night/messages.edc \
+data/themes/night/multiparty-list.edc \
+data/themes/night/popup.edc \
+data/themes/night/scroller.edc
 
 EXTRA_DIST += \
-data/themes/default-hd.edc \
-data/themes/default-sd.edc \
 data/themes/default.edc \
-$(THEME_INCLUDES) $(THEME_IMAGES)
+data/themes/night.edc \
+$(THEME_INCLUDES) \
+$(NIGHT_THEME_INCLUDES) \
+$(THEME_IMAGES)
 
 
-data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(top_srcdir)/data/themes/default-hd.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+data/themes/default.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(THEME_INCLUDES) $(THEME_IMAGES)
 	$(MKDIR_P) $(top_builddir)/data/themes
 	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
-	$(top_srcdir)/data/themes/default-hd.edc \
+	$(top_srcdir)/data/themes/default.edc \
 	$(top_builddir)/data/themes/default.edj
 
-data/themes/default-sd.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/default.edc $(top_srcdir)/data/themes/default-sd.edc $(THEME_INCLUDES) $(THEME_IMAGES)
+data/themes/night.edj: $(top_builddir)/Makefile $(top_srcdir)/data/themes/night.edc $(NIGHT_THEME_INCLUDES) $(THEME_IMAGES)
 	$(MKDIR_P) $(top_builddir)/data/themes
 	$(AM_V_EDJ)$(EDJE_CC) $(EDJE_FLAGS) \
-	$(top_srcdir)/data/themes/default-sd.edc \
-	$(top_builddir)/data/themes/default-sd.edj
+	$(top_srcdir)/data/themes/night.edc \
+	$(top_builddir)/data/themes/night.edj
 
 clean-local:
 	rm -f $(top_builddir)/data/themes/default.edj
-	rm -f $(top_builddir)/data/themes/default-sd.edj
+	rm -f $(top_builddir)/data/themes/night.edj
 
 examplesdir = $(pkgdatadir)/examples
 examples_DATA = \

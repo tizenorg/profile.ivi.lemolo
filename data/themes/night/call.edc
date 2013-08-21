@@ -1,0 +1,2435 @@
+group {
+   name: "elm/layout/ofono-efl/call";
+
+   /*
+    * Represents the dialer ongoing voice call(s) screen.
+    *
+    * Parts:
+    *   TEXT: elm.text.<CALL>.name
+    *   TEXT: elm.text.<CALL>.status
+    *   TEXT: elm.text.<CALL>.elapsed
+    *   TEXT: elm.text.<CALL>.phone.type
+    *   TEXT: elm.text.waiting
+    *   SWALLOW: elm.swallow.multiparty-details
+    *
+    * Signals:
+    *   Emit (source is "call"):
+    *     pressed,<ID>:  key <ID> was pressed
+    *     released,<ID>: key <ID> was released
+    *     clicked,<ID>:  key <ID> was clicked (press and release in the key)
+    *   Listen (source is "call"):
+    *     show,answer:            show "answer" action
+    *     hide,answer:            hide "answer" action
+    *     show,waiting:           show call waiting popup (hold+answer...)
+    *     hide,waiting:           hide call waiting popup
+    *     show,<CALL>,elapsed:    have elapsed (elm.text.<CALL>.elapsed)
+    *     hide,<CALL>,elapsed:    don't have elapsed and it should be hidden
+    *     show,<CALL>,multiparty: call is multiparty
+    *     hide,<CALL>,multiparty: call is not multiparty
+    *     state,<CALL>,<STATE>:   state changed to <STATE>
+    *     disable,<ID>:           disable action <ID>
+    *     enable,<ID>:            enable action <ID>
+    *     toggle,on,<ID>:         mark toggle action <ID> as selected
+    *     toggle,off,<ID>:        mark toggle action <ID> as unselected
+    *     show,multiparty-details: ask the multiparty details to be visible
+    *     hide,multiparty-details: ask the multiparty details to be hidden
+    *     calls,1                  single call mode
+    *     calls,2                  two calls mode
+    *
+    * Messages:
+    *     1 - FLOAT: speaker volume 0.0-1.0
+    *     2 - FLOAT: microphone volume 0.0-1.0
+    *     11 - FLOAT: elapsed time in seconds (> 0.0) for call #1
+    *     12 - FLOAT: elapsed time in seconds (> 0.0) for call #2
+    *
+    * Where <ID> is: numbers 0 to 9, star, hash, mute, keypad,
+    * speaker, add-call, merge, swap, contacts, answer, hangup,
+    * waiting-hangup, hold-answer, hangup-answer, <CALL>,multiparty,
+    * multiparty-details, actions.
+    *
+    * Where <STATE> is: disconnected, active, held, dialing, alerting,
+    * incoming, waiting.
+    *
+    * Where <CALL> is: 1 or 2.
+    */
+
+   min: WIDTH HEIGHT;
+
+   images {
+      image: "bg_call.jpg" COMP;
+      image: "ico_mute.png" COMP;
+      image: "ico_keypad.png" COMP;
+      image: "ico_speaker.png" COMP;
+      image: "ico_add_call.png" COMP;
+      image: "ico_merge.png" COMP;
+      image: "ico_swap.png" COMP;
+      image: "ico_contacts.png" COMP;
+      image: "ico_arrow_right.png" COMP;
+   }
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "primary";
+            min: WIDTH HEIGHT;
+         }
+      }
+
+      part {
+         name: "notification.bar";
+         type: RECT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 255;
+            rel1.relative: 0.0 0.0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: -1 NOTIFICATION_BAR_HEIGHT;
+            }
+         }
+      }
+
+#define SEPARATOR(id, clip, rely, offy, relto)                          \
+      part {                                                            \
+         name: "separator.primary."##id;                                \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "primary";                                     \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 offy;                                          \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT / 2);                \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "separator.bg."##id;                                     \
+         type: RECT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: clip;                                                 \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "bg";                                          \
+            rel1 {                                                      \
+               relative: 0.0 rely;                                      \
+               offset: 0 (offy + SEPARATOR_HEIGHT / 2);                 \
+               to_y: relto;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               relative: 1.0 rely;                                      \
+               offset: -1 (offy + SEPARATOR_HEIGHT);                    \
+               to_y: relto;                                             \
+            }                                                           \
+         }                                                              \
+      }
+
+#define CALL(id, offy)                                                  \
+      part {                                                            \
+         name: "call."##id;                                             \
+         type: RECT;                                                    \
+         clip_to: "clipper.multiparty-details-hidden";                  \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            rel1 {                                                      \
+               to: "notification.bar";                                  \
+               relative: 0.0 1.0;                                       \
+               offset: 0 (-SEPARATOR_HEIGHT + offy);                    \
+            }                                                           \
+            rel2 {                                                      \
+               to: "notification.bar";                                  \
+               relative: 1.0 1.0;                                       \
+               offset: -1 (CALL_HEIGHT + offy);                         \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      SEPARATOR("call."##id, "call."##id, 0.0, 0, "call."##id);         \
+                                                                        \
+      part {                                                            \
+         name: "clipper."##id".multiparty";                             \
+         type: RECT;                                                    \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "multiparty" 0.0;                                    \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id".multiparty";                              \
+         type: IMAGE;                                                   \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id".multiparty";                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: LIST_ICON_SIZE LIST_ICON_SIZE;				\
+            max: LIST_ICON_SIZE LIST_ICON_SIZE;                         \
+            rel1 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 0.0;                                       \
+               offset: (-LIST_ICON_SIZE - BORDER_PADDING) 0;            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 1.0;                                       \
+               offset: (-BORDER_PADDING -1) -1;                         \
+            }                                                           \
+            image.normal: "ico_arrow_right.png";                        \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "secondary";                                   \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id".multiparty";                         \
+            action: SIGNAL_EMIT "released,"##id",multiparty" "call";    \
+            after: "show_up_"##id"_multiparty";                         \
+            api: ""##id"_multiparty_released"                           \
+               "call #"##id" multiparty was released";                  \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id"_multiparty";                          \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id".multiparty";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id".multiparty";                         \
+            after: "show_down_"##id"_multiparty";                       \
+            action: SIGNAL_EMIT "pressed,"##id",multiparty" "call";     \
+            api: ""##id"_multiparty_pressed"                            \
+               "call #"##id" multiparty was pressed";                   \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id"_multiparty";                        \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id".multiparty";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id".multiparty";                         \
+            action: SIGNAL_EMIT "clicked,"##id",multiparty" "call";     \
+            api: ""##id"_multiparty_clicked"                            \
+               "call #"##id" multiparty was clicked";                   \
+         }                                                              \
+                                                                        \
+         program {                                                      \
+            signal: "show,"##id",multiparty";                           \
+            source: "call";                                             \
+            action: STATE_SET "multiparty" 0.0;                         \
+            target: "clipper."##id".multiparty";                        \
+            target: "area."##id".name";                                 \
+            api: ""##id"_multiparty_show"                               \
+               "call #"##id" make multiparty visible";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "hide,"##id",multiparty";                           \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper."##id".multiparty";                        \
+            target: "area."##id".name";                                 \
+            api: ""##id"_multiparty_hide"                               \
+               "call #"##id" make multiparty hidden";                   \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {								\
+         name: "area."##id".name";                                      \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            rel1 {                                                      \
+               to: "call."##id;                                         \
+               offset: BORDER_PADDING SEPARATOR_HEIGHT;                 \
+            }                                                           \
+            rel2 {                                                      \
+               to: "call."##id;                                         \
+               relative: 1.0 0.0;                                       \
+               offset: (-BORDER_PADDING - 1) (ACTION_HEIGHT - 1);       \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "multiparty" 0.0;                                    \
+            inherit: "default" 0.0;                                     \
+            rel2.offset: (-BORDER_PADDING - ITEM_PADDING -LIST_ICON_SIZE - 1) (ACTION_HEIGHT - 1); \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "elm.text."##id".name";                                  \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: ""##id"_name" "remote party call name (call #"##id")";    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 0.0;                                       \
+               offset: ITEM_PADDING 0;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area."##id".name";                                  \
+               relative: 1.0 1.0;                                       \
+               offset: -1 -CALL_TEXT_OFFSET;                            \
+            }                                                           \
+            text {                                                      \
+               text: "Gustavo Barbieri";                                \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               size_range: SIZE_MEDIUM SIZE_MEDIUM;                     \
+               fit: 1 1;                                                \
+               max: 0 1;                                                \
+               align: 0.0 1.0;                                          \
+               ellipsis: 0.0;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "held" 0.0;                                          \
+            inherit: "default" 0.0;                                     \
+            color_class: "secondary";                                   \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.text."##id".status";                                \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: ""##id"_status" "call status (call #"##id")";             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "secondary";                                   \
+            fixed: 1 1;                                                 \
+            align: 0.0 0.0;                                             \
+            rel1 {                                                      \
+               to_x: "elm.swallow.img."##id;                            \
+               to_y: "elm.text."##id".name";                            \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -SEPARATOR_HEIGHT;                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -1;                                 \
+            }                                                           \
+            text {                                                      \
+               text: "calling...";                                      \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               min: 1 1;                                                \
+               align: 0.0 0.0;                                          \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.text."##id".elapsed";                               \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         api: "1_elapsed" "call elapsed formatted time (call #"##id")"; \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "secondary";                                       \
+            fixed: 1 1;                                                 \
+            align: 0.0 0.0;                                             \
+            rel1 {                                                      \
+               to: "elm.text."##id".status";                            \
+               relative: 1.0 0.0;                                       \
+               offset: ITEM_PADDING 0;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.text."##id".status";                            \
+               relative: 1.0 1.0;                                       \
+               offset: ITEM_PADDING -1;                                 \
+            }                                                           \
+            text {                                                      \
+               text: "01:23";                                           \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               min: 1 1;                                                \
+               align: 0.0 0.0;                                          \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.swallow.border."##id;                               \
+         type: RECT;                                                    \
+         scale: 1;                                                      \
+         mouse_events: 0;                                               \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 0.0 0.0;                                       \
+               offset: -1 -1;                                           \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: 0 0;                                             \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.swallow.img.bg".#id;                                \
+         type: RECT;                                                    \
+         scale: 1;                                                      \
+         mouse_events: 0;                                               \
+         clip_to: "call."##id;                                          \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "primary";                                     \
+            rel1 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 0.0 0.0;                                       \
+               offset: 0 0;                                             \
+            }                                                           \
+            rel2 {                                                      \
+               to: "elm.swallow.img."##id;                              \
+               relative: 1.0 1.0;                                       \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      part {                                                            \
+         name: "elm.swallow.img."##id;                                  \
+         type: SWALLOW;                                                 \
+         scale: 1;                                                      \
+         clip_to: "call."##id;                                          \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            visible: 1;                                                 \
+            min: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;                       \
+            max: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;                       \
+            rel1 {                                                      \
+               to: "area."##id."name";                                  \
+               relative: 0.0 0.0;                                       \
+               offset: 0 ITEM_PADDING;                                  \
+            }                                                           \
+            rel2 {                                                      \
+               to: "area."##id."name";                                  \
+               relative: 0.0 0.0;                                       \
+               offset: CALL_PHOTO_SIZE (CALL_PHOTO_SIZE + ITEM_PADDING); \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+                                                                        \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "area."##id".name";                                 \
+            action: SIGNAL_EMIT "clicked,swap" "call";                  \
+         }                                                              \
+         program {                                                      \
+            signal: "state,"##id",held";                                \
+            source: "call";                                             \
+            action: STATE_SET "held" 0.0;                               \
+            transition: ACCELERATE 0.1;                                 \
+            target: "elm.text."##id".name";                             \
+         }                                                              \
+         program {                                                      \
+            signal: "state,"##id",active";                              \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "elm.text."##id".name";                             \
+         }                                                              \
+                                                                        \
+      }
+
+      CALL("1", 0);
+      CALL("2", CALL_HEIGHT + SEPARATOR_HEIGHT);
+
+      programs {
+         program {
+            signal: "calls,1";
+            source: "call";
+            action: STATE_SET "hidden" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "call.2";
+         }
+         program {
+            signal: "calls,2";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.1;
+            target: "call.2";
+         }
+      }
+
+      SEPARATOR("actions", "clipper.actions", 0.0, -SEPARATOR_HEIGHT, "bg.actions");
+
+      part {
+         name: "bg.actions";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: WIDTH ACTION_HEIGHT;
+            max: WIDTH 99999; /* keep it tight centered */
+            fixed: 1 1;
+            rel1 {
+               to: "bg.buttons";
+               relative: 0.0 0.0;
+               offset: 0 (-ACTION_HEIGHT - SEPARATOR_HEIGHT);
+            }
+            rel2 {
+               to: "bg.buttons";
+               relative: 1.0 0.0;
+               offset: -1 -SEPARATOR_HEIGHT;
+            }
+         }
+      }
+      part {
+         name: "clipper.actions";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      programs {
+         program {
+            name: "enable,actions1";
+            signal: "enable,actions";
+            source: "call";
+            action: ACTION_STOP;
+            target: "disable,actions1";
+            target: "disable,actions2";
+            after: "enable,actions2";
+         }
+         program {
+            name: "enable,actions2";
+            action: STATE_SET "visible" 0.0;
+            transition: DECELERATE 0.3;
+            target: "clipper.actions";
+         }
+
+         program {
+            name: "disable,actions1";
+            signal: "disable,actions";
+            source: "call";
+            action: ACTION_STOP;
+            target: "enable,actions1";
+            target: "enable,actions2";
+            after: "disable,actions2";
+         }
+         program {
+            name: "disable,actions2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.actions";
+         }
+      }
+
+#define ACTION_BUTTON(id, img, r1, r2)                                  \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.actions";                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            color_class: "disabled";                                    \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;				\
+            max: ACTION_HEIGHT ACTION_HEIGHT;				\
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.ico."##id;                                       \
+         type: IMAGE;                                                   \
+         mouse_events: 0;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "ico_"##img".png";                            \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "disable,"##id;                                     \
+            source: "call";                                             \
+            action: STATE_SET "disabled" 0.0;                           \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_disable" "disable "##id;                           \
+         }                                                              \
+         program {                                                      \
+            signal: "enable,"##id;                                      \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_enable" "enable "##id;                             \
+         }                                                              \
+      }
+
+#define ACTION_HIDEABLE(id, img, r1, r2)                                \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.actions";                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.ico."##id;                                       \
+         type: IMAGE;                                                   \
+         mouse_events: 0;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "ico_"##img".png";				\
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+         program {                                                      \
+            name: "hide_"##id;                                          \
+            signal: "hide,"##id;                                        \
+            source: "call";                                             \
+            action: STATE_SET "hidden" 0.0;                             \
+            target: "clipper."##id;                                     \
+            api: id"_hide" "hide "##id;                                 \
+         }                                                              \
+         program {                                                      \
+            name: "show_"##id;                                          \
+            signal: "show,"##id;                                        \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper."##id;                                     \
+            api: id"_show" "show "##id;                                 \
+         }                                                              \
+      }
+
+#define ACTION_TOGGLE(id, img, r1, r2)                                  \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.actions";                                    \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            color_class: "disabled";                                    \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.toggle."##id;                                \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.ico."##id;                                       \
+         type: IMAGE;                                                   \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.toggle."##id;                                \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+            image.normal: "ico_"##img".png";				\
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "clipper.toggle."##id;                                   \
+         type: RECT;                                                    \
+         clip_to: "clipper."##id;                                       \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.toggle."##id;                                    \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            visible: 0;                                                 \
+            rel1 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.actions";                                        \
+               relative: r2;                                            \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button.toggle.ico."##id;                                \
+         type: IMAGE;                                                   \
+         mouse_events: 0;                                               \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "action";                                      \
+            min: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            max: ACTION_HEIGHT ACTION_HEIGHT;                           \
+            fixed: 1 1;                                                 \
+            visible: 0;                                                 \
+            rel1.to: "button.toggle."##id;                              \
+            rel2.to: "button.toggle."##id;                              \
+            image.normal: "ico_"##img".png";				\
+         }                                                              \
+         description {                                                  \
+            state: "on" 0.0;                                            \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "blocker."##id;                                          \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 0 0 0 0;                                             \
+            visible: 0;                                                 \
+            rel1.to: "button."##id;                                     \
+            rel2.to: "button."##id;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "disabled" 0.0;                                      \
+            inherit: "default" 0.0;                                     \
+            visible: 1;                                                 \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            api: id"_released" id" was released";                       \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "button.ico."##id;                                  \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button.toggle."##id;                               \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+         program {                                                      \
+            signal: "disable,"##id;                                     \
+            source: "call";                                             \
+            action: STATE_SET "disabled" 0.0;                           \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_disable" "disable "##id;                           \
+         }                                                              \
+         program {                                                      \
+            signal: "enable,"##id;                                      \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "blocker."##id;                                     \
+            target: "clipper."##id;                                     \
+            api: id"_enable" "enable "##id;                             \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,on,"##id;                                   \
+            source: "call";                                             \
+            action: STATE_SET "on" 0.0;                                 \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+            target: "button.toggle.ico."##id;                           \
+            api: id"_toggle_on" "toggle on "##id;                       \
+         }                                                              \
+         program {                                                      \
+            signal: "toggle,off,"##id;                                  \
+            source: "call";                                             \
+            action: STATE_SET "default" 0.0;                            \
+            target: "clipper.toggle."##id;                              \
+            target: "button.toggle."##id;                               \
+            target: "button.toggle.ico."##id;                           \
+            api: id"_toggle_off" "toggle off "##id;                     \
+         }                                                              \
+      }
+
+      ACTION_TOGGLE("mute",    "mute",    0.00 0.0, 0.25 1.0);
+      ACTION_TOGGLE("speaker", "speaker", 0.25 0.0, 0.50 1.0);
+      ACTION_BUTTON("keypad",  "keypad",  0.50 0.0, 0.75 1.0);
+
+      ACTION_HIDEABLE("merge",    "merge",  0.75 0.0, 1.0 1.0);
+      ACTION_HIDEABLE("add-call", "add_call", 0.75 0.0, 1.0 1.0);
+
+#undef ACTION_BUTTON
+#undef ACTION_TOGGLE
+
+      SEPARATOR("answer", "clipper.answer", 0.0, -SEPARATOR_HEIGHT, "button.answer");
+      SEPARATOR("hangup", "clipper.multiparty-details-hidden", 0.0, -SEPARATOR_HEIGHT, "button.hangup");
+
+      programs {
+         program {
+            signal: "enable,merge";
+            source: "call";
+            after: "hide_add-call";
+            after: "show_merge";
+         }
+         program {
+            signal: "disable,merge";
+            source: "call";
+            after: "show_add-call";
+            after: "hide_merge";
+         }
+      }
+
+      part {
+         name: "clipper.keypad-hidden";
+         type: RECT;
+         clip_to: "clipper.multiparty-details-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.keypad-visible";
+         type: RECT;
+         clip_to: "clipper.multiparty-details-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+            rel2.offset: -1 (-ACTION_HEIGHT - SEPARATOR_HEIGHT);
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+
+
+      /* keypad */
+      SEPARATOR("hide-keypad", "clipper.keypad-visible", 0.0, -SEPARATOR_HEIGHT, "button.hide-keypad");
+      SEPARATOR("keypad", "clipper.keypad-visible", 0.0, -SEPARATOR_HEIGHT, "bg.keypad");
+
+      part {
+         name: "bg.keypad";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            min: WIDTH (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT);
+            max: WIDTH (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT); /* keep it tight centered */
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 0 (-HEIGHT + 2 * CALL_HEIGHT + 2 * ACTION_HEIGHT + 3 * SEPARATOR_HEIGHT);
+               to_y: "button.hide-keypad";
+            }
+            rel2 {
+               relative: 1.0 0.0;
+               offset: 0 (-SEPARATOR_HEIGHT - 1);
+               to_y: "button.hide-keypad";
+            }
+         }
+      }
+#define BUTTON(id, label, sub, ccls, r1, r2)                            \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: "action";                                      \
+            rel1 {                                                      \
+               to: "bg.keypad";                                         \
+               relative: r1;                                            \
+            }                                                           \
+            rel2 {                                                      \
+               to: "bg.keypad";                                         \
+               relative: r2;                                            \
+               offset: -2 -2;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: ccls;                                          \
+            rel1.to: "button."##id;                                     \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+               relative: 1.0 0.8;                                       \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_MEDIUM;                                       \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "sub."##id;                                              \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper.keypad-visible";                             \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: "secondary";                                   \
+            rel1 {                                                      \
+               to: "button."##id;                                       \
+               relative: 0.0 0.5;                                       \
+               offset: 0 2;                                             \
+            }                                                           \
+            rel2.to: "button."##id;                                     \
+            text {                                                      \
+               text: sub;                                               \
+               font: FONT_BOLD;                                         \
+               size: SIZE_TINY;                                         \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 16 16 16 255;                                        \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            after: "show_up_"##id;                                      \
+            api: id"_released" id" was released";                       \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.3;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+            target: "sub."##id;                                         \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("1",    "1",     "", "action", 0.000 0.0, 0.333 0.25);
+      BUTTON("2",    "2",  "ABC", "action", 0.333 0.0, 0.666 0.25);
+      BUTTON("3",    "3",  "DEF", "action", 0.666 0.0, 1.000 0.25);
+
+      BUTTON("4",    "4",  "GHI", "action", 0.000 0.25, 0.333 0.50);
+      BUTTON("5",    "5",  "JKL", "action", 0.333 0.25, 0.666 0.50);
+      BUTTON("6",    "6",  "MNO", "action", 0.666 0.25, 1.000 0.50);
+
+      BUTTON("7",    "7", "PQRS", "action", 0.000 0.50, 0.333 0.75);
+      BUTTON("8",    "8",  "TUV", "action", 0.333 0.50, 0.666 0.75);
+      BUTTON("9",    "9", "WXYZ", "action", 0.666 0.50, 1.000 0.75);
+
+      BUTTON("star", "*",     "", "secondary",  0.000 0.75, 0.333 1.00);
+      BUTTON("0",    "0",    "+", "action", 0.333 0.75, 0.666 1.00);
+      BUTTON("hash", "#",     "", "secondary",  0.666 0.75, 1.000 1.00);
+#undef BUTTON
+
+      part {
+         name: "area.hide-keypad";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT);
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 (HEIGHT - 2 * CALL_HEIGHT - 2 * ACTION_HEIGHT - 4 * SEPARATOR_HEIGHT - 1);
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 -SEPARATOR_HEIGHT;
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 (-SEPARATOR_HEIGHT - 1);
+            }
+         }
+      }
+      part {
+         name: "button.hide-keypad";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            rel1.to_y: "area.hide-keypad";
+            rel2.to_y: "area.hide-keypad";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "label.hide-keypad";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.hide-keypad";
+            rel2.to: "button.hide-keypad";
+            text {
+               text: "Hide Keypad";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "active,disconnected";
+            source: "call";
+            after: "hide_keypad";
+         }
+         program {
+            name: "hide_keypad";
+            signal: "clicked,hangup";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "clipper.keypad-visible";
+            target: "clipper.keypad-hidden";
+            target: "area.hide-keypad";
+         }
+
+         program {
+            signal: "mouse,up,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.hide-keypad";
+            target: "label.hide-keypad";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.hide-keypad";
+            target: "label.hide-keypad";
+         }
+
+         program {
+            name: "hide-keypad-phase1";
+            signal: "mouse,clicked,1";
+            source: "button.hide-keypad";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-visible";
+            target: "area.hide-keypad";
+            after: "hide-keypad-phase2";
+         }
+         program {
+            name: "hide-keypad-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-hidden";
+         }
+
+         program {
+            name: "show-keypad-phase1";
+            signal: "mouse,clicked,1";
+            source: "button.keypad";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.keypad-hidden";
+            after: "show-keypad-phase2";
+         }
+         program {
+            name: "show-keypad-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "area.hide-keypad";
+            target: "clipper.keypad-visible";
+         }
+      }
+
+      /* buttons */
+      part {
+         name: "bg.buttons";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            rel1.to: "area.answer";
+            rel2.to: "button.hangup";
+         }
+      }
+
+      part {
+         name: "clipper.answer";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.keypad-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "area.answer";
+         type: RECT;
+         mouse_events: 0;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1.to_y: "button.hangup";
+            rel2.to_y: "button.hangup";
+         }
+         description {
+            state: "visible" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               to_y: "button.hangup";
+               relative: 0.0 -1.0;
+               offset: 0 -SEPARATOR_HEIGHT;
+            }
+            rel2 {
+               to_y: "button.hangup";
+               relative: 1.0 0.0;
+               offset: -1 (-SEPARATOR_HEIGHT - 1);
+            }
+         }
+      }
+      part {
+         name: "button.answer";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "action";
+            rel1.to_y: "area.answer";
+            rel2.to_y: "area.answer";
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "label.answer";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.answer";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.answer";
+            rel2.to: "button.answer";
+            text {
+               text: "Answer";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.answer";
+            action: SIGNAL_EMIT "released,answer" "call";
+            after: "show_up_answer";
+            api: "answer_released" "answer was released";
+         }
+         program {
+            name: "show_up_answer";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.answer";
+            target: "label.answer";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.answer";
+            after: "show_down_answer";
+            action: SIGNAL_EMIT "pressed,answer" "call";
+            api: "answer_pressed" "answer was pressed";
+         }
+         program {
+            name: "show_down_answer";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.answer";
+            target: "label.answer";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.answer";
+            action: SIGNAL_EMIT "clicked,answer" "call";
+            api: "answer_clicked" "answer was clicked";
+         }
+
+         program {
+            signal: "show,answer";
+            source: "call";
+            action: STATE_SET "visible" 0.0;
+            target: "area.answer";
+            target: "clipper.answer";
+            api: "answer_show" "make answer button visible";
+         }
+         program {
+            signal: "hide,answer";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "area.answer";
+            target: "clipper.answer";
+            api: "answer_hide" "make answer button hidden";
+         }
+      }
+
+      part {
+         name: "button.hangup";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.multiparty-details-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            color_class: "caution";
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -ACTION_HEIGHT;
+            }
+            rel2 {
+               relative: 1 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+         }
+      }
+      part {
+         name: "label.hangup";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.multiparty-details-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "caution";
+            rel1.to: "button.hangup";
+            rel2.to: "button.hangup";
+            text {
+               text: "Hangup";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.hangup";
+            action: SIGNAL_EMIT "released,hangup" "call";
+            api: "hangup_released" "hangup was released";
+            after: "show_up_hangup";
+         }
+         program {
+            name: "show_up_hangup";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.hangup";
+            target: "label.hangup";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.hangup";
+            after: "show_down_hangup";
+            action: SIGNAL_EMIT "pressed,hangup" "call";
+            api: "hangup_pressed" "hangup was pressed";
+         }
+         program {
+            name: "show_down_hangup";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.hangup";
+            target: "label.hangup";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.hangup";
+            action: SIGNAL_EMIT "clicked,hangup" "call";
+            api: "hangup_clicked" "hangup was clicked";
+         }
+      }
+
+      /* multiparty options */
+      part {
+         name: "clipper.multiparty-details-hidden";
+         type: RECT;
+         clip_to: "clipper.waiting-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.multiparty-details-visible";
+         type: RECT;
+         clip_to: "clipper.waiting-hidden";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "label.multiparty";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            align: 0.0 0.5;
+            rel1.offset: BORDER_PADDING 0;
+            rel2 {
+               relative: 1.0 0.0;
+               offset: (-BORDER_PADDING - 1) ACTION_HEIGHT;
+            }
+            text {
+               text: "Conference";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_MEDIUM;
+               fit: 1 1;
+               align: 0.5 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+      SEPARATOR("multiparty-details", "clipper.multiparty-details-visible", 0.0, -SEPARATOR_HEIGHT, "elm.swallow.multiparty-details");
+
+      part {
+         name: "elm.swallow.multiparty-details";
+         type: SWALLOW;
+         mouse_events: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         api: "multiparty_details" "swallow to hold the multiparty details";
+         description {
+            state: "default" 0.0;
+            visible: 0;
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 (ACTION_HEIGHT + SEPARATOR_HEIGHT);
+            }
+            rel2 {
+               relative: 1.0 2.0;
+               offset: -1 (-ACTION_HEIGHT - SEPARATOR_HEIGHT);
+            }
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1 {
+               relative: 0.0 0.0;
+               offset: 0 (ACTION_HEIGHT + SEPARATOR_HEIGHT);
+            }
+            rel2 {
+               relative: 1.0 1.0;
+               offset: -1 (-ACTION_HEIGHT - SEPARATOR_HEIGHT);
+            }
+         }
+      }
+
+      SEPARATOR("multiparty-details-back", "clipper.multiparty-details-visible", 0.0, -SEPARATOR_HEIGHT, "button.multiparty-details-back");
+      part {
+         name: "button.multiparty-details-back";
+         type: RECT;
+         mouse_events: 1;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "bg";
+            rel1 {
+               relative: 0.0 1.0;
+               offset: 0 -ACTION_HEIGHT;
+            }
+            rel2 {
+               relative: 1 1.0;
+               offset: -1 -1;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "action";
+         }
+      }
+      part {
+         name: "label.multiparty-details-back";
+         type: TEXT;
+         mouse_events: 0;
+         clip_to: "clipper.multiparty-details-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1.to: "button.multiparty-details-back";
+            rel2.to: "button.multiparty-details-back";
+            text {
+               text: "Back";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.5 0.5;
+            }
+         }
+         description {
+            state: "pressed" 0.0;
+            inherit: "default" 0.0;
+            color_class: "bg";
+         }
+      }
+      programs {
+         program {
+            signal: "mouse,up,1";
+            source: "button.multiparty-details-back";
+            action: STATE_SET "default" 0.0;
+            transition: DECELERATE 0.1;
+            target: "button.multiparty-details-back";
+            target: "label.multiparty-details-back";
+         }
+         program {
+            signal: "mouse,down,1";
+            source: "button.multiparty-details-back";
+            action: STATE_SET "pressed" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "button.multiparty-details-back";
+            target: "label.multiparty-details-back";
+         }
+         program {
+            signal: "mouse,clicked,1";
+            source: "button.multiparty-details-back";
+            action: SIGNAL_EMIT "hide,multiparty-details" "call";
+         }
+	 program {
+            signal: "multiparty,private";
+            source: "call";
+            action: SIGNAL_EMIT "hide,multiparty-details" "call";
+	 }
+      }
+
+      programs {
+         program {
+            name: "hide-multiparty-details-phase1";
+            signal: "hide,multiparty-details";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-visible";
+            target: "elm.swallow.multiparty-details";
+            after: "hide-multiparty-details-phase2";
+            api: "multiparty_details_hide" "make multiparty-details popup hidden";
+         }
+         program {
+            name: "hide-multiparty-details-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-hidden";
+         }
+
+	 program {
+            signal: "clicked,2,multiparty";
+            source: "call";
+            after: "show-multiparty-details-phase1";
+         }
+
+         program {
+            name: "show-multiparty-details-phase1";
+            signal: "clicked,1,multiparty"; /* just show on user request */
+            source: "call";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.multiparty-details-hidden";
+            after: "show-multiparty-details-phase2";
+            api: "multiparty_details_show" "make multiparty-details popup visible";
+         }
+         program {
+            name: "show-multiparty-details-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "elm.swallow.multiparty-details";
+            target: "clipper.multiparty-details-visible";
+         }
+      }
+
+      /* waiting popup */
+      part {
+         name: "clipper.waiting-hidden";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+      }
+      part {
+         name: "clipper.waiting-visible";
+         type: RECT;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 0;
+            visible: 0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            color: 255 255 255 255;
+            visible: 1;
+         }
+      }
+      part {
+         name: "area.waiting";
+         type: RECT;
+         mouse_events: 1; /* block events going to the call screen below it */
+         description {
+            state: "default" 0.0;
+            color: 0 0 0 0;
+            visible: 0;
+            rel1.relative: 0.0 1.0;
+            rel2.relative: 1.0 2.0;
+         }
+         description {
+            state: "alternate" 0.0;
+            inherit: "default" 0.0;
+            visible: 1;
+            rel1.relative: 0.0 0.0;
+            rel2.relative: 1.0 1.0;
+         }
+      }
+
+#define BUTTON(id, label, colcls, prev)                                 \
+      SEPARATOR(id, "clipper."##id, 0.0, -SEPARATOR_HEIGHT, "button."##id); \
+      part {                                                            \
+         name: "clipper."##id;                                          \
+         type: RECT;                                                    \
+         clip_to: "clipper.waiting-visible";                            \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 0;                                       \
+            visible: 0;                                                 \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "button."##id;                                           \
+         type: RECT;                                                    \
+         mouse_events: 1;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 0;                                       \
+            color_class: colcls;                                        \
+            rel1 {                                                      \
+               to: prev;                                                \
+               relative: 0.0 0.0;                                       \
+               offset: 0 -ACTION_HEIGHT;                                \
+            }                                                           \
+            rel2 {                                                      \
+               to: prev;                                                \
+               relative: 1.0 0.0;                                       \
+               offset: -1 -1;                                           \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color: 255 255 255 255;                                     \
+         }                                                              \
+         description {                                                  \
+            state: "hidden" 0.0;                                        \
+            inherit: "default" 0.0;                                     \
+            rel1 {                                                      \
+               to: prev;                                                \
+               relative: 0.0 0.0;                                       \
+               offset: 0 SEPARATOR_HEIGHT;                              \
+            }                                                           \
+            rel2 {                                                      \
+               to: prev;                                                \
+               relative: 1.0 0.0;                                       \
+               offset: -1 (ACTION_HEIGHT + SEPARATOR_HEIGHT - 1);       \
+            }                                                           \
+         }                                                              \
+      }                                                                 \
+      part {                                                            \
+         name: "label."##id;                                            \
+         type: TEXT;                                                    \
+         mouse_events: 0;                                               \
+         clip_to: "clipper."##id;                                       \
+         description {                                                  \
+            state: "default" 0.0;                                       \
+            color: 255 255 255 255;                                     \
+            color_class: colcls;                                        \
+            rel1 {                                                      \
+               to: "button."##id;                                       \
+               offset: BORDER_PADDING 0;                                \
+            }                                                           \
+            rel2 {                                                      \
+               to: "button."##id;                                       \
+               offset: (-BORDER_PADDING - 1) -1;                        \
+            }                                                           \
+            text {                                                      \
+               text: label;                                             \
+               font: FONT_NORMAL;                                       \
+               size: SIZE_LARGE;                                        \
+               align: 0.5 0.5;                                          \
+            }                                                           \
+         }                                                              \
+         description {                                                  \
+            state: "pressed" 0.0;                                       \
+            inherit: "default" 0.0;                                     \
+            color_class: "bg";                                          \
+         }                                                              \
+      }                                                                 \
+      programs {                                                        \
+         program {                                                      \
+            signal: "mouse,up,1";                                       \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "released,"##id "call";                 \
+            api: id"_released" id" was released";                       \
+            after: "show_up_"##id;                                      \
+         }                                                              \
+         program {                                                      \
+            name: "show_up_"##id;                                       \
+            action: STATE_SET "default" 0.0;                            \
+            transition: DECELERATE 0.1;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,down,1";                                     \
+            source: "button."##id;                                      \
+            after: "show_down_"##id;                                    \
+            action: SIGNAL_EMIT "pressed,"##id "call";                  \
+            api: id"_pressed" id" was pressed";                         \
+         }                                                              \
+         program {                                                      \
+            name: "show_down_"##id;                                     \
+            action: STATE_SET "pressed" 0.0;                            \
+            transition: ACCELERATE 0.3;                                 \
+            target: "button."##id;                                      \
+            target: "label."##id;                                       \
+         }                                                              \
+         program {                                                      \
+            signal: "mouse,clicked,1";                                  \
+            source: "button."##id;                                      \
+            action: SIGNAL_EMIT "clicked,"##id "call";                  \
+            api: id"_clicked" id" was clicked";                         \
+         }                                                              \
+      }
+
+      BUTTON("waiting-hangup", "Decline", "action", "separator.primary.hold-answer");
+      BUTTON("hold-answer", "Hold + Answer", "action", "separator.primary.hangup-answer");
+      BUTTON("hangup-answer", "Hangup + Answer", "caution", "separator.primary.waiting-last");
+#undef BUTTON
+
+      SEPARATOR("waiting-last", "clipper.waiting-visible", 1.0, 0, "");
+      SEPARATOR("waiting", "clipper.waiting-visible", 0.0, 0, "area.waiting");
+      part {
+         name: "elm.text.waiting";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.waiting-visible";
+         api: "waiting" "waiting call name";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "elm.swallow.waiting.photo";
+               relative: 1.0 0.0;
+               offset: ITEM_PADDING 0;
+            }
+            rel2 {
+               to: "notification.bar";
+               relative: 1.0 1.0;
+               offset: -BORDER_PADDING ACTION_HEIGHT;
+            }
+            text {
+               text: "Someone";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               size_range: SIZE_TINY SIZE_MEDIUM;
+               fit: 1 1;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "waiting.img.border";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            rel1 {
+               to: "elm.swallow.waiting.photo";
+               relative: 0.0 0.0;
+               offset: -1 -1;
+            }
+            rel2 {
+               to: "elm.swallow.waiting.photo";
+               relative: 1.0 1.0;
+               offset: 0 0;
+            }
+         }
+      }
+
+      part {
+         name: "waiting.img.bg";
+         type: RECT;
+         scale: 1;
+         mouse_events: 0;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "primary";
+            rel1 {
+               to: "elm.swallow.waiting.photo";
+               relative: 0.0 0.0;
+               offset: 0 0;
+            }
+            rel2 {
+               to: "elm.swallow.waiting.photo";
+               relative: 1.0 1.0;
+               offset: -1 -1;
+            }
+         }
+      }
+
+      part {
+         name: "elm.swallow.waiting.photo";
+         type: SWALLOW;
+         scale: 1;
+         clip_to: "clipper.waiting-visible";
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            min: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;
+            max: CALL_PHOTO_SIZE CALL_PHOTO_SIZE;
+            rel1 {
+               to: "notification.bar";
+               relative: 0.0 1.0;
+               offset: BORDER_PADDING ITEM_PADDING;
+            }
+            rel2 {
+               to: "notification.bar";
+               relative: 0.0 1.0;
+               offset: (CALL_PHOTO_SIZE + BORDER_PADDING) (CALL_PHOTO_SIZE + ITEM_PADDING);
+            }
+         }
+      }
+
+      part {
+         name: "label.waiting";
+         type: TEXT;
+         mouse_events: 0;
+         scale: 1;
+         clip_to: "clipper.waiting-visible";
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "secondary";
+            fixed: 1 1;
+            align: 0.0 0.0;
+            rel1 {
+               to: "elm.text.waiting";
+               relative: 0.0 1.0;
+               offset: 0 -20;
+            }
+            rel2 {
+               to: "elm.text.waiting";
+               relative: 0.0 1.0;
+               offset: 0 -1;
+            }
+            text {
+               text: "Waiting...";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 1 1;
+               align: 0.0 0.0;
+            }
+         }
+      }
+
+      programs {
+         program {
+            name: "hide-waiting-phase1";
+            signal: "hide,waiting";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-visible";
+            after: "hide-waiting-phase2";
+            api: "waiting_hide" "make waiting popup hidden";
+         }
+         program {
+            name: "hide-waiting-phase2";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "area.waiting";
+            after: "hide-waiting-phase3";
+         }
+         program {
+            name: "hide-waiting-phase3";
+            action: STATE_SET "default" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-hidden";
+         }
+
+         program {
+            name: "show-waiting-phase1";
+            signal: "show,waiting";
+            source: "call";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-hidden";
+            after: "show-waiting-phase2";
+            api: "waiting_show" "make waiting popup visible";
+         }
+         program {
+            name: "show-waiting-phase2";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "area.waiting";
+            after: "show-waiting-phase3";
+         }
+         program {
+            name: "show-waiting-phase3";
+            action: STATE_SET "alternate" 0.0;
+            transition: ACCELERATE 0.3;
+            target: "clipper.waiting-visible";
+         }
+
+         program {
+            signal: "enable,merge";
+            source: "call";
+            action: STATE_SET "hidden" 0.0;
+            target: "button.hold-answer";
+            target: "clipper.hold-answer";
+         }
+         program {
+            signal: "disable,merge";
+            source: "call";
+            action: STATE_SET "default" 0.0;
+            target: "button.hold-answer";
+            target: "clipper.hold-answer";
+         }
+      }
+
+#undef SEPARATOR
+   }
+
+}
+
+group {
+   name: "elm/layout/ofono-efl/activecall";
+
+   /*
+    * Represents the active call in the other screens (not callscreen)
+    *
+    * Parts:
+    *   TEXT: elm.text.name
+    *   TEXT: elm.text.phone.type
+    *   TEXT: elm.text.status
+    *   TEXT: elm.text.elapsed
+    * Signals:
+    *   Emit (source is "call"):
+    *     clicked:
+    * Listen (source is "call"):
+    *     show,multiparty: active call is multiparty
+    *     hide,multiparty: active call is not multiparty
+    *     state,<STATE>:   state changed to <STATE>
+    *
+    * Where <STATE> is: disconnected, active, held, dialing, alerting,
+    * incoming, waiting.
+    */
+
+   parts {
+      part {
+         name: "bg";
+         type: RECT;
+         mouse_events: 1;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "action";
+            max: 99999 (ACTION_HEIGHT / 2);
+            min: 0 (ACTION_HEIGHT / 2);
+            align: 0.5 0.0;
+         }
+      }
+
+      programs {
+         program {
+            signal: "mouse,clicked,1";
+            source: "bg";
+            action: SIGNAL_EMIT "clicked" "call";
+         }
+      }
+
+      part {
+         name: "elm.text.name";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "primary";
+            rel1 {
+               offset: BORDER_PADDING 0;
+            }
+            rel2 {
+               to_y: "bg";
+               to_x: "elm.text.elapsed";
+               relative: 0.0 1.0;
+               offset: (-ITEM_PADDING - 1) -1;
+            }
+            text {
+               text: "Gustavo Barbieri";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               align: 0.0 0.5;
+               ellipsis: 0.0;
+            }
+         }
+      }
+
+      part {
+         name: "elm.text.elapsed";
+         type: TEXT;
+         mouse_events: 0;
+         description {
+            state: "default" 0.0;
+            color: 255 255 255 255;
+            color_class: "primary";
+            align: 1.0 0.5;
+            fixed: 1 1;
+            rel1 {
+               relative: 1.0 0.0;
+               offset: (-BORDER_PADDING - 1) 0;
+            }
+            rel2 {
+               to: "bg";
+               offset: (-BORDER_PADDING - 1) -1;
+            }
+            text {
+               text: "12:34";
+               font: FONT_NORMAL;
+               size: SIZE_MEDIUM;
+               min: 1 0;
+               align: 1.0 0.5;
+            }
+         }
+      }
+   }
+}
+
+group {
+
+   name: "elm/icon/multiparty/default";
+
+   images{
+      image: "ico_multiparty.png" COMP;
+   }
+
+   parts {
+      part {
+         name : "base";
+         scale: 1;
+         description {
+            state: "default" 0.0;
+            aspect: 1.0 1.0;
+            color_class: "action";
+            aspect_preference: BOTH;
+            image.normal: "ico_multiparty.png";
+         }
+      }
+   }
+}
