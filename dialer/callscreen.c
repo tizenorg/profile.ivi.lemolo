@@ -632,6 +632,10 @@ static void _call_auto_place(Callscreen *ctx, OFono_Call *c)
 
 	if (!ctx->calls.first) {
 		DBG("first call %p", c);
+		_call_clear(ctx, 1);
+		_call_clear(ctx, 2);
+	        elm_object_signal_emit(ctx->self, "calls,1", "call");
+
 		_call_first_set(ctx, c);
 		_call_current_set(ctx, c);
 		return;
