@@ -159,6 +159,29 @@ Evas_Object *layout_add(Evas_Object *parent, const char *style)
 	return layout;
 }
 
+Eina_Bool util_set_night_mode(Eina_Bool night_mode)
+{
+        snprintf(def_theme, sizeof(def_theme), "%s/themes/night.edj",
+                        elm_app_data_dir_get());
+
+        elm_theme_extension_add(NULL, def_theme);
+
+        if (night_mode)
+        {
+                night_mode = EINA_TRUE;
+                elm_theme_overlay_add(NULL, def_theme);
+                DBG("Load theme at %s", def_theme);
+        }
+        else
+        {
+                night_mode = EINA_FALSE;
+                elm_theme_overlay_del(NULL, def_theme);
+                DBG("Unload theme at %s", def_theme);
+        }
+
+	return EINA_TRUE;
+}
+
 Eina_Bool util_init(const char *theme)
 {
 	elm_app_compile_bin_dir_set(PACKAGE_BIN_DIR);
