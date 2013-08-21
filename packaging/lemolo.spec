@@ -18,6 +18,7 @@ BuildRequires:  pkgconfig(capi-system-power)
 BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
+BuildRequires:  pkgconfig(libpulse)
 BuildRequires:  edje-tools
 Requires: ofono
 

@@ -6,6 +6,7 @@ AM_CFLAGS = \
 	-DPACKAGE_LIB_DIR=\"$(libdir)\" \
 	-I$(top_srcdir)/utils \
 	@EFL_CFLAGS@ \
+	@PULSEAUDIO_CFLAGS@ \
 	@TIZEN_CFLAGS@
 
 MAINTAINERCLEANFILES = \
@@ -32,12 +33,15 @@ utils_libofono_efl_utils_la_SOURCES = \
 	utils/log.h \
 	utils/ofono.c \
 	utils/ofono.h \
+	utils/pulseaudio.c \
+	utils/pulseaudio.h \
 	utils/simple-popup.c \
 	utils/simple-popup.h \
 	utils/util.c \
 	utils/util.h
 utils_libofono_efl_utils_la_LIBADD = \
 	@EFL_LIBS@ \
+	@PULSEAUDIO_LIBS@ \
 	@TIZEN_LIBS@
 
 if HAVE_TIZEN
@@ -53,6 +57,7 @@ bin_PROGRAMS = \
 
 dialer_dialer_LDADD = \
 	@EFL_LIBS@ \
+	@PULSEAUDIO_LIBS@ \
 	@TIZEN_LIBS@ \
 	utils/libofono-efl-utils.la
 

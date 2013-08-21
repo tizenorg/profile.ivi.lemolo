@@ -32,6 +32,12 @@ PKG_CHECK_MODULES([EFL],
 		dbus-1
 	 ])
 
+PKG_CHECK_MODULES([PULSEAUDIO],
+	[
+		libpulse
+		libpulse-mainloop-glib
+	 ])
+
 EFL_WITH_BIN([edje], [edje-cc], [edje_cc])
 
 want_tizen="auto"

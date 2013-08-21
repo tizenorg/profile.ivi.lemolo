@@ -15,6 +15,7 @@
 #include "gui.h"
 #include "log.h"
 #include "ofono.h"
+#include "pulseaudio.h"
 #include "rc.h"
 #include "util.h"
 
@@ -216,6 +217,12 @@ EAPI int elm_main(int argc, char **argv)
 	}
 #endif
 
+	if (!pa_init()) {
+		CRITICAL("Could not setup pulseaudio");
+		_app_exit_code = EXIT_FAILURE;
+		goto end_pulseaudio;
+	}
+
 	if (!gui_init()) {
 		CRITICAL("Could not setup graphical user interface");
 		_app_exit_code = EXIT_FAILURE;
@@ -244,6 +251,8 @@ EAPI int elm_main(int argc, char **argv)
 
 end_util:
 	util_shutdown();
+end_pulseaudio:
+	pa_shutdown();
 #ifdef HAVE_TIZEN
 end_amb:
 	amb_shutdown();
