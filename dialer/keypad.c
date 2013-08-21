@@ -503,6 +503,7 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 		else if (ctx->last) {
 			eina_strbuf_append(ctx->number, ctx->last);
 			_number_display(ctx);
+			_call(ctx, EINA_TRUE);
 		}
 	} else if (strcmp(emission, "save") == 0) {
 		ERR("TODO save contact %s!",
