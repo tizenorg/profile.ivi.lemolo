@@ -2,7 +2,7 @@
 <manifest xmlns="http://tizen.org/ns/packages" package="org.tizen.dialer" version="0.1.3" install-location="internal-only">
 	<label>Dialer</label>
   	<description>Handsfree Dialer Application</description>
-	<ui-application appid="org.tizen.dialer" exec="/usr/apps/org.tizen.dialer/bin/dialer" nodisplay="false" multiple="false" type="capp" taskmanage="true">
+	<ui-application appid="org.tizen.dialer" exec="/usr/bin/dialer" nodisplay="false" multiple="false" type="capp" taskmanage="true">
 		<icon>org.tizen.dialer.png</icon>
 		<label>Dialer</label>
 		<label xml:lang="en-gb">Dialer</label>
