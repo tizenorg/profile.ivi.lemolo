@@ -1,3 +1,12 @@
+* Wed Aug 21 2013 Jimmy Huang <jimmy.huang@intel.com> submit/tizen/20130628.212219@b452f07
+- Updated version to 0.1.4
+- Init pulseaudio at startup
+- Added one-button redial support
+- Adding support for nightmode theme change
+- Fixing packaging to be compliant with gbs
+- Fixed dialer to build without TIZEN components on Ubunbu
+- Create new default theme and adds night theme files
+
 * Fri Jun 28 2013 Jimmy Huang <jimmy.huang@intel.com> submit/tizen/20130627.224951@fe384be
 - Fixes TIVI-1105 - Dialer UI keypad rendered overlapping while calling
 
