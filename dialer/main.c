@@ -97,6 +97,9 @@ static int _terminate(void *data __UNUSED__)
 
 EAPI int elm_main(int argc, char **argv)
 {
+#ifdef HAVE_TIZEN
+	int iReturn = 0;
+#endif
 	int args;
 	char *modem_path = NULL;
 	char *modem_api = NULL;
@@ -213,26 +216,29 @@ EAPI int elm_main(int argc, char **argv)
 	if (!amb_init()) {
 		CRITICAL("Could not setup automotive-message-broker");
 		_app_exit_code = EXIT_FAILURE;
-		goto end_amb;
+		goto end_util;
 	}
 #endif
 
 	if (!pa_init()) {
 		CRITICAL("Could not setup pulseaudio");
 		_app_exit_code = EXIT_FAILURE;
-		goto end_pulseaudio;
+#ifdef HAVE_TIZEN
+		goto end_amb;
+#else
+		goto end_util;
+#endif
 	}
 
 	if (!gui_init()) {
 		CRITICAL("Could not setup graphical user interface");
 		_app_exit_code = EXIT_FAILURE;
-		goto end_util;
+		goto end_pulseaudio;
 	}
 
 	INF("Entering main loop");
 
 #ifdef HAVE_TIZEN
-	int iReturn = 0;
 	struct appcore_ops ops = {
 		.create = _create,
 		.resume = _resume,
@@ -248,15 +254,14 @@ EAPI int elm_main(int argc, char **argv)
 	INF("Quit main loop");
 
 	gui_shutdown();
-
-end_util:
-	util_shutdown();
 end_pulseaudio:
 	pa_shutdown();
 #ifdef HAVE_TIZEN
 end_amb:
 	amb_shutdown();
 #endif
+end_util:
+	util_shutdown();
 end_ofono:
 	ofono_shutdown();
 end_rc:

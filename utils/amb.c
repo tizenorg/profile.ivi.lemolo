@@ -203,7 +203,6 @@ static void _amb_free(AMB_Manager *m)
 
 static void _amb_properties_changed(void *data __UNUSED__, DBusMessage *msg)
 {
-	const char *path;
 	AMB_Manager *m = _amb_get();
 	DBusMessageIter iter, value;
 	const char *interface;
@@ -212,8 +211,6 @@ static void _amb_properties_changed(void *data __UNUSED__, DBusMessage *msg)
 		ERR("Could not handle message %p", msg);
 		return;
 	}
-
-	path = dbus_message_get_path(msg);
 
 	dbus_message_iter_get_basic(&iter, &interface);
 	dbus_message_iter_next(&iter);
