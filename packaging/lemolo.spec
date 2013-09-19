@@ -1,3 +1,5 @@
+%bcond_with lemolo_option_notification
+
 Name:       lemolo
 Summary:    Ofono EFL Dialer
 Version:    0.1.4
@@ -33,7 +35,11 @@ handsfree profile over bluetooth.
 
 %build
 
-%autogen --enable-tizen
+%autogen \
+%if %{with lemolo_option_notification}
+--enable-notification \
+%endif
+--enable-tizen
 
 make %{?jobs:-j%jobs}
 

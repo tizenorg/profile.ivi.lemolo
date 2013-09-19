@@ -70,6 +70,16 @@ fi
 
 AM_CONDITIONAL([HAVE_TIZEN], [test "$have_tizen" = "yes"])
 
+AC_ARG_ENABLE([notification],
+   AC_HELP_STRING([--enable-notification], [enable Tizen notification. @<:@default=auto@:>@]),
+   [want_notification="${enableval}"], [:])
+
+if test "$have_tizen" = "yes" -a "$want_notification" = "yes"; then
+     AC_DEFINE([HAVE_NOTIFICATION], 1, [Notification support])
+fi
+
+AM_CONDITIONAL([HAVE_NOTIFICATION], [test "$have_tizen" = "yes"])
+
 with_max_log_level="EINA_LOG_LEVEL_DBG"
 AC_ARG_WITH(maximum-log-level,
    [AC_HELP_STRING([--with-maximum-log-level=NUMBER],

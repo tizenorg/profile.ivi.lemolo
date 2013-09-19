@@ -1,3 +1,7 @@
+* Thu Sep 19 2013 Jimmy Huang <jimmy.huang@intel.com>
+- Implement system notification for incoming call
+- Fixed compilation warnings
+
 * Wed Aug 21 2013 Jimmy Huang <jimmy.huang@intel.com> submit/tizen/20130628.212219@b452f07
 - Updated version to 0.1.4
 - Init pulseaudio at startup
