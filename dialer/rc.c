@@ -3,6 +3,11 @@
 #endif
 #include <Elementary.h>
 
+#ifdef HAVE_NOTIFICATION
+#include <appsvc.h>
+#include <notification.h>
+#endif
+
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
@@ -175,6 +180,80 @@ err_args:
 	dbus_message_unref(msg);
 }
 
+#ifdef HAVE_NOTIFICATION
+static void _system_notification_emit(OFono_Call *call)
+{
+	const char *line_id, *type="", *content = "";
+	const char *title = "Incoming call";
+	Contact_Info *c_info;
+	notification_h noti = NULL;
+	notification_error_e noti_err = NOTIFICATION_ERROR_NONE;
+
+	noti = notification_new(NOTIFICATION_TYPE_NOTI,
+				NOTIFICATION_GROUP_ID_NONE,
+				NOTIFICATION_PRIV_ID_NONE);
+	if (noti == NULL) {
+		ERR("Failed to create notification");
+		return;
+	}
+
+	noti_err = notification_set_pkgname(noti, "org.tizen.dialer");
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to set pkgname: %d", noti_err);
+		return;
+	}
+
+	noti_err = notification_set_text(noti, NOTIFICATION_TEXT_TYPE_TITLE,
+					title,
+					NULL,
+					NOTIFICATION_VARIABLE_TYPE_NONE);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to set notification title: %d", noti_err);
+		return;
+	}
+
+	line_id = ofono_call_line_id_get(call);
+	c_info = gui_contact_search(line_id, &type);
+
+	if (c_info) {
+		content = contact_info_full_name_get(c_info);
+	} else {
+		content = line_id;
+	}
+
+	noti_err = notification_set_text(noti, NOTIFICATION_TEXT_TYPE_CONTENT,
+					content,
+					NULL,
+					NOTIFICATION_VARIABLE_TYPE_NONE);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to set notification content: %d", noti_err);
+		return;
+	}
+
+	bundle *b = NULL;
+	b = bundle_create();
+	appsvc_set_pkgname(b, "org.tizen.dialer");
+	noti_err = notification_set_execute_option(noti, NOTIFICATION_EXECUTE_TYPE_SINGLE_LAUNCH, "Launch", NULL, b);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to set notification execute option: %d", noti_err);
+		return;
+	}
+
+	noti_err = notification_insert(noti, NULL);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to send notification: %d", noti_err);
+		return;
+	}
+	DBG("Sent notification: %s : %s", title, content);
+
+	noti_err = notification_free(noti);
+	if (noti_err != NOTIFICATION_ERROR_NONE) {
+		ERR("Failed to free notification: %d", noti_err);
+		return;
+	}
+}
+#endif
+
 static DBusMessage *_rc_waiting_call_get(E_DBus_Object *obj __UNUSED__,
 						DBusMessage *msg)
 {
@@ -325,6 +404,9 @@ static void _rc_call_added_cb(void *data __UNUSED__, OFono_Call *call)
 	waiting = call;
 	_new_call_sig_emit(call);
 
+#ifdef HAVE_NOTIFICATION
+	_system_notification_emit(call);
+#endif
 }
 
 static void _rc_call_removed_cb(void *data __UNUSED__, OFono_Call *call)
