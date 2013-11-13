@@ -11,6 +11,8 @@
 #include "log.h"
 
 static char def_theme[PATH_MAX] = "";
+static char *_last_user_mode_config_path;
+static Eet_Data_Descriptor *_last_user_mode_descriptor;
 
 /* TODO: find a configurable way to format the number.
  * Right now it's: 1-234-567-8901 as per
@@ -182,8 +184,76 @@ Eina_Bool util_set_night_mode(Eina_Bool night_mode)
 	return EINA_TRUE;
 }
 
+Eina_Bool util_set_last_user_mode(Last_User_Mode *mode) {
+	Eina_Bool ret;
+	Eet_File *efile;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(_last_user_mode_config_path, EINA_FALSE);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(_last_user_mode_descriptor, EINA_FALSE);
+
+	efile = eet_open(_last_user_mode_config_path, EET_FILE_MODE_WRITE);
+	if (!efile) {
+		ERR("Cannot open %s for write", _last_user_mode_config_path);
+		return EINA_FALSE;
+	}
+
+	ret = eet_data_write(efile, _last_user_mode_descriptor, LAST_USER_MODE_ENTRY, mode, EINA_TRUE);
+	if (!ret) {
+		ERR("Cannot write to %s", _last_user_mode_config_path);
+	}
+	eet_close(efile);
+	return ret;
+}
+
+Last_User_Mode *util_get_last_user_mode() {
+	Eet_File *efile;
+	Last_User_Mode *mode;
+
+	EINA_SAFETY_ON_NULL_RETURN_VAL(_last_user_mode_config_path, NULL);
+
+	efile = eet_open(_last_user_mode_config_path, EET_FILE_MODE_READ);
+	if (!efile) {
+		ERR("Cannot open %s for read", _last_user_mode_config_path);
+		return NULL;
+	}
+
+	mode = eet_data_read(efile, _last_user_mode_descriptor, LAST_USER_MODE_ENTRY);
+	eet_close(efile);
+
+	return mode;
+}
+
+static void _last_user_mode_descriptor_init(void) {
+	Eet_Data_Descriptor_Class eddc;
+
+	EET_EINA_STREAM_DATA_DESCRIPTOR_CLASS_SET(&eddc, Last_User_Mode);
+	_last_user_mode_descriptor = eet_data_descriptor_stream_new(&eddc);
+
+	EET_DATA_DESCRIPTOR_ADD_BASIC(_last_user_mode_descriptor, Last_User_Mode,
+					"last_view", last_view, EET_T_UINT);
+	EET_DATA_DESCRIPTOR_ADD_BASIC(_last_user_mode_descriptor, Last_User_Mode,
+					"last_history_view", last_history_view, EET_T_UINT);
+	EET_DATA_DESCRIPTOR_ADD_BASIC(_last_user_mode_descriptor, Last_User_Mode,
+					"last_number", last_number, EET_T_STRING);
+}
+
+
 Eina_Bool util_init(const char *theme)
 {
+	int ret;
+	const char *config_path;
+	char base_dir[PATH_MAX];
+	Eet_File *efile;
+
+	eet_init();
+	config_path = efreet_config_home_get();
+	snprintf(base_dir, sizeof(base_dir), "%s/%s", config_path, PACKAGE_NAME);
+	ecore_file_mkpath(base_dir);
+	ret = asprintf(&_last_user_mode_config_path,  "%s/%s/last_user_mode.eet", config_path, PACKAGE_NAME);
+	if (ret < 0)
+		return EINA_FALSE;
+
+	_last_user_mode_descriptor_init();
 	elm_app_compile_bin_dir_set(PACKAGE_BIN_DIR);
 	elm_app_compile_data_dir_set(PACKAGE_DATA_DIR);
 	elm_app_info_set(util_init, "ofono-efl", "themes/default.edj");
@@ -214,4 +284,9 @@ Eina_Bool util_init(const char *theme)
 
 void util_shutdown(void)
 {
+	if (_last_user_mode_config_path)
+		free(_last_user_mode_config_path);
+	if (_last_user_mode_descriptor)
+		eet_data_descriptor_free(_last_user_mode_descriptor);
+	eet_shutdown();
 }

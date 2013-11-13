@@ -720,16 +720,28 @@ static void _on_clicked(void *data, Evas_Object *obj __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
 	History *ctx = data;
+	Last_User_Mode *last;
 
 	EINA_SAFETY_ON_NULL_RETURN(emission);
 	emission += strlen("clicked,");
 
 	DBG("ctx=%p, signal: %s", ctx, emission);
+	last = util_get_last_user_mode();
 
-	if (!strcmp(emission, "all"))
+	if (!strcmp(emission, "all")) {
 		elm_object_signal_emit(obj, "show,all", "gui");
-	else if (!strcmp(emission, "missed"))
+		if (last) {
+			last->last_history_view = DIALER_LAST_HISTORY_VIEW_ALL;
+			util_set_last_user_mode(last);
+		}
+	}
+	else if (!strcmp(emission, "missed")) {
 		elm_object_signal_emit(obj, "show,missed", "gui");
+		if (last) {
+			last->last_history_view = DIALER_LAST_HISTORY_VIEW_MISSED;
+			util_set_last_user_mode(last);
+		}
+	}
 	else if (!strcmp(emission, "clear"))
 		_history_clear(ctx);
 	else if (!strcmp(emission, "edit")) {

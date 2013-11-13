@@ -43,6 +43,14 @@ static void _number_display(Keypad *ctx)
 	const char *number = eina_strbuf_string_get(ctx->number);
 	char *s = phone_format(number);
 	const char *type;
+	Last_User_Mode *last;
+
+	last = util_get_last_user_mode();
+	if (last) {
+		eina_stringshare_replace(&(last->last_number), number);
+		util_set_last_user_mode(last);
+	}
+
 	if (!s) {
 		elm_object_part_text_set(ctx->self, "elm.text.display", "");
 		elm_object_part_text_set(ctx->self, "elm.text.contact-and-type",

@@ -1,3 +1,6 @@
+* Wed Nov 13 2013 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/20130920.213555@96e7dfe
+- Implement last user mode
+
 * Thu Sep 19 2013 Jimmy Huang <jimmy.huang@intel.com>
 - Implement system notification for incoming call
 - Fixed compilation warnings

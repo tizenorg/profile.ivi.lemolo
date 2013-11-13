@@ -68,6 +68,9 @@ OFono_Pending *gui_dial(const char *number)
 
 static void _gui_show(Evas_Object *o)
 {
+	Last_User_Mode *last;
+
+	last = util_get_last_user_mode();
 	if (o == keypad)
 		elm_object_signal_emit(main_layout, "show,keypad", "gui");
 	else if (o == contacts)
@@ -76,6 +79,17 @@ static void _gui_show(Evas_Object *o)
 		elm_object_signal_emit(main_layout, "show,history", "gui");
 	elm_object_focus_set(o, EINA_TRUE);
 	current_view = o;
+
+	if (last) {
+		if (current_view == keypad)
+			last->last_view = DIALER_LAST_VIEW_KEYPAD;
+		else if (current_view == contacts)
+			last->last_view = DIALER_LAST_VIEW_CONTACTS;
+		else if (current_view == history)
+			last->last_view = DIALER_LAST_VIEW_HISTORY;
+
+		util_set_last_user_mode(last);
+	}
 }
 
 Evas_Object *gui_simple_popup(const char *title, const char *message)
@@ -267,6 +281,36 @@ static void _on_contacts_selected(void *data __UNUSED__,
 	gui_dial(number);
 }
 
+static void _load_last_user_view() {
+	Last_User_Mode *last;
+
+	last = util_get_last_user_mode();
+	if (!last) {
+		DBG("Last user config file not found - create default view");
+		last = calloc(1, sizeof(Last_User_Mode));
+		last->last_view = DIALER_LAST_VIEW_KEYPAD;
+		last->last_history_view = DIALER_LAST_HISTORY_VIEW_ALL;
+		last->last_number = eina_stringshare_add("");
+		util_set_last_user_mode(last);
+	}
+
+	if(last->last_number) {
+		keypad_number_set(keypad, last->last_number, EINA_FALSE);
+	}
+	if (last->last_view == DIALER_LAST_VIEW_KEYPAD) {
+		_gui_show(keypad);
+	} else if (last->last_view == DIALER_LAST_VIEW_CONTACTS) {
+		_gui_show(contacts);
+	} else if (last->last_view == DIALER_LAST_VIEW_HISTORY) {
+		_gui_show(history);
+		if (last->last_history_view != DIALER_LAST_HISTORY_VIEW_ALL) {
+			elm_object_signal_emit(history, "show,missed", "gui");
+		}
+	}
+	eina_stringshare_del(last->last_number);
+	free(last);
+}
+
 Eina_Bool gui_init(void)
 {
 	Evas_Object *lay, *obj;
@@ -320,8 +364,6 @@ Eina_Bool gui_init(void)
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
 	elm_object_part_content_set(lay, "elm.swallow.history", obj);
 
-	_gui_show(keypad);
-
 	cs = obj = callscreen_add(win);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(obj, EINA_FALSE);
 	evas_object_size_hint_weight_set(obj,
@@ -329,6 +371,8 @@ Eina_Bool gui_init(void)
 	evas_object_size_hint_align_set(obj, EVAS_HINT_FILL, EVAS_HINT_FILL);
 	elm_object_part_content_set(flip, "back", obj);
 	evas_object_show(obj);
+
+	_load_last_user_view();
 
 	callback_node_modem_changed =
 		ofono_modem_changed_cb_add(_ofono_changed, NULL);
