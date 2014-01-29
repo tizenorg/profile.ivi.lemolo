@@ -31,7 +31,7 @@ static Evas_Object *current_view = NULL;
 
 static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
 static OFono_Callback_List_USSD_Notify_Node *callback_node_ussd_notify = NULL;
-static AMB_Callback_List_Node *callback_node_night_mode_changed = NULL;
+static AMB_Callback_List_Node *callback_node_amb_properties_changed = NULL;
 
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
@@ -250,14 +250,12 @@ static void _ofono_changed(void *data __UNUSED__)
 	elm_object_part_text_set(main_layout, "elm.text.voicemail", buf);
 }
 
-static void _night_mode_changed(void *data __UNUSED__)
+static void _amb_properties_changed(void *data __UNUSED__)
 {
-	DBG("Night mode changed");
-	Eina_Bool changed = amb_night_mode_get();
-	if (night_mode != changed)
-	{
-		DBG("Nightmode changed to %d", changed);
-		night_mode = changed;
+	Eina_Bool night_mode_changed = amb_night_mode_get();
+	if (night_mode != night_mode_changed) {
+		DBG("Night mode changed to %d", night_mode_changed);
+		night_mode = night_mode_changed;
 		util_set_night_mode(night_mode);
 
 		if (current_view)
@@ -378,8 +376,8 @@ Eina_Bool gui_init(void)
 		ofono_modem_changed_cb_add(_ofono_changed, NULL);
 	callback_node_ussd_notify =
 		ofono_ussd_notify_cb_add(_ofono_ussd_notify, NULL);
-	callback_node_night_mode_changed =
-		amb_properties_changed_cb_add(_night_mode_changed, NULL);
+	callback_node_amb_properties_changed =
+		amb_properties_changed_cb_add(_amb_properties_changed, NULL);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);

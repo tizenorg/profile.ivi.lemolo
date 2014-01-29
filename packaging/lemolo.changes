@@ -1,3 +1,7 @@
+* Wed Jan 29 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/20131115.212927@9ce884c
+- Use FindObject instead of deprecated findProperty to pull from AMB
+- Fixes TIVI-2631
+
 * Wed Nov 13 2013 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/20130920.213555@96e7dfe
 - Implement last user mode
 

@@ -16,7 +16,6 @@ static E_DBus_Connection *bus_conn = NULL;
 static char *bus_id = NULL;
 static AMB_Manager *amb_manager = NULL;
 static E_DBus_Signal_Handler *sig_amb_properties_changed = NULL;
-static DBusPendingCall *amb_get_night_mode_path = NULL;
 
 struct _AMB_Callback_List_Node
 {
@@ -62,15 +61,13 @@ struct _AMB_Manager
 	AMB_Bus_Object base;
 	const char *name;
 	unsigned int interfaces;
-	unsigned char vehiclespeed;
-	Eina_Bool nightmode : 1;
+	Eina_Bool night_mode;
 };
 
 static void _amb_property_update(AMB_Manager *m, const char *interface,
 					DBusMessageIter *property)
 {
 	if (strcmp(interface, AMB_NIGHT_MODE_IFACE) == 0) {
-		/* TODO: change later to use night mode */
 		DBusMessageIter entry, variant;
 		const char *key;
 
@@ -81,8 +78,8 @@ static void _amb_property_update(AMB_Manager *m, const char *interface,
 
 			dbus_message_iter_next(&entry);
 			dbus_message_iter_recurse(&entry, &variant);
-			m->nightmode = _dbus_bool_get(&variant);
-			DBG("NightMode updated: %d", m->nightmode);
+			m->night_mode = _dbus_bool_get(&variant);
+			DBG("NightMode updated: %d", m->night_mode);
 		} else {
 			DBG("invalid key: %s", key);
 		}
@@ -104,7 +101,7 @@ static void _notify_amb_callbacks_list(Eina_Inlist *list)
 		node->cb((void *) node->cb_data);
 }
 
-static void _amb_get_night_mode_reply(void *data __UNUSED__, DBusMessage *msg,
+static void _amb_get_property_reply(void *data __UNUSED__, DBusMessage *msg,
 					DBusError *err)
 {
 	if (!msg) {
@@ -115,47 +112,70 @@ static void _amb_get_night_mode_reply(void *data __UNUSED__, DBusMessage *msg,
 		return;
 	}
 
+	EINA_SAFETY_ON_NULL_RETURN(data);
+
 	DBusError e;
 	dbus_error_init(&e);
-	dbus_bool_t value;
+	DBusMessageIter iter;
+	DBusMessageIter variant;
 
+	if (dbus_message_iter_init(msg, &iter) == FALSE) {
+		ERR("Invalid dbus response");
+		return;
+	}
+
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
+		ERR("Unexpected dbus response type");
+		return;
+	}
+
+	char *property_name = (char*) data;
 	AMB_Manager *m = _amb_get();
+	dbus_message_iter_recurse(&iter, &variant);
 
-	dbus_message_get_args(msg, &e, DBUS_TYPE_BOOLEAN, &value, DBUS_TYPE_INVALID);
+	if (strcmp(property_name, PROP_NIGHT_MODE_STRING) == 0) {
+		m->night_mode = _dbus_bool_get(&variant);
+		DBG("NightMode is set to: %d", m->night_mode);
+	} else {
+		return;
+	}
 
-	m->nightmode = value;
-	DBG("NightMode is set to: %d", m->nightmode);
 	_notify_amb_callbacks_list(cbs_amb_properties_changed);
 }
 
 static void _amb_manager_property_get(char *property, char *path, E_DBus_Method_Return_Cb cb, void *data)
 {
 	DBusMessage *msg;
+	char *interface_name;
 
 	EINA_SAFETY_ON_NULL_RETURN(property);
 	EINA_SAFETY_ON_NULL_RETURN(path);
 
 	if (strcmp(property, PROP_NIGHT_MODE_STRING) == 0) {
-		char* interface_name = AMB_NIGHT_MODE_IFACE;
-
-		msg = dbus_message_new_method_call(
-			bus_id, path, AMB_PROPERTIES_IFACE, "Get");
-
-		dbus_message_append_args(msg,
-			DBUS_TYPE_STRING, &interface_name,
-			DBUS_TYPE_STRING, &property,
-			DBUS_TYPE_INVALID);
-
-		e_dbus_message_send(bus_conn, msg, cb, -1, data);
+		interface_name = AMB_NIGHT_MODE_IFACE;
+	} else {
+		return;
 	}
+
+	msg = dbus_message_new_method_call(
+		bus_id, path, AMB_PROPERTIES_IFACE, "Get");
+
+	dbus_message_append_args(msg,
+		DBUS_TYPE_STRING, &interface_name,
+		DBUS_TYPE_STRING, &property,
+		DBUS_TYPE_INVALID);
+
+	e_dbus_message_send(bus_conn, msg, cb, -1, data);
 
 	dbus_message_unref(msg);
 }
 
-static void _amb_get_night_mode_path_reply(void *data __UNUSED__, DBusMessage *msg,
+static void _amb_get_property_path_reply(void *data, DBusMessage *msg,
 					DBusError *err)
 {
-	amb_get_night_mode_path = NULL;
+	DBusError e;
+	DBusMessageIter iter, array;
+	char *path;
 
 	if (!msg) {
 		if (err)
@@ -165,17 +185,52 @@ static void _amb_get_night_mode_path_reply(void *data __UNUSED__, DBusMessage *m
 		return;
 	}
 
-	DBusError e;
-	char *path;
+	EINA_SAFETY_ON_NULL_RETURN(data);
+
 	dbus_error_init(&e);
 	dbus_message_get_args(msg, &e, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID);
+	if (!dbus_message_iter_init(msg, &iter)) {
+                ERR("Could not handle message %p", msg);
+                return;
+        }
 
-	if(!path) { 
-		ERR("Could not get NightMode object path");
+	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY) {
+                ERR("Could not handle message %p", msg);
+                return;
+        }
+
+	dbus_message_iter_recurse(&iter, &array);
+	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_OBJECT_PATH) {
+		ERR("Message does not contain object path");
 		return;
 	}
 
-	_amb_manager_property_get(PROP_NIGHT_MODE_STRING, path, _amb_get_night_mode_reply, NULL);
+	dbus_message_iter_get_basic(&array, &path);
+	if(!path) { 
+		ERR("Could not get object path");
+		return;
+	}
+
+	_amb_manager_property_get((char*) data, path, _amb_get_property_reply, data);
+}
+
+static void _amb_get_property_path(const char *property, E_DBus_Method_Return_Cb cb)
+{
+        DBusMessage *msg = dbus_message_new_method_call(
+                bus_id, "/", AMB_MANAGER_IFACE, "FindObject");
+
+        dbus_message_append_args(msg,
+                DBUS_TYPE_STRING, &property,
+                DBUS_TYPE_INVALID);
+
+        e_dbus_message_send(bus_conn, msg, cb, -1, (void*) property);
+
+        dbus_message_unref(msg);
+}
+
+static void _amb_get_property(const char *property)
+{
+	_amb_get_property_path(property, _amb_get_property_path_reply);
 }
 
 static AMB_Manager *_amb_new(const char *path)
@@ -216,6 +271,7 @@ static void _amb_properties_changed(void *data __UNUSED__, DBusMessage *msg)
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &value);
 
+	DBG("AMB property changed at %s", interface);
 	if (strcmp(interface, AMB_NIGHT_MODE_IFACE) == 0) {
 		_amb_property_update(m, interface, &value);
 		_notify_amb_callbacks_list(cbs_amb_properties_changed);
@@ -227,19 +283,7 @@ static void _amb_load(void)
 	amb_manager = _amb_new("/");
 	EINA_SAFETY_ON_NULL_RETURN(amb_manager);
 
-	char *property_name = PROP_NIGHT_MODE_STRING; 
-
-	DBusMessage *msg = dbus_message_new_method_call(
-		bus_id, "/", AMB_MANAGER_IFACE, "findProperty");
-
-	dbus_message_append_args(msg,
-		DBUS_TYPE_STRING, &property_name,
-		DBUS_TYPE_INVALID);
-
-	amb_get_night_mode_path = e_dbus_message_send(
-		bus_conn, msg, _amb_get_night_mode_path_reply, -1, NULL);
-
-	dbus_message_unref(msg);
+	_amb_get_property(PROP_NIGHT_MODE_STRING);
 }
 
 static void _amb_connected(const char *id)
@@ -327,11 +371,11 @@ static void _amb_get_name_owner(void *data __UNUSED__, DBusMessage *msg, DBusErr
 	_amb_connected(id);
 }
 
-Eina_Bool amb_nightmode_get(void)
+Eina_Bool amb_night_mode_get(void)
 {
 	AMB_Manager *m = _amb_get();
 	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
-	return m->nightmode;
+	return m->night_mode;
 }
 
 Eina_Bool amb_init(void)
@@ -364,13 +408,6 @@ void amb_shutdown(void)
 		amb_manager = NULL;
 	}	
 	_amb_disconnected();
-}
-
-Eina_Bool amb_night_mode_get(void)
-{
-	AMB_Manager *m = _amb_get();
-	EINA_SAFETY_ON_NULL_RETURN_VAL(m, EINA_FALSE);
-	return m->nightmode;
 }
 
 static AMB_Callback_List_Node * _amb_callback_list_node_create(
