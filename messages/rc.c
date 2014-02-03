@@ -2,6 +2,7 @@
 #include "config.h"
 #endif
 #include <Elementary.h>
+#include <E_DBus.h>
 
 #include "log.h"
 #include "gui.h"
