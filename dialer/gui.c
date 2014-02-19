@@ -11,6 +11,7 @@
 #include "ussd.h"
 #include "util.h"
 #include "simple-popup.h"
+#include "i18n.h"
 
 #ifdef HAVE_TIZEN
 #include <appcore-efl.h>
@@ -52,9 +53,9 @@ static void _dial_reply(void *data, OFono_Error err,
 	if (err != OFONO_ERROR_NONE) {
 		char buf[1024];
 		const char *msg = ofono_error_message_get(err);
-		snprintf(buf, sizeof(buf), "Could not call %s: %s",
+		snprintf(buf, sizeof(buf), _("Could not call %s: %s"),
 				number, msg);
-		gui_simple_popup("Error", buf);
+		gui_simple_popup(_("Error"), buf);
 	}
 
 	free(number);
@@ -64,6 +65,28 @@ OFono_Pending *gui_dial(const char *number)
 {
 	char *copy = strdup(number);
 	return ofono_dial(copy, NULL, _dial_reply, copy);
+}
+
+static void _gui_set_text(void)
+{
+	elm_object_part_text_set(cs, "label.hide-keypad", _("Hide Keypad"));
+	elm_object_part_text_set(cs, "label.answer", _("Answer"));
+	elm_object_part_text_set(cs, "label.hangup", _("Hangup"));
+	elm_object_part_text_set(cs, "label.multiparty", _("Conference"));
+	elm_object_part_text_set(cs, "label.multiparty-details-back", _("Back"));
+	elm_object_part_text_set(cs, "label.waiting", _("Waiting..."));
+	elm_object_part_text_set(cs, "elm.text.name", _("Unknown"));
+	elm_object_part_text_set(cs, "elm.text.waiting", _("Unknown"));
+
+	elm_object_part_text_set(keypad, "label.all", _("Decline"));
+	elm_object_part_text_set(keypad, "label.missed", _("Hold + Answer"));
+	elm_object_part_text_set(keypad, "label.clear", _("Hangup + Answer"));
+	elm_object_part_text_set(keypad, "label.edit,done", _("Redial"));
+
+	elm_object_part_text_set(history, "label.all", _("All"));
+	elm_object_part_text_set(history, "label.missed", _("Missed"));
+	elm_object_part_text_set(history, "label.clear", _("Clear"));
+	elm_object_part_text_set(history, "label.edit,done", _("Done"));
 }
 
 static void _gui_show(Evas_Object *o)
@@ -322,10 +345,14 @@ Eina_Bool gui_init(void)
 	elm_win_autodel_set(win, EINA_FALSE);
 
 #ifdef HAVE_TIZEN
-	appcore_set_i18n("ofono-efl", "en-US");
+	appcore_set_i18n("lemolo", NULL);
 #ifdef HAVE_UI_GADGET
 	UG_INIT_EFL(win, UG_OPT_INDICATOR_PORTRAIT_ONLY);
 #endif
+#else
+	setlocale(LC_ALL, "");
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	textdomain(PACKAGE);
 #endif
 
 	flip = elm_flip_add(win);
@@ -370,6 +397,7 @@ Eina_Bool gui_init(void)
 	elm_object_part_content_set(flip, "back", obj);
 	evas_object_show(obj);
 
+	_gui_set_text();
 	_load_last_user_view();
 
 	callback_node_modem_changed =

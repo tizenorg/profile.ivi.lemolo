@@ -1,3 +1,6 @@
+* Tue Feb 18 2014 Jimmy Huang <jimmy.huang@intel.com> submit/accepted/tizen/ivi/20140131.204941@2b2d852
+- Add gettext support for internationalization
+
 * Wed Jan 29 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/20131115.212927@9ce884c
 - Use FindObject instead of deprecated findProperty to pull from AMB
 - Fixes TIVI-2631

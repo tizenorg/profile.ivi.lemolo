@@ -10,6 +10,7 @@
 #include "ofono.h"
 #include "contacts-ofono-efl.h"
 #include "util.h"
+#include "i18n.h"
 
 #ifndef EET_COMPRESSION_DEFAULT
 #define EET_COMPRESSION_DEFAULT 1
@@ -688,7 +689,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	EINA_SAFETY_ON_NULL_RETURN(btn);
 	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->mobile);
-	elm_object_part_text_set(btn, "elm.text.type", "Mobile");
+	elm_object_part_text_set(btn, "elm.text.type", _("Mobile"));
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
@@ -704,7 +705,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	EINA_SAFETY_ON_NULL_RETURN(btn);
 	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->home);
-	elm_object_part_text_set(btn, "elm.text.type", "Home");
+	elm_object_part_text_set(btn, "elm.text.type", _("Home"));
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
@@ -720,7 +721,7 @@ static void _on_item_click(void *data, Evas_Object *obj __UNUSED__,
 	EINA_SAFETY_ON_NULL_RETURN(btn);
 	elm_object_style_set(btn, "contacts");
 	phone = phone_format(c_info->work);
-	elm_object_part_text_set(btn, "elm.text.type", "Work");
+	elm_object_part_text_set(btn, "elm.text.type", _("Work"));
 	elm_object_part_text_set(btn, "elm.text.phone", phone);
 	free(phone);
 	evas_object_size_hint_weight_set(btn, EVAS_HINT_EXPAND,
@@ -882,6 +883,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 
 	details = layout_add(parent, "contacts_details");
 	EINA_SAFETY_ON_NULL_GOTO(details, err_layout);
+	elm_object_part_text_set(details, "label.back", _("Back"));
 
 	obj = layout_add(parent, "contacts_bg");
 	EINA_SAFETY_ON_NULL_GOTO(obj, err_obj);

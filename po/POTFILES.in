@@ -1,0 +1,8 @@
+dialer/callscreen.c
+dialer/gui.c
+dialer/history.c
+dialer/keypad.c
+dialer/ussd.c
+tizen/answer_daemon.c
+utils/contacts-tizen.c
+utils/contacts.c

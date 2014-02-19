@@ -7,6 +7,7 @@
 #include "gui.h"
 #include "ofono.h"
 #include "simple-popup.h"
+#include "i18n.h"
 
 typedef struct _USSD
 {
@@ -33,24 +34,23 @@ static void _ussd_respond_reply(void *data, OFono_Error err, const char *str)
 		eina_stringshare_replace(&(ctx->message), str);
 		simple_popup_message_set(ctx->popup, ctx->message);
 	} else if (err == OFONO_ERROR_OFFLINE) {
-		simple_popup_title_set(ctx->popup, "Offline");
-		simple_popup_message_set(ctx->popup, "System is Offline");
+		simple_popup_title_set(ctx->popup, _("Offline"));
+		simple_popup_message_set(ctx->popup, _("System is Offline"));
 		simple_popup_button_dismiss_set(ctx->popup);
 	} else {
 		char buf[256];
 
 		if (ctx->state == OFONO_USSD_STATE_USER_RESPONSE)
 			snprintf(buf, sizeof(buf),
-					"Could not complete.<br>Error: %s.<br>"
-					"Try again:<br><br>%s",
+					_("Could not complete.<br>Error: %s.<br>Try again:<br><br>%s"),
 					ofono_error_message_get(err),
 					ctx->message);
 		else
 			snprintf(buf, sizeof(buf),
-					"Could not complete.<br>Error: %s.",
+					_("Could not complete.<br>Error: %s."),
 					ofono_error_message_get(err));
 
-		simple_popup_title_set(ctx->popup, "Error");
+		simple_popup_title_set(ctx->popup, _("Error"));
 		simple_popup_message_set(ctx->popup, buf);
 	}
 }
@@ -116,10 +116,10 @@ static void _ofono_changed(void *data)
 	} else {
 		simple_popup_entry_enable(ctx->popup);
 		simple_popup_buttons_set(ctx->popup,
-						"Respond",
+						_("Respond"),
 						"dialer",
 						_ussd_respond,
-						"Cancel",
+						_("Cancel"),
 						"dialer-caution",
 						_ussd_cancel,
 						ctx);
@@ -159,7 +159,7 @@ void ussd_start(const char *message)
 	ctx->state = -1;
 	ctx->cb_changed = ofono_modem_changed_cb_add(_ofono_changed, ctx);
 
-	ctx->popup = gui_simple_popup("Supplementary Services", ctx->message);
+	ctx->popup = gui_simple_popup(_("Supplementary Services"), ctx->message);
 	evas_object_event_callback_add(ctx->popup, EVAS_CALLBACK_DEL,
 					_on_del, ctx);
 	_ofono_changed(ctx);

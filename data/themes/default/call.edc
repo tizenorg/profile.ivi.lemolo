@@ -316,7 +316,7 @@ group {
                offset: -1 -CALL_TEXT_OFFSET;                            \
             }                                                           \
             text {                                                      \
-               text: "Gustavo Barbieri";                                \
+               text: "Unknown";                                         \
                font: FONT_NORMAL;                                       \
                size: SIZE_MEDIUM;                                       \
                size_range: SIZE_MEDIUM SIZE_MEDIUM;                     \
@@ -2126,7 +2126,7 @@ group {
                offset: -BORDER_PADDING ACTION_HEIGHT;
             }
             text {
-               text: "Someone";
+               text: "Unknown";
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
                size_range: SIZE_TINY SIZE_MEDIUM;
@@ -2372,7 +2372,7 @@ group {
                offset: (-ITEM_PADDING - 1) -1;
             }
             text {
-               text: "Gustavo Barbieri";
+               text: "Unknown";
                font: FONT_NORMAL;
                size: SIZE_MEDIUM;
                align: 0.0 0.5;

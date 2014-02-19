@@ -726,55 +726,55 @@ static const char *_contact_number_type_get(contacts_record_h contact_number_h)
 		return NULL;
 
 	if (number_type & CONTACTS_NUMBER_TYPE_OTHER) {
-		return "Other";
+		return _("Other");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_HOME) {
-		return "Home";
+		return _("Home");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_WORK) {
-		return "Work";
+		return _("Work");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_VOICE) {
-		return "Home";
+		return _("Home");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_FAX) {
-		return "Fax";
+		return _("Fax");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_MSG) {
-		return "Message";
+		return _("Message");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_CELL) {
-		return "Mobile";
+		return _("Mobile");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_PAGER) {
-		return "Pager";
+		return _("Pager");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_BBS) {
-		return "Bulletin board";
+		return _("Bulletin board");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_MODEM) {
-		return "Modem";
+		return _("Modem");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_CAR) {
-		return "Car phone";
+		return _("Car phone");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_ISDN) {
-		return "ISDN";
+		return _("ISDN");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_VIDEO) {
-		return "Video conference";
+		return _("Video conference");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_PCS) {
-		return "Personal communicatior";
+		return _("Personal communicatior");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_ASSISTANT) {
-		return "Assistant telephone";
+		return _("Assistant telephone");
 	}
 	else if (number_type & CONTACTS_NUMBER_TYPE_CUSTOM) {
-		return "Custom";
+		return _("Custom");
 	}
 	else {
-		return "Unknown";
+		return _("Unknown");
 	}
 }
 
@@ -786,7 +786,7 @@ static const char *_alias_phone_type_match(Contact_Info *c_info,
 		if (_is_alias(cn, alias))
 			return cn->type;
 	}
-	return "Unknown";
+	return _("Unknown");
 }
 
 static Eina_Bool _alias_create(Contact_Info *c_info, const char *number)
@@ -922,7 +922,7 @@ const char *contact_info_number_check(const Contact_Info *c,
 		if (_contact_number_is_equal(cn, number))
 			return cn->type;
 	}
-	return "Unknown";
+	return _("Unknown");
 }
 
 Eina_Bool contact_info_picture_set(Contact_Info *c __UNUSED__,

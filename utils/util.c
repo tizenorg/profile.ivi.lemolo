@@ -243,7 +243,6 @@ Eina_Bool util_init(const char *theme)
 	int ret;
 	const char *config_path;
 	char base_dir[PATH_MAX];
-	Eet_File *efile;
 
 	eet_init();
 	config_path = efreet_config_home_get();

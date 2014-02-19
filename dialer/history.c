@@ -13,6 +13,7 @@
 #include "util.h"
 #include "gui.h"
 #include "simple-popup.h"
+#include "i18n.h"
 
 #ifndef EET_COMPRESSION_DEFAULT
 #define EET_COMPRESSION_DEFAULT 1
@@ -633,14 +634,14 @@ static void _history_clear(History *ctx)
 
 	EINA_SAFETY_ON_TRUE_RETURN(ctx->clear_popup != NULL);
 
-	ctx->clear_popup = p = gui_simple_popup("Clear History",
-				"Do you want to clear all history entries?");
+	ctx->clear_popup = p = gui_simple_popup(_("Clear History"),
+				_("Do you want to clear all history entries?"));
 
 	simple_popup_buttons_set(p,
-					"Dismiss",
+					_("Dismiss"),
 					"dialer",
 					_history_clear_cancel,
-					"Yes, Clear",
+					_("Yes, Clear"),
 					"dialer-caution",
 					_history_clear_do,
 					ctx);
@@ -689,7 +690,7 @@ static char *_item_label_get(void *data, Evas_Object *obj __UNUSED__,
 
 	if (!strcmp(part, "type")) {
 		if (!call_info->contact_type)
-			return strdup("Unknown");
+			return strdup(_("Unknown"));
 		return strdup(call_info->contact_type);
 	}
 

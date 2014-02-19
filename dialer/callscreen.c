@@ -1,6 +1,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#ifdef HAVE_TIZEN
+#include <appcore-efl.h>
+#endif
 #include <Elementary.h>
 
 #include "log.h"
@@ -8,6 +11,7 @@
 #include "ofono.h"
 #include "util.h"
 #include "simple-popup.h"
+#include "i18n.h"
 
 typedef struct _Callscreen
 {
@@ -249,19 +253,19 @@ static const char *_call_state_str(OFono_Call_State state)
 {
 	switch (state) {
 	case OFONO_CALL_STATE_DISCONNECTED:
-		return "Disconnected";
+		return _("Disconnected");
 	case OFONO_CALL_STATE_ACTIVE:
-		return "Active";
+		return _("Active");
 	case OFONO_CALL_STATE_HELD:
-		return "On Hold";
+		return _("On Hold");
 	case OFONO_CALL_STATE_DIALING:
-		return "Dialing...";
+		return _("Dialing...");
 	case OFONO_CALL_STATE_ALERTING:
-		return "Alerting...";
+		return _("Alerting...");
 	case OFONO_CALL_STATE_INCOMING:
-		return "Incoming...";
+		return _("Incoming...");
 	case OFONO_CALL_STATE_WAITING:
-		return "Waiting...";
+		return _("Waiting...");
 	default:
 		ERR("unknown state: %d", state);
 		return NULL;
@@ -789,20 +793,20 @@ static void _call_disconnected_show(Callscreen *ctx, OFono_Call *c,
 		goto done;
 
 	if (strcmp(reason, "network") == 0)
-		title = "Network Disconnected!";
+		title = _("Network Disconnected!");
 	else
-		title = "Disconnected!";
+		title = _("Disconnected!");
 
-	snprintf(msg, sizeof(msg), "Try to redial %s", number);
+	snprintf(msg, sizeof(msg), _("Try to redial %s"), number);
 
 	eina_stringshare_replace(&ctx->disconnected.number, number);
 
 	ctx->disconnected.popup = p = gui_simple_popup(title, msg);
 	simple_popup_buttons_set(p,
-					"Dismiss",
+					_("Dismiss"),
 					"dialer",
 					_popup_close,
-					"Redial",
+					_("Redial"),
 					"dialer",
 					_popup_redial,
 					ctx);

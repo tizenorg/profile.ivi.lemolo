@@ -4,6 +4,7 @@ AM_CFLAGS = \
 	-DPACKAGE_DATA_DIR=\"$(pkgdatadir)/\" \
 	-DPACKAGE_BIN_DIR=\"$(bindir)\" \
 	-DPACKAGE_LIB_DIR=\"$(libdir)\" \
+	-DLOCALEDIR=\"${datadir}/locale\" \
 	-I$(top_srcdir)/utils \
 	@EFL_CFLAGS@ \
 	@PULSEAUDIO_CFLAGS@ \
@@ -22,7 +23,7 @@ MAINTAINERCLEANFILES = \
 	Makefile.in \
 	missing \
 	mkinstalldirs
-EXTRA_DIST =
+EXTRA_DIST = config.rpath
 
 noinst_LTLIBRARIES = utils/libofono-efl-utils.la
 
@@ -30,6 +31,7 @@ utils_libofono_efl_utils_la_SOURCES = \
 	utils/amb.c \
 	utils/amb.h \
 	utils/contacts-ofono-efl.h \
+	utils/i18n.h \
 	utils/log.h \
 	utils/ofono.c \
 	utils/ofono.h \
@@ -289,3 +291,5 @@ scripts_SCRIPTS = \
 data/scripts/ofono-efl-contacts-db-create.py
 
 EXTRA_DIST += $(examples_DATA) $(scripts_SCRIPTS)
+
+SUBDIRS = po

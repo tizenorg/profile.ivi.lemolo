@@ -23,6 +23,7 @@ BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
 BuildRequires:  pkgconfig(libpulse)
 BuildRequires:  edje-tools
+BuildRequires:  gettext-tools
 Requires: ofono
 Requires: automotive-message-broker
 
@@ -47,8 +48,9 @@ make %{?jobs:-j%jobs}
 %install
 rm -rf %{buildroot}
 %make_install
+%find_lang %{name}
 
-%files
+%files -f %{name}.lang
 %defattr(-,root,root,-)
 %{_bindir}/answer_daemon
 %{_bindir}/dialer

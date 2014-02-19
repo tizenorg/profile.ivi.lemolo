@@ -19,6 +19,7 @@
 #include <power.h>
 #include <aul.h>
 #endif
+#include "i18n.h"
 
 #define APP_NAME "org.tizen.answer"
 #define BUS_NAME "org.tizen.dialer"
@@ -147,7 +148,7 @@ static void _call_screen_show(Call_Screen *cs)
 	} else
 		elm_icon_standard_set(icon, "no-picture");
 
-	elm_object_part_text_set(cs->layout, "elm.text.state", "Incoming...");
+	elm_object_part_text_set(cs->layout, "elm.text.state", _("Incoming..."));
 	elm_object_part_text_set(cs->layout, "elm.text.phone.type", c->type);
 	elm_object_part_content_set(cs->layout, "elm.swallow.photo", icon);
 	elm_object_signal_emit(cs->layout, "show,activecall", "gui");
@@ -472,6 +473,8 @@ static Eina_Bool _gui_init(Call_Screen *cs)
 	win = elm_win_util_standard_add("answer screen", "oFono Answer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
 	elm_win_autodel_set(win, EINA_FALSE);
+        elm_object_part_text_set(win, "elm.text.name", _("Unknown"));
+        elm_object_part_text_set(win, "elm.text.state", _("Incoming..."));
 
 	lay = gui_layout_add(win, "answer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(lay, EINA_FALSE);
@@ -482,8 +485,8 @@ static Eina_Bool _gui_init(Call_Screen *cs)
 	elm_object_style_set(slider, "answer");
 	elm_actionslider_indicator_pos_set(slider, ELM_ACTIONSLIDER_CENTER);
 	elm_actionslider_magnet_pos_set(slider, ELM_ACTIONSLIDER_CENTER);
-	elm_object_part_text_set(slider, "left", "Hangup");
-	elm_object_part_text_set(slider, "right", "Answer");
+	elm_object_part_text_set(slider, "left", _("Hangup"));
+	elm_object_part_text_set(slider, "right", _("Answer"));
 	evas_object_smart_callback_add(slider, "selected",
 					_slider_pos_changed_cb, cs);
 	evas_object_show(slider);

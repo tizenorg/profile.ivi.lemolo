@@ -102,7 +102,7 @@ group {
                offset: 0 (SEPARATOR_HEIGHT + CONTACT_PHOTO_SIZE);
             }
             text {
-               text: "Gustavo Barbieri";
+               text: "Unknown";
                font: FONT_NORMAL;
                size: SIZE_HUGE;
                size_range: SIZE_TINY SIZE_HUGE;
