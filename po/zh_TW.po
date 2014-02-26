@@ -1,0 +1,245 @@
+# English translations for lemolo package.
+# Copyright (C) 2014 Free Software Foundation, Inc.
+# This file is distributed under the same license as the lemolo package.
+# Jimmy Huang <jimmy.huang@intel.com>, 2014.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: lemolo 0.1.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-02-18 14:47-0800\n"
+"PO-Revision-Date: 2014-01-20 13:46-0800\n"
+"Last-Translator: Jimmy Huang <jimmy.huang@intel.com>\n"
+"Language-Team: English\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: dialer/callscreen.c:256
+msgid "Disconnected"
+msgstr "斷線"
+
+#: dialer/callscreen.c:258
+msgid "Active"
+msgstr "通話中"
+
+#: dialer/callscreen.c:260
+msgid "On Hold"
+msgstr "擱置"
+
+#: dialer/callscreen.c:262
+msgid "Dialing..."
+msgstr "撥號..."
+
+#: dialer/callscreen.c:264
+msgid "Alerting..."
+msgstr "提醒..."
+
+#: dialer/callscreen.c:266 tizen/answer_daemon.c:153 tizen/answer_daemon.c:479
+msgid "Incoming..."
+msgstr "來電..."
+
+#: dialer/callscreen.c:268 dialer/gui.c:345
+msgid "Waiting..."
+msgstr "等待..."
+
+#: dialer/callscreen.c:796
+msgid "Network Disconnected!"
+msgstr "斷線"
+
+#: dialer/callscreen.c:798
+msgid "Disconnected!"
+msgstr "斷線"
+
+#: dialer/callscreen.c:800
+#, c-format
+msgid "Try to redial %s"
+msgstr "嘗試重撥 %s"
+
+#: dialer/callscreen.c:806 dialer/history.c:645
+msgid "Dismiss"
+msgstr "取消"
+
+#: dialer/callscreen.c:809 dialer/gui.c:352
+msgid "Redial"
+msgstr "重撥"
+
+#: dialer/gui.c:56
+#, c-format
+msgid "Could not call %s: %s"
+msgstr "不能撥打電話 %s: %s"
+
+#: dialer/gui.c:58 dialer/keypad.c:291 dialer/ussd.c:56
+msgid "Error"
+msgstr "錯誤"
+
+#: dialer/gui.c:91
+msgid "Switching to history"
+msgstr "切換到歷史"
+
+#: dialer/gui.c:340
+msgid "Hide Keypad"
+msgstr "隱藏鍵盤"
+
+#: dialer/gui.c:341 tizen/answer_daemon.c:491
+msgid "Answer"
+msgstr "接聽"
+
+#: dialer/gui.c:342 tizen/answer_daemon.c:490
+msgid "Hangup"
+msgstr "掛斷"
+
+#: dialer/gui.c:343
+msgid "Conference"
+msgstr "會議"
+
+#: dialer/gui.c:344 utils/contacts.c:889
+msgid "Back"
+msgstr "返回"
+
+#: dialer/gui.c:346 dialer/gui.c:347 dialer/history.c:697
+#: tizen/answer_daemon.c:478 utils/contacts-tizen.c:777
+#: utils/contacts-tizen.c:789 utils/contacts-tizen.c:925
+msgid "Unknown"
+msgstr "不明"
+
+#: dialer/gui.c:349
+msgid "Decline"
+msgstr "拒絕"
+
+#: dialer/gui.c:350
+msgid "Hold + Answer"
+msgstr "擱置 + 接聽"
+
+#: dialer/gui.c:351
+msgid "Hangup + Answer"
+msgstr "掛斷 + 接聽"
+
+#: dialer/gui.c:354
+msgid "All"
+msgstr "所有"
+
+#: dialer/gui.c:355
+msgid "Missed"
+msgstr "未接"
+
+#: dialer/gui.c:356
+msgid "Clear"
+msgstr "清除"
+
+#: dialer/gui.c:357
+msgid "Done"
+msgstr "完成"
+
+#: dialer/history.c:641
+msgid "Clear History"
+msgstr "清除記錄"
+
+#: dialer/history.c:642
+msgid "Do you want to clear all history entries?"
+msgstr "你要清除全部歷史記錄？"
+
+#: dialer/history.c:648
+msgid "Yes, Clear"
+msgstr "是的，清除"
+
+#: dialer/keypad.c:104
+msgid "IMEI Request"
+msgstr "IMEI請求"
+
+#: dialer/keypad.c:104
+msgid "No modem"
+msgstr "數據機"
+
+#: dialer/ussd.c:40
+msgid "Offline"
+msgstr "離線"
+
+#: dialer/ussd.c:41
+msgid "System is Offline"
+msgstr "系統離線"
+
+#: dialer/ussd.c:48
+#, c-format
+msgid "Could not complete.<br>Error: %s.<br>Try again:<br><br>%s"
+msgstr "無法完成.<br>Error: %s.<br>再試一次:<br><br>%s"
+
+#: dialer/ussd.c:53
+#, c-format
+msgid "Could not complete.<br>Error: %s."
+msgstr "無法完成.<br>Error: %s."
+
+#: dialer/ussd.c:122
+msgid "Respond"
+msgstr "呼應"
+
+#: dialer/ussd.c:125
+msgid "Cancel"
+msgstr "取消"
+
+#: dialer/ussd.c:165
+msgid "Supplementary Services"
+msgstr "補充服務"
+
+#: utils/contacts-tizen.c:729
+msgid "Other"
+msgstr "其他"
+
+#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:711
+msgid "Home"
+msgstr "家裡"
+
+#: utils/contacts-tizen.c:735 utils/contacts.c:727
+msgid "Work"
+msgstr "工作"
+
+#: utils/contacts-tizen.c:741
+msgid "Fax"
+msgstr "傳真"
+
+#: utils/contacts-tizen.c:744
+msgid "Message"
+msgstr "留言"
+
+#: utils/contacts-tizen.c:747 utils/contacts.c:695
+msgid "Mobile"
+msgstr "移動"
+
+#: utils/contacts-tizen.c:750
+msgid "Pager"
+msgstr "呼叫"
+
+#: utils/contacts-tizen.c:753
+msgid "Bulletin board"
+msgstr "佈告欄"
+
+#: utils/contacts-tizen.c:756
+msgid "Modem"
+msgstr "數據機"
+
+#: utils/contacts-tizen.c:759
+msgid "Car phone"
+msgstr "汽車"
+
+#: utils/contacts-tizen.c:762
+msgid "ISDN"
+msgstr "ISDN"
+
+#: utils/contacts-tizen.c:765
+msgid "Video conference"
+msgstr "視頻會議"
+
+#: utils/contacts-tizen.c:768
+msgid "Personal communicatior"
+msgstr "個人通信器"
+
+#: utils/contacts-tizen.c:771
+msgid "Assistant telephone"
+msgstr "手機助手"
+
+#: utils/contacts-tizen.c:774
+msgid "Custom"
+msgstr "自定"
