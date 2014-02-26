@@ -1,3 +1,6 @@
+* Wed Feb 26 2014 Ulf Hofemeier <ulf.hofemeier@intel.com> submit/accepted/tizen/ivi/20140131.204941@6c6d35f
+- Added German translations
+
 * Tue Feb 18 2014 Jimmy Huang <jimmy.huang@intel.com> submit/accepted/tizen/ivi/20140131.204941@2b2d852
 - Add gettext support for internationalization
 
