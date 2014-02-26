@@ -1,0 +1,245 @@
+# English translations for lemolo package.
+# Copyright (C) 2014 Free Software Foundation, Inc.
+# This file is distributed under the same license as the lemolo package.
+# Jimmy Huang <jimmy.huang@intel.com>, 2014.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: lemolo 0.1.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-02-18 14:47-0800\n"
+"PO-Revision-Date: 2014-01-20 13:46-0800\n"
+"Last-Translator: Ulf Hofemeier <ulf.hofemeier@intel.com>\n"
+"Language-Team: German\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: dialer/callscreen.c:256
+msgid "Disconnected"
+msgstr "Getrennt"
+
+#: dialer/callscreen.c:258
+msgid "Active"
+msgstr "Aktiv"
+
+#: dialer/callscreen.c:260
+msgid "On Hold"
+msgstr "Warteschleife"
+
+#: dialer/callscreen.c:262
+msgid "Dialing..."
+msgstr "Wählen"
+
+#: dialer/callscreen.c:264
+msgid "Alerting..."
+msgstr "Alarm"
+
+#: dialer/callscreen.c:266 tizen/answer_daemon.c:153 tizen/answer_daemon.c:479
+msgid "Incoming..."
+msgstr "Eingehender Anruf"
+
+#: dialer/callscreen.c:268 dialer/gui.c:345
+msgid "Waiting..."
+msgstr "Warten"
+
+#: dialer/callscreen.c:796
+msgid "Network Disconnected!"
+msgstr "Netzwerkverbindung unterbrochen"
+
+#: dialer/callscreen.c:798
+msgid "Disconnected!"
+msgstr "Getrennt"
+
+#: dialer/callscreen.c:800
+#, c-format
+msgid "Try to redial %s"
+msgstr "Versuche erneut zu wählen %s"
+
+#: dialer/callscreen.c:806 dialer/history.c:645
+msgid "Dismiss"
+msgstr "Abweisen"
+
+#: dialer/callscreen.c:809 dialer/gui.c:352
+msgid "Redial"
+msgstr "Wahlwiederholung"
+
+#: dialer/gui.c:56
+#, c-format
+msgid "Could not call %s: %s"
+msgstr "Anruf beendet %s: %s"
+
+#: dialer/gui.c:58 dialer/keypad.c:291 dialer/ussd.c:56
+msgid "Error"
+msgstr "Fehler"
+
+#: dialer/gui.c:91
+msgid "Switching to history"
+msgstr "Protokolle "
+
+#: dialer/gui.c:340
+msgid "Hide Keypad"
+msgstr "Tastenfeld ausblenden"
+
+#: dialer/gui.c:341 tizen/answer_daemon.c:491
+msgid "Answer"
+msgstr "Antworten"
+
+#: dialer/gui.c:342 tizen/answer_daemon.c:490
+msgid "Hangup"
+msgstr "Auflegen"
+
+#: dialer/gui.c:343
+msgid "Conference"
+msgstr "Konferenz"
+
+#: dialer/gui.c:344 utils/contacts.c:889
+msgid "Back"
+msgstr "Zurück"
+
+#: dialer/gui.c:346 dialer/gui.c:347 dialer/history.c:697
+#: tizen/answer_daemon.c:478 utils/contacts-tizen.c:777
+#: utils/contacts-tizen.c:789 utils/contacts-tizen.c:925
+msgid "Unknown"
+msgstr "Unbekannt"
+
+#: dialer/gui.c:349
+msgid "Decline"
+msgstr "Abweisen"
+
+#: dialer/gui.c:350
+msgid "Hold + Answer"
+msgstr "Halten + Antworten"
+
+#: dialer/gui.c:351
+msgid "Hangup + Answer"
+msgstr "Auflegen + Antworten"
+
+#: dialer/gui.c:354
+msgid "All"
+msgstr "Alle"
+
+#: dialer/gui.c:355
+msgid "Missed"
+msgstr "Anruf in Abwesenheit"
+
+#: dialer/gui.c:356
+msgid "Clear"
+msgstr "Löschen"
+
+#: dialer/gui.c:357
+msgid "Done"
+msgstr "Fertig"
+
+#: dialer/history.c:641
+msgid "Clear History"
+msgstr "Protokoll löschen"
+
+#: dialer/history.c:642
+msgid "Do you want to clear all history entries?"
+msgstr "Möchten Sie alle Protokolleinträge löschen?"
+
+#: dialer/history.c:648
+msgid "Yes, Clear"
+msgstr "Ja, löschen"
+
+#: dialer/keypad.c:104
+msgid "IMEI Request"
+msgstr "IMEI Anfrage"
+
+#: dialer/keypad.c:104
+msgid "No modem"
+msgstr "Kein Modem"
+
+#: dialer/ussd.c:40
+msgid "Offline"
+msgstr "Offline"
+
+#: dialer/ussd.c:41
+msgid "System is Offline"
+msgstr "System ist Offline"
+
+#: dialer/ussd.c:48
+#, c-format
+msgid "Could not complete.<br>Error: %s.<br>Try again:<br><br>%s"
+msgstr "Konnte nicht abgeschlossen werden.<br>Fehler: %s.<br>Erneut versuchen:<br><br>%s"
+
+#: dialer/ussd.c:53
+#, c-format
+msgid "Could not complete.<br>Error: %s."
+msgstr "Konnte nicht abgeschlossen werden.<br>Fehler: %s."
+
+#: dialer/ussd.c:122
+msgid "Respond"
+msgstr "Antworten"
+
+#: dialer/ussd.c:125
+msgid "Cancel"
+msgstr "Aufheben"
+
+#: dialer/ussd.c:165
+msgid "Supplementary Services"
+msgstr "Zusatzdienste"
+
+#: utils/contacts-tizen.c:729
+msgid "Other"
+msgstr "Andere"
+
+#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:711
+msgid "Home"
+msgstr "Zuhause"
+
+#: utils/contacts-tizen.c:735 utils/contacts.c:727
+msgid "Work"
+msgstr "Arbeit"
+
+#: utils/contacts-tizen.c:741
+msgid "Fax"
+msgstr "FAX"
+
+#: utils/contacts-tizen.c:744
+msgid "Message"
+msgstr "Nachricht"
+
+#: utils/contacts-tizen.c:747 utils/contacts.c:695
+msgid "Mobile"
+msgstr "Mobil"
+
+#: utils/contacts-tizen.c:750
+msgid "Pager"
+msgstr "Piepser"
+
+#: utils/contacts-tizen.c:753
+msgid "Bulletin board"
+msgstr "Schwarzes Brett"
+
+#: utils/contacts-tizen.c:756
+msgid "Modem"
+msgstr "Modem"
+
+#: utils/contacts-tizen.c:759
+msgid "Car phone"
+msgstr "Autotelefon"
+
+#: utils/contacts-tizen.c:762
+msgid "ISDN"
+msgstr "ISDN"
+
+#: utils/contacts-tizen.c:765
+msgid "Video conference"
+msgstr "Videokonferenz"
+
+#: utils/contacts-tizen.c:768
+msgid "Personal communicatior"
+msgstr "Persönlicher Kommunikator"
+
+#: utils/contacts-tizen.c:771
+msgid "Assistant telephone"
+msgstr "Assistent Telefonnummer"
+
+#: utils/contacts-tizen.c:774
+msgid "Custom"
+msgstr "Benutzerdefiniert"
