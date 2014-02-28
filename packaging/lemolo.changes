@@ -1,3 +1,11 @@
+* Fri Feb 28 2014 Jimmy Huang <jimmy.huang@intel.com> submit/tizen/20140228.192930@532fe24
+- Bump version to 0.1.5
+- Added support for changing locale dynamically
+- Added missing de_DE to translation file
+- Added German translations
+- Added Traditional Chinese translations
+- Added Simplified Chinese translations
+
 * Tue Feb 18 2014 Jimmy Huang <jimmy.huang@intel.com> submit/accepted/tizen/ivi/20140131.204941@2b2d852
 - Add gettext support for internationalization
 
