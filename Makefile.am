@@ -31,6 +31,7 @@ utils_libofono_efl_utils_la_SOURCES = \
 	utils/amb.c \
 	utils/amb.h \
 	utils/contacts-ofono-efl.h \
+	utils/i18n.c \
 	utils/i18n.h \
 	utils/log.h \
 	utils/ofono.c \

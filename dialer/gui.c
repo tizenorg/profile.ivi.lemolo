@@ -33,6 +33,7 @@ static Evas_Object *current_view = NULL;
 static OFono_Callback_List_Modem_Node *callback_node_modem_changed = NULL;
 static OFono_Callback_List_USSD_Notify_Node *callback_node_ussd_notify = NULL;
 static AMB_Callback_List_Node *callback_node_amb_properties_changed = NULL;
+static Locale_Callback_List_Node *callback_node_locale_properties_changed = NULL;
 
 /* XXX elm_flip should just do the right thing, but it does not */
 static Eina_Bool in_call = EINA_FALSE;
@@ -286,6 +287,20 @@ static void _amb_properties_changed(void *data __UNUSED__)
 	}
 }
 
+static void _locale_properties_changed(void *data __UNUSED__)
+{
+	const char *new_lang = locale_lang_get();
+	if (new_lang) {
+		if (strncmp(new_lang, "LANG=", 5) == 0)
+			new_lang += 5;
+
+		DBG("Switching UI language to %s", new_lang);
+		setenv ("LANG", new_lang, 1);
+		setlocale (LC_ALL, new_lang);
+		_gui_set_text();
+	}
+}
+
 static void _ofono_ussd_notify(void *data __UNUSED__, Eina_Bool needs_reply,
 				const char *message)
 {
@@ -406,6 +421,8 @@ Eina_Bool gui_init(void)
 		ofono_ussd_notify_cb_add(_ofono_ussd_notify, NULL);
 	callback_node_amb_properties_changed =
 		amb_properties_changed_cb_add(_amb_properties_changed, NULL);
+	callback_node_locale_properties_changed =
+		locale_properties_changed_cb_add(_locale_properties_changed, NULL);
 
 	/* TODO: make it match better with Tizen: icon and other properties */
 	obj = elm_layout_edje_get(lay);

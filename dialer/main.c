@@ -13,6 +13,7 @@
 
 #include "amb.h"
 #include "gui.h"
+#include "i18n.h"
 #include "log.h"
 #include "ofono.h"
 #include "pulseaudio.h"
@@ -218,13 +219,19 @@ EAPI int elm_main(int argc, char **argv)
 		_app_exit_code = EXIT_FAILURE;
 		goto end_util;
 	}
+
+	if (!locale_init()) {
+		CRITICAL("Could not setup locale");
+		_app_exit_code = EXIT_FAILURE;
+		goto end_amb;
+	}
 #endif
 
 	if (!pa_init()) {
 		CRITICAL("Could not setup pulseaudio");
 		_app_exit_code = EXIT_FAILURE;
 #ifdef HAVE_TIZEN
-		goto end_amb;
+		goto end_locale;
 #else
 		goto end_util;
 #endif
@@ -257,6 +264,8 @@ EAPI int elm_main(int argc, char **argv)
 end_pulseaudio:
 	pa_shutdown();
 #ifdef HAVE_TIZEN
+end_locale:
+	locale_shutdown();
 end_amb:
 	amb_shutdown();
 #endif
