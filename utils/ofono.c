@@ -519,6 +519,7 @@ error_path:
 static void _call_free(OFono_Call *c)
 {
 	DBG("c=%p %s", c, c->base.path);
+	ofono_call_hangup(c, NULL, NULL);
 
 	_notify_ofono_callbacks_call_list(cbs_call_removed, c);
 

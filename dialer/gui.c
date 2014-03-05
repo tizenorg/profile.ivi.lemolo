@@ -211,6 +211,12 @@ static void _gui_quit(void)
 	elm_exit();
 }
 
+static void _on_del(void *data __UNUSED__, Evas *e __UNUSED__,
+                        Evas_Object *obj __UNUSED__, void *event __UNUSED__)
+{
+	_gui_quit();
+}
+
 static void _on_clicked(void *data __UNUSED__, Evas_Object *o __UNUSED__,
 			const char *emission, const char *source __UNUSED__)
 {
@@ -353,11 +359,12 @@ Eina_Bool gui_init(void)
 	Evas_Coord w, h;
 
 	/* dialer should never, ever quit */
-	elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_NONE);
+	elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_LAST_WINDOW_CLOSED);
 
 	win = elm_win_util_standard_add("ofono-dialer", "oFono Dialer");
 	EINA_SAFETY_ON_NULL_RETURN_VAL(win, EINA_FALSE);
-	elm_win_autodel_set(win, EINA_FALSE);
+	elm_win_autodel_set(win, EINA_TRUE);
+	evas_object_event_callback_add(win, EVAS_CALLBACK_DEL, _on_del, NULL);
 
 #ifdef HAVE_TIZEN
 	appcore_set_i18n("lemolo", NULL);
