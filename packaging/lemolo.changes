@@ -1,3 +1,9 @@
+* Thu Mar 06 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20140305.222432@d2468d5
+- Bump version to 1.1.6
+- Implements TIVI-1126 - Support ringtone for incoming call
+- Fixes TIVI-2600 - HFP calls not ended when app closes
+- Enable system notification by default
+
 * Fri Feb 28 2014 Jimmy Huang <jimmy.huang@intel.com> submit/tizen/20140228.192930@532fe24
 - Bump version to 0.1.5
 - Added support for changing locale dynamically
