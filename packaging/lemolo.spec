@@ -1,6 +1,6 @@
 Name:       lemolo
 Summary:    Ofono EFL Dialer
-Version:    0.1.5
+Version:    0.1.6
 Release:    1
 Group:      Applications/Telephony
 License:    Apache-2.0
