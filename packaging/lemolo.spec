@@ -55,6 +55,7 @@ rm -rf %{buildroot}
 %{_bindir}/dialer_open
 %{_bindir}/message_daemon
 %{_datadir}/lemolo/examples/contacts.csv
+%{_datadir}/lemolo/ringtones/default.wav
 %{_datadir}/lemolo/scripts/ofono-efl-contacts-db-create.py
 %{_datadir}/lemolo/themes/default.edj
 %{_datadir}/lemolo/themes/night.edj

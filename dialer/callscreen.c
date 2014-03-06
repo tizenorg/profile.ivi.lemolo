@@ -11,6 +11,7 @@
 #include "ofono.h"
 #include "util.h"
 #include "simple-popup.h"
+#include "pulseaudio.h"
 #include "i18n.h"
 
 typedef struct _Callscreen
@@ -1004,8 +1005,10 @@ static void _call_added(void *data, OFono_Call *c)
 		_call_waiting_set(ctx, c);
 	else {
 		_call_auto_place(ctx, c);
-		if (state == OFONO_CALL_STATE_INCOMING)
+		if (state == OFONO_CALL_STATE_INCOMING) {
+			pa_play_ringtone();
 			_call_incoming_set(ctx, c);
+		}
 	}
 
 	gui_call_enter();
@@ -1018,6 +1021,7 @@ static void _call_removed(void *data, OFono_Call *c)
 		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
 		ctx->calls.waiting, c);
 
+	pa_stop_ringtone();
 	ctx->calls.list = eina_list_remove(ctx->calls.list, c);
 	_call_disconnected_show(ctx, c, "local");
 }
@@ -1235,9 +1239,13 @@ static void _call_changed(void *data, OFono_Call *c)
 	Callscreen *ctx = data;
 	OFono_Call_State state = ofono_call_state_get(c);
 
-	DBG("BEGIN: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%d)",
+	DBG("BEGIN: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%s)",
 		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
-		ctx->calls.waiting, c, state);
+		ctx->calls.waiting, c, _call_state_str(state));
+
+	if (state == OFONO_CALL_STATE_ACTIVE || state == OFONO_CALL_STATE_DISCONNECTED) {
+		pa_stop_ringtone();
+	}
 
 	if (ctx->calls.waiting == c)
 		_call_changed_waiting_update(ctx, c);
@@ -1267,9 +1275,9 @@ static void _call_changed(void *data, OFono_Call *c)
 
 	_call_changed_swap_merge_update(ctx);
 
-	DBG("END: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%d)",
+	DBG("END: ctx=%p, %p, %p, current=%p, waiting=%p, changed=%p (%s)",
 		ctx, ctx->calls.first, ctx->calls.second, ctx->calls.current,
-		ctx->calls.waiting, c, state);
+		ctx->calls.waiting, c, _call_state_str(state));
 }
 
 static void _call_disconnected(void *data, OFono_Call *c, const char *reason)

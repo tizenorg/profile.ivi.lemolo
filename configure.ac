@@ -36,6 +36,7 @@ PKG_CHECK_MODULES([PULSEAUDIO],
 	[
 		libpulse
 		libpulse-mainloop-glib
+		libpulse-simple
 	 ])
 
 EFL_WITH_BIN([edje], [edje-cc], [edje_cc])

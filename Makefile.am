@@ -170,6 +170,9 @@ if HAVE_TIZEN
 EDJE_FLAGS += -DHAVE_TIZEN=1
 endif
 
+ringtonesdir = $(pkgdatadir)/ringtones
+ringtones_DATA = data/ringtones/default.wav
+
 filesdir = $(pkgdatadir)/themes
 files_DATA = \
 data/themes/default.edj \
