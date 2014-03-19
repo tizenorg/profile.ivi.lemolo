@@ -1,3 +1,7 @@
+* Wed Mar 19 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/release/20140315.035936@97c4204
+- Set locale based on LANG and LC_ALL environment variables set
+- Updated translation files
+
 * Thu Mar 06 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20140305.222432@d2468d5
 - Bump version to 1.1.6
 - Implements TIVI-1126 - Support ringtone for incoming call
