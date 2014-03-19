@@ -8,179 +8,175 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lemolo 0.1.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-02-18 14:47-0800\n"
+"POT-Creation-Date: 2014-03-19 12:24-0700\n"
 "PO-Revision-Date: 2014-01-20 13:46-0800\n"
 "Last-Translator: Jimmy Huang <jimmy.huang@intel.com>\n"
-"Language-Team: English\n"
+"Language-Team: Simplified Chinese\n"
 "Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: dialer/callscreen.c:256
+#: dialer/callscreen.c:257
 msgid "Disconnected"
 msgstr "断线"
 
-#: dialer/callscreen.c:258
+#: dialer/callscreen.c:259
 msgid "Active"
 msgstr "通话中"
 
-#: dialer/callscreen.c:260
+#: dialer/callscreen.c:261
 msgid "On Hold"
 msgstr "搁置"
 
-#: dialer/callscreen.c:262
+#: dialer/callscreen.c:263
 msgid "Dialing..."
 msgstr "拨号..."
 
-#: dialer/callscreen.c:264
+#: dialer/callscreen.c:265
 msgid "Alerting..."
 msgstr "提醒..."
 
-#: dialer/callscreen.c:266 tizen/answer_daemon.c:153 tizen/answer_daemon.c:479
+#: dialer/callscreen.c:267 tizen/answer_daemon.c:151 tizen/answer_daemon.c:477
 msgid "Incoming..."
 msgstr "来电..."
 
-#: dialer/callscreen.c:268 dialer/gui.c:345
+#: dialer/callscreen.c:269 dialer/gui.c:78
 msgid "Waiting..."
 msgstr "等待..."
 
-#: dialer/callscreen.c:796
+#: dialer/callscreen.c:797
 msgid "Network Disconnected!"
 msgstr "断线"
 
-#: dialer/callscreen.c:798
+#: dialer/callscreen.c:799
 msgid "Disconnected!"
 msgstr "断线"
 
-#: dialer/callscreen.c:800
+#: dialer/callscreen.c:801
 #, c-format
 msgid "Try to redial %s"
 msgstr "尝试重拨 %s"
 
-#: dialer/callscreen.c:806 dialer/history.c:645
+#: dialer/callscreen.c:807 dialer/history.c:641
 msgid "Dismiss"
 msgstr "取消"
 
-#: dialer/callscreen.c:809 dialer/gui.c:352
+#: dialer/callscreen.c:810 dialer/gui.c:85
 msgid "Redial"
 msgstr "重拨"
 
-#: dialer/gui.c:56
+#: dialer/gui.c:57
 #, c-format
 msgid "Could not call %s: %s"
 msgstr "不能拨打电话 %s: %s"
 
-#: dialer/gui.c:58 dialer/keypad.c:291 dialer/ussd.c:56
+#: dialer/gui.c:59 dialer/keypad.c:288 dialer/ussd.c:53
 msgid "Error"
 msgstr "错误"
 
-#: dialer/gui.c:91
-msgid "Switching to history"
-msgstr "切换到历史"
-
-#: dialer/gui.c:340
+#: dialer/gui.c:73
 msgid "Hide Keypad"
 msgstr "隐藏键盘"
 
-#: dialer/gui.c:341 tizen/answer_daemon.c:491
+#: dialer/gui.c:74 tizen/answer_daemon.c:489
 msgid "Answer"
 msgstr "接听"
 
-#: dialer/gui.c:342 tizen/answer_daemon.c:490
+#: dialer/gui.c:75 tizen/answer_daemon.c:488
 msgid "Hangup"
 msgstr "挂断"
 
-#: dialer/gui.c:343
+#: dialer/gui.c:76
 msgid "Conference"
 msgstr "会议"
 
-#: dialer/gui.c:344 utils/contacts.c:889
+#: dialer/gui.c:77 utils/contacts.c:886
 msgid "Back"
 msgstr "返回"
 
-#: dialer/gui.c:346 dialer/gui.c:347 dialer/history.c:697
-#: tizen/answer_daemon.c:478 utils/contacts-tizen.c:777
+#: dialer/gui.c:79 dialer/gui.c:80 dialer/history.c:693
+#: tizen/answer_daemon.c:476 utils/contacts-tizen.c:777
 #: utils/contacts-tizen.c:789 utils/contacts-tizen.c:925
 msgid "Unknown"
 msgstr "不明"
 
-#: dialer/gui.c:349
+#: dialer/gui.c:82
 msgid "Decline"
 msgstr "拒绝"
 
-#: dialer/gui.c:350
+#: dialer/gui.c:83
 msgid "Hold + Answer"
 msgstr "搁置 + 接听"
 
-#: dialer/gui.c:351
+#: dialer/gui.c:84
 msgid "Hangup + Answer"
 msgstr "挂断 + 接听"
 
-#: dialer/gui.c:354
+#: dialer/gui.c:87
 msgid "All"
 msgstr "所有"
 
-#: dialer/gui.c:355
+#: dialer/gui.c:88
 msgid "Missed"
 msgstr "未接"
 
-#: dialer/gui.c:356
+#: dialer/gui.c:89
 msgid "Clear"
 msgstr "清除"
 
-#: dialer/gui.c:357
+#: dialer/gui.c:90
 msgid "Done"
 msgstr "完成"
 
-#: dialer/history.c:641
+#: dialer/history.c:637
 msgid "Clear History"
 msgstr "清除记录"
 
-#: dialer/history.c:642
+#: dialer/history.c:638
 msgid "Do you want to clear all history entries?"
 msgstr "你要清除全部历史记录？"
 
-#: dialer/history.c:648
+#: dialer/history.c:644
 msgid "Yes, Clear"
 msgstr "是的，清除"
 
-#: dialer/keypad.c:104
+#: dialer/keypad.c:101
 msgid "IMEI Request"
 msgstr "IMEI请求"
 
-#: dialer/keypad.c:104
+#: dialer/keypad.c:101
 msgid "No modem"
 msgstr "数据机"
 
-#: dialer/ussd.c:40
+#: dialer/ussd.c:37
 msgid "Offline"
 msgstr "离线"
 
-#: dialer/ussd.c:41
+#: dialer/ussd.c:38
 msgid "System is Offline"
 msgstr "系统离线"
 
-#: dialer/ussd.c:48
+#: dialer/ussd.c:45
 #, c-format
 msgid "Could not complete.<br>Error: %s.<br>Try again:<br><br>%s"
-msgstr "无法完成.<br>Error: %s.<br>再试一次:<br><br>%s"
+msgstr "无法完成.<br>错误: %s.<br>再试一次:<br><br>%s"
 
-#: dialer/ussd.c:53
+#: dialer/ussd.c:50
 #, c-format
 msgid "Could not complete.<br>Error: %s."
-msgstr "无法完成.<br>Error: %s."
+msgstr "无法完成.<br>错误: %s."
 
-#: dialer/ussd.c:122
+#: dialer/ussd.c:119
 msgid "Respond"
 msgstr "呼应"
 
-#: dialer/ussd.c:125
+#: dialer/ussd.c:122
 msgid "Cancel"
 msgstr "取消"
 
-#: dialer/ussd.c:165
+#: dialer/ussd.c:162
 msgid "Supplementary Services"
 msgstr "补充服务"
 
@@ -188,11 +184,11 @@ msgstr "补充服务"
 msgid "Other"
 msgstr "其他"
 
-#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:711
+#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:708
 msgid "Home"
 msgstr "家里"
 
-#: utils/contacts-tizen.c:735 utils/contacts.c:727
+#: utils/contacts-tizen.c:735 utils/contacts.c:724
 msgid "Work"
 msgstr "工作"
 
@@ -204,7 +200,7 @@ msgstr "传真"
 msgid "Message"
 msgstr "音信"
 
-#: utils/contacts-tizen.c:747 utils/contacts.c:695
+#: utils/contacts-tizen.c:747 utils/contacts.c:692
 msgid "Mobile"
 msgstr "移动"
 

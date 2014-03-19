@@ -8,179 +8,175 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lemolo 0.1.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-02-18 14:47-0800\n"
+"POT-Creation-Date: 2014-03-19 12:24-0700\n"
 "PO-Revision-Date: 2014-01-20 13:46-0800\n"
 "Last-Translator: Ulf Hofemeier <ulf.hofemeier@intel.com>\n"
 "Language-Team: German\n"
-"Language: en_US\n"
+"Language: de_DE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: dialer/callscreen.c:256
+#: dialer/callscreen.c:257
 msgid "Disconnected"
 msgstr "Getrennt"
 
-#: dialer/callscreen.c:258
+#: dialer/callscreen.c:259
 msgid "Active"
 msgstr "Aktiv"
 
-#: dialer/callscreen.c:260
+#: dialer/callscreen.c:261
 msgid "On Hold"
 msgstr "Warteschleife"
 
-#: dialer/callscreen.c:262
+#: dialer/callscreen.c:263
 msgid "Dialing..."
 msgstr "Wählen"
 
-#: dialer/callscreen.c:264
+#: dialer/callscreen.c:265
 msgid "Alerting..."
 msgstr "Alarm"
 
-#: dialer/callscreen.c:266 tizen/answer_daemon.c:153 tizen/answer_daemon.c:479
+#: dialer/callscreen.c:267 tizen/answer_daemon.c:151 tizen/answer_daemon.c:477
 msgid "Incoming..."
 msgstr "Eingehender Anruf"
 
-#: dialer/callscreen.c:268 dialer/gui.c:345
+#: dialer/callscreen.c:269 dialer/gui.c:78
 msgid "Waiting..."
 msgstr "Warten"
 
-#: dialer/callscreen.c:796
+#: dialer/callscreen.c:797
 msgid "Network Disconnected!"
 msgstr "Netzwerkverbindung unterbrochen"
 
-#: dialer/callscreen.c:798
+#: dialer/callscreen.c:799
 msgid "Disconnected!"
 msgstr "Getrennt"
 
-#: dialer/callscreen.c:800
+#: dialer/callscreen.c:801
 #, c-format
 msgid "Try to redial %s"
 msgstr "Versuche erneut zu wählen %s"
 
-#: dialer/callscreen.c:806 dialer/history.c:645
+#: dialer/callscreen.c:807 dialer/history.c:641
 msgid "Dismiss"
 msgstr "Abweisen"
 
-#: dialer/callscreen.c:809 dialer/gui.c:352
+#: dialer/callscreen.c:810 dialer/gui.c:85
 msgid "Redial"
 msgstr "Wahlwiederholung"
 
-#: dialer/gui.c:56
+#: dialer/gui.c:57
 #, c-format
 msgid "Could not call %s: %s"
 msgstr "Anruf beendet %s: %s"
 
-#: dialer/gui.c:58 dialer/keypad.c:291 dialer/ussd.c:56
+#: dialer/gui.c:59 dialer/keypad.c:288 dialer/ussd.c:53
 msgid "Error"
 msgstr "Fehler"
 
-#: dialer/gui.c:91
-msgid "Switching to history"
-msgstr "Protokolle "
-
-#: dialer/gui.c:340
+#: dialer/gui.c:73
 msgid "Hide Keypad"
 msgstr "Tastenfeld ausblenden"
 
-#: dialer/gui.c:341 tizen/answer_daemon.c:491
+#: dialer/gui.c:74 tizen/answer_daemon.c:489
 msgid "Answer"
 msgstr "Antworten"
 
-#: dialer/gui.c:342 tizen/answer_daemon.c:490
+#: dialer/gui.c:75 tizen/answer_daemon.c:488
 msgid "Hangup"
 msgstr "Auflegen"
 
-#: dialer/gui.c:343
+#: dialer/gui.c:76
 msgid "Conference"
 msgstr "Konferenz"
 
-#: dialer/gui.c:344 utils/contacts.c:889
+#: dialer/gui.c:77 utils/contacts.c:886
 msgid "Back"
 msgstr "Zurück"
 
-#: dialer/gui.c:346 dialer/gui.c:347 dialer/history.c:697
-#: tizen/answer_daemon.c:478 utils/contacts-tizen.c:777
+#: dialer/gui.c:79 dialer/gui.c:80 dialer/history.c:693
+#: tizen/answer_daemon.c:476 utils/contacts-tizen.c:777
 #: utils/contacts-tizen.c:789 utils/contacts-tizen.c:925
 msgid "Unknown"
 msgstr "Unbekannt"
 
-#: dialer/gui.c:349
+#: dialer/gui.c:82
 msgid "Decline"
 msgstr "Abweisen"
 
-#: dialer/gui.c:350
+#: dialer/gui.c:83
 msgid "Hold + Answer"
 msgstr "Halten + Antworten"
 
-#: dialer/gui.c:351
+#: dialer/gui.c:84
 msgid "Hangup + Answer"
 msgstr "Auflegen + Antworten"
 
-#: dialer/gui.c:354
+#: dialer/gui.c:87
 msgid "All"
 msgstr "Alle"
 
-#: dialer/gui.c:355
+#: dialer/gui.c:88
 msgid "Missed"
 msgstr "Anruf in Abwesenheit"
 
-#: dialer/gui.c:356
+#: dialer/gui.c:89
 msgid "Clear"
 msgstr "Löschen"
 
-#: dialer/gui.c:357
+#: dialer/gui.c:90
 msgid "Done"
 msgstr "Fertig"
 
-#: dialer/history.c:641
+#: dialer/history.c:637
 msgid "Clear History"
 msgstr "Protokoll löschen"
 
-#: dialer/history.c:642
+#: dialer/history.c:638
 msgid "Do you want to clear all history entries?"
 msgstr "Möchten Sie alle Protokolleinträge löschen?"
 
-#: dialer/history.c:648
+#: dialer/history.c:644
 msgid "Yes, Clear"
 msgstr "Ja, löschen"
 
-#: dialer/keypad.c:104
+#: dialer/keypad.c:101
 msgid "IMEI Request"
 msgstr "IMEI Anfrage"
 
-#: dialer/keypad.c:104
+#: dialer/keypad.c:101
 msgid "No modem"
 msgstr "Kein Modem"
 
-#: dialer/ussd.c:40
+#: dialer/ussd.c:37
 msgid "Offline"
 msgstr "Offline"
 
-#: dialer/ussd.c:41
+#: dialer/ussd.c:38
 msgid "System is Offline"
 msgstr "System ist Offline"
 
-#: dialer/ussd.c:48
+#: dialer/ussd.c:45
 #, c-format
 msgid "Could not complete.<br>Error: %s.<br>Try again:<br><br>%s"
 msgstr "Konnte nicht abgeschlossen werden.<br>Fehler: %s.<br>Erneut versuchen:<br><br>%s"
 
-#: dialer/ussd.c:53
+#: dialer/ussd.c:50
 #, c-format
 msgid "Could not complete.<br>Error: %s."
 msgstr "Konnte nicht abgeschlossen werden.<br>Fehler: %s."
 
-#: dialer/ussd.c:122
+#: dialer/ussd.c:119
 msgid "Respond"
 msgstr "Antworten"
 
-#: dialer/ussd.c:125
+#: dialer/ussd.c:122
 msgid "Cancel"
 msgstr "Aufheben"
 
-#: dialer/ussd.c:165
+#: dialer/ussd.c:162
 msgid "Supplementary Services"
 msgstr "Zusatzdienste"
 
@@ -188,11 +184,11 @@ msgstr "Zusatzdienste"
 msgid "Other"
 msgstr "Andere"
 
-#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:711
+#: utils/contacts-tizen.c:732 utils/contacts-tizen.c:738 utils/contacts.c:708
 msgid "Home"
 msgstr "Zuhause"
 
-#: utils/contacts-tizen.c:735 utils/contacts.c:727
+#: utils/contacts-tizen.c:735 utils/contacts.c:724
 msgid "Work"
 msgstr "Arbeit"
 
@@ -204,7 +200,7 @@ msgstr "FAX"
 msgid "Message"
 msgstr "Nachricht"
 
-#: utils/contacts-tizen.c:747 utils/contacts.c:695
+#: utils/contacts-tizen.c:747 utils/contacts.c:692
 msgid "Mobile"
 msgstr "Mobil"
 
