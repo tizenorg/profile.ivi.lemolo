@@ -357,6 +357,7 @@ Eina_Bool gui_init(void)
 {
 	Evas_Object *lay, *obj;
 	Evas_Coord w, h;
+	const char *lang;
 
 	/* dialer should never, ever quit */
 	elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_LAST_WINDOW_CLOSED);
@@ -367,15 +368,22 @@ Eina_Bool gui_init(void)
 	evas_object_event_callback_add(win, EVAS_CALLBACK_DEL, _on_del, NULL);
 
 #ifdef HAVE_TIZEN
-	appcore_set_i18n("lemolo", NULL);
 #ifdef HAVE_UI_GADGET
 	UG_INIT_EFL(win, UG_OPT_INDICATOR_PORTRAIT_ONLY);
 #endif
-#else
-	setlocale(LC_ALL, "");
+#endif
+
+	/*
+	 * check LANG and LC_ALL environment variables,
+	 * LC_ALL takes precedence
+	 */
+	lang = getenv("LC_ALL");
+	if (!lang)
+		lang = getenv("LANG");
+
+	setlocale(LC_ALL, lang);
 	bindtextdomain(PACKAGE, LOCALEDIR);
 	textdomain(PACKAGE);
-#endif
 
 	flip = elm_flip_add(win);
 	evas_object_size_hint_weight_set(flip,
