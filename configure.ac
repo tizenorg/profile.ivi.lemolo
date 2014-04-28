@@ -50,7 +50,6 @@ AC_ARG_ENABLE([tizen],
 if test "$want_tizen" != "no"; then
    PKG_CHECK_MODULES([TIZEN],
                 [
-                        ecore-x
                         appcore-efl
                         contacts-service2
                         vconf
