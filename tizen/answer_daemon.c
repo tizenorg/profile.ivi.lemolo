@@ -10,12 +10,8 @@
 #include <E_DBus.h>
 
 #ifdef HAVE_TIZEN
-#include <Ecore_X.h>
 #include <vconf.h>
 #include <vconf-keys.h>
-#if 0
-#include <utilX.h>
-#endif
 #include <power.h>
 #include <aul.h>
 #endif
@@ -48,23 +44,8 @@ typedef struct _Call_Screen {
 
 static void _set_notification_type(Evas_Object *win, Eina_Bool high)
 {
-#if 0
-	Ecore_X_Window xwin;
-
-	xwin = elm_win_xwindow_get(win);
-
-	if (high) {
-		ecore_x_netwm_window_type_set(xwin,
-						ECORE_X_WINDOW_TYPE_NOTIFICATION);
-		utilx_set_system_notification_level(ecore_x_display_get(), xwin,
-							UTILX_NOTIFICATION_LEVEL_HIGH);
-		power_wakeup(EINA_TRUE);
-	} else
-		ecore_x_netwm_window_type_set(xwin, ECORE_X_WINDOW_TYPE_NORMAL);
-#else
 	(void)win;
 	(void)high;
-#endif
 }
 
 static Eina_Bool _phone_locked(void)
