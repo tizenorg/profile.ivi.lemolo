@@ -18,7 +18,6 @@
 #ifdef HAVE_UI_GADGET
 #include <ui-gadget.h>
 #endif
-#include <Ecore_X.h>
 #endif
 
 static Evas_Object *win = NULL;
