@@ -136,7 +136,7 @@ desktopicon_DATA = org.tizen.dialer.png
 if HAVE_TIZEN
 desktopdir = /usr/share/packages
 desktop_DATA = \
-org.tizen.dialer.xml
+lemolo.xml
 else
 desktopdir = @with_desktopdir@
 desktop_DATA = \

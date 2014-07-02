@@ -59,6 +59,6 @@ rm -rf %{buildroot}
 %{_datadir}/lemolo/themes/default.edj
 %{_datadir}/lemolo/themes/night.edj
 %{_datadir}/lemolo/tizen-examples/order
-%{_datadir}/packages/org.tizen.dialer.xml
+%{_datadir}/packages/lemolo.xml
 %{_datadir}/icons/default/small/org.tizen.dialer.png
 %{_datadir}/dbus-1/services/org.tizen.dialer.service
