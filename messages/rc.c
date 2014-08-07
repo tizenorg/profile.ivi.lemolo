@@ -2,22 +2,21 @@
 #include "config.h"
 #endif
 #include <Elementary.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 
 #include "log.h"
 #include "gui.h"
 #include "ofono.h"
 
-static E_DBus_Connection *bus_conn = NULL;
-static E_DBus_Object *bus_obj = NULL;
-static E_DBus_Interface *bus_iface = NULL;
+static Eldbus_Connection *bus_conn = NULL;
+static Eldbus_Service_Interface *bus_iface = NULL;
 
 #define RC_IFACE "org.tizen.messages.Control"
 #define RC_PATH "/"
 
 static const char *rc_service = NULL;
 static OFono_Callback_List_Modem_Node *modem_changed_node = NULL;
-static DBusMessage *pending_send = NULL;
+static Eldbus_Message *pending_send = NULL;
 
 static void _send_message(const char *number, const char *message,
 				Eina_Bool do_auto)
@@ -29,96 +28,82 @@ static void _send_message(const char *number, const char *message,
 
 static void _modem_changed_cb(void *data __UNUSED__)
 {
-	DBusError err;
 	const char *number, *message;
-	dbus_bool_t do_auto;
-	DBusMessage *reply;
+	Eina_Bool do_auto;
+	Eldbus_Message *reply;
 
 	if (!ofono_voice_is_online() || !pending_send)
 		return;
 
-	dbus_error_init(&err);
-	dbus_message_get_args(pending_send, &err,
-				DBUS_TYPE_STRING, &number,
-				DBUS_TYPE_STRING, &message,
-				DBUS_TYPE_BOOLEAN, &do_auto, DBUS_TYPE_INVALID);
-
-	if (dbus_error_is_set(&err)) {
-		ERR("Could not parse message: %s: %s", err.name, err.message);
-		reply = dbus_message_new_error(pending_send, err.name,
-						err.message);
+	if (!eldbus_message_arguments_get(pending_send, "ssb", &number, &message, &do_auto)) {
+		ERR("Could not get pending send arguments");
+		reply = eldbus_message_error_new(pending_send, "Pending send", "Invalid argument");
 		goto reply_send;
 	}
 
 	_send_message(number, message, do_auto);
-	reply = dbus_message_new_method_return(pending_send);
+	reply = eldbus_message_method_return_new(pending_send);
 reply_send:
-	e_dbus_message_send(bus_conn, reply, NULL, -1, NULL);
-	dbus_message_unref(pending_send);
-	dbus_message_unref(reply);
+	eldbus_connection_send(bus_conn, reply, NULL, NULL, -1);
+	eldbus_message_unref(pending_send);
 	pending_send = NULL;
 }
 
-static DBusMessage *
-_rc_activate(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
+static Eldbus_Message *
+_rc_activate(Eldbus_Object *obj __UNUSED__, Eldbus_Message *msg)
 {
 	INF("Remotely activated!");
 	gui_activate();
-	return dbus_message_new_method_return(msg);
+	return eldbus_message_method_return_new(msg);
 }
 
-static DBusMessage *
-_rc_send(E_DBus_Object *obj __UNUSED__, DBusMessage *msg)
+static Eldbus_Message *
+_rc_send(Eldbus_Object *obj __UNUSED__, Eldbus_Message *msg)
 {
-	DBusError err;
-	dbus_bool_t do_auto;
+	Eina_Bool do_auto;
 	const char *number, *message;
 
 	if (!ofono_voice_is_online()) {
 		if (pending_send)
-			dbus_message_unref(pending_send);
-		pending_send = dbus_message_ref(msg);
+			eldbus_message_unref(pending_send);
+		pending_send = eldbus_message_ref(msg);
 		return NULL;
 	}
 
-	dbus_error_init(&err);
-	dbus_message_get_args(msg, &err,
-				DBUS_TYPE_STRING, &number,
-				DBUS_TYPE_STRING, &message,
-				DBUS_TYPE_BOOLEAN, &do_auto, DBUS_TYPE_INVALID);
-	if (dbus_error_is_set(&err)) {
-		ERR("Could not parse message: %s: %s", err.name, err.message);
-		return dbus_message_new_error(msg, err.name, err.message);
+	if (!eldbus_message_arguments_get(msg, "ssb", &number, &message, &do_auto)) {
+		ERR("Could not get pending send arguments");
+		return eldbus_message_error_new(pending_send, "Pending send", "Invalid argument");
 	}
+
 	_send_message(number, message, do_auto);
-	return dbus_message_new_method_return(msg);
+	return eldbus_message_method_return_new(msg);
 }
+
+static const Eldbus_Method rc_methods[] = {
+	{ "Activate", NULL, NULL, _rc_activate, },
+	{ "Send", NULL, ELDBUS_ARGS(
+		{"s", "number"},
+		{"s", "message"},
+		{"b", "do_auto"}),	_rc_send, ELDBUS_METHOD_FLAG_DEPRECATED },
+	{ }
+};
+
+static const Eldbus_Service_Interface_Desc rc_iface_desc = {
+   RC_IFACE, rc_methods, NULL, NULL, NULL, NULL
+};
 
 static void _rc_object_register(void)
 {
-	bus_obj = e_dbus_object_add(bus_conn, RC_PATH, NULL);
-	if (!bus_obj) {
-		CRITICAL("Could not create "RC_PATH" DBus object.");
-		return;
-	}
-	bus_iface = e_dbus_interface_new(RC_IFACE);
-	e_dbus_object_interface_attach(bus_obj, bus_iface);
-
-#define IF_ADD(name, par, ret, cb)		\
-	e_dbus_interface_method_add(bus_iface, name, par, ret, cb)
-
-	IF_ADD("Activate", "", "", _rc_activate);
-	IF_ADD("Send", "ssb", "", _rc_send);
-#undef IF_ADD
+	bus_iface = eldbus_service_interface_register(bus_conn,	RC_PATH, &rc_iface_desc);
 }
 
-static void _rc_activate_existing_reply(void *data __UNUSED__,
-					DBusMessage *msg __UNUSED__,
-					DBusError *err)
+static void _rc_activate_existing_reply(void *data __UNUSED__, const Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	if (dbus_error_is_set(err)) {
-		CRITICAL("Failed to activate existing messages: %s: %s",
-				err->name, err->message);
+	const char *err_name, *err_message;
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		CRITICAL("Failed to activate existing messages: %s: %s", err_name, err_message);
 		_app_exit_code = EXIT_FAILURE;
 		ecore_main_loop_quit();
 		return;
@@ -130,31 +115,29 @@ static void _rc_activate_existing_reply(void *data __UNUSED__,
 
 static void _rc_activate_existing(void)
 {
-	DBusMessage *msg = dbus_message_new_method_call(
+	Eldbus_Message *msg = eldbus_message_method_call_new(
 		rc_service, RC_PATH, RC_IFACE, "Activate");
-	e_dbus_message_send(bus_conn, msg,  _rc_activate_existing_reply,
-				-1, NULL);
-	dbus_message_unref(msg);
+	eldbus_connection_send(bus_conn, msg,  _rc_activate_existing_reply, NULL, -1);
 }
 
-static void _rc_request_name_reply(void *data __UNUSED__, DBusMessage *msg,
-					DBusError *err)
+static void _rc_request_name_reply(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusError e;
-	dbus_uint32_t t;
+	int t;
+	const char *err_name, *err_message;
 
-	if (!msg) {
-		if (err)
-			WRN("%s: %s", err->name, err->message);
-		else
-			WRN("No message");
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to request name: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "u", &t)) {
+		ERR("Could not get request name arguments");
 		_rc_activate_existing();
 		return;
 	}
 
-	dbus_error_init(&e);
-	dbus_message_get_args(msg, &e, DBUS_TYPE_UINT32, &t, DBUS_TYPE_INVALID);
-	if (t == DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
+	if (t == ELDBUS_NAME_REQUEST_REPLY_PRIMARY_OWNER) {
 		_rc_object_register();
 		gui_activate();
 	} else {
@@ -167,20 +150,20 @@ Eina_Bool rc_init(const char *service)
 {
 	rc_service = service;
 
-	if (!elm_need_e_dbus()) {
+	if (!elm_need_eldbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
 	}
 
 	INF("Running on Session bus");
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SESSION);
+	bus_conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SESSION);
 
 	if (!bus_conn) {
 		CRITICAL("Could not get DBus Bus");
 		return EINA_FALSE;
 	}
 
-	e_dbus_request_name(bus_conn, rc_service, DBUS_NAME_FLAG_DO_NOT_QUEUE,
+	eldbus_name_request(bus_conn, rc_service, ELDBUS_NAME_REQUEST_FLAG_DO_NOT_QUEUE,
 				_rc_request_name_reply, NULL);
 
 	modem_changed_node = ofono_modem_changed_cb_add(_modem_changed_cb,
@@ -191,15 +174,13 @@ Eina_Bool rc_init(const char *service)
 
 void rc_shutdown(void)
 {
-	if (bus_obj)
-		e_dbus_object_free(bus_obj);
 	if (bus_iface)
-		e_dbus_interface_unref(bus_iface);
+		eldbus_service_interface_unregister(bus_iface);
 
 	ofono_modem_changed_cb_del(modem_changed_node);
 
 	if (pending_send)
-		dbus_message_unref(pending_send);
+		eldbus_message_unref(pending_send);
 
 	bus_conn = NULL;
 }

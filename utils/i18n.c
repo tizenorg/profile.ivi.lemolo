@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 #include <Elementary.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 
 #include "i18n.h"
 #include "log.h"
@@ -12,10 +12,10 @@ typedef struct _Locale_Bus_Object Locale_Bus_Object;
 
 static const char bus_name[] = "org.freedesktop.locale1";
 
-static E_DBus_Connection *bus_conn = NULL;
+static Eldbus_Connection *bus_conn = NULL;
 static char *bus_id = NULL;
 static Locale_Manager *locale_manager = NULL;
-static E_DBus_Signal_Handler *sig_locale_properties_changed = NULL;
+static Eldbus_Signal_Handler *sig_locale_properties_changed = NULL;
 
 struct _Locale_Callback_List_Node
 {
@@ -36,17 +36,17 @@ static Eina_Inlist *cbs_locale_properties_changed = NULL;
 struct _Locale_Bus_Object
 {
 	const char *path;
-	Eina_List *dbus_signals; /* of E_DBus_Signal_Handler */
+	Eina_List *dbus_signals; /* of Eldbus_Signal_Handler */
 };
 
 static void _bus_object_free(Locale_Bus_Object *o)
 {
-	E_DBus_Signal_Handler *sh;
+	Eldbus_Signal_Handler *sh;
 
 	eina_stringshare_del(o->path);
 
 	EINA_LIST_FREE(o->dbus_signals, sh)
-		e_dbus_signal_handler_del(bus_conn, sh);
+		eldbus_signal_handler_del(sh);
 }
 
 struct _Locale_Manager
@@ -70,56 +70,41 @@ static void _notify_locale_callbacks_list(Eina_Inlist *list)
 		node->cb((void *) node->cb_data);
 }
 
-static void _locale_get_property_reply(void *data __UNUSED__, DBusMessage *msg,
-					DBusError *err)
+static void _locale_get_property_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
-		return;
-	}
+	Eldbus_Message_Iter *variant, *array;
+	const char *type, *locale, *err_name, *err_message;
 
 	EINA_SAFETY_ON_NULL_RETURN(data);
 
-	DBusError e;
-	dbus_error_init(&e);
-	DBusMessageIter iter;
-	DBusMessageIter variant, array;
-	char *locale;
-
-	if (dbus_message_iter_init(msg, &iter) == FALSE) {
-		ERR("Invalid dbus response");
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
-		ERR("Unexpected dbus response type");
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get property: %s: %s", err_name, err_message);
 		return;
 	}
 
-	dbus_message_iter_recurse(&iter, &variant);
-	if (dbus_message_iter_get_arg_type(&variant) != DBUS_TYPE_ARRAY) {
-		ERR("Message does not contain property string");
+	if (!eldbus_message_arguments_get(msg, "v", &variant)) {
+		ERR("Could not get arguments");
 		return;
 	}
 
-	dbus_message_iter_recurse(&variant, &array);
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Message does not contain property string");
+	if (!eldbus_message_iter_arguments_get(variant, "as", &array)) {
+		ERR("Could not get arguments");
 		return;
 	}
 
-	dbus_message_iter_get_basic(&array, &locale);
-	if(!locale) { 
-		ERR("Could not get property");
+	if (!eldbus_message_iter_get_and_next(array, 's', &locale)) {
+		ERR("Could not get locale");
 		return;
 	}
 
 	char *property_name = (char*) data;
 	Locale_Manager *m = _locale_get();
-	dbus_message_iter_recurse(&iter, &variant);
 
 	if (strcmp(property_name, PROP_LOCALE_STRING) == 0) {
 		if (m->lang)
@@ -135,9 +120,9 @@ static void _locale_get_property_reply(void *data __UNUSED__, DBusMessage *msg,
 	_notify_locale_callbacks_list(cbs_locale_properties_changed);
 }
 
-static void _locale_property_get(char *property, char *path, E_DBus_Method_Return_Cb cb, void *data)
+static void _locale_property_get(char *property, char *path, Eldbus_Message_Cb cb, void *data)
 {
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	char *interface_name;
 
 	EINA_SAFETY_ON_NULL_RETURN(property);
@@ -149,17 +134,11 @@ static void _locale_property_get(char *property, char *path, E_DBus_Method_Retur
 		return;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, LOCALE_BUS_PATH, LOCALE_PROPERTIES_IFACE, "Get");
 
-	dbus_message_append_args(msg,
-		DBUS_TYPE_STRING, &interface_name,
-		DBUS_TYPE_STRING, &property,
-		DBUS_TYPE_INVALID);
-
-	e_dbus_message_send(bus_conn, msg, cb, -1, data);
-
-	dbus_message_unref(msg);
+	eldbus_message_arguments_append(msg, "ss", interface_name, property);
+	eldbus_connection_send(bus_conn, msg, cb, data, -1);
 }
 
 static Locale_Manager *_locale_new(const char *path)
@@ -188,19 +167,20 @@ static void _locale_free(Locale_Manager *m)
 	free(m);
 }
 
-static void _locale_properties_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _locale_properties_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusMessageIter iter, value;
-	const char *interface;
+	Eldbus_Message_Iter *array1, *array2;
+	const char *interface, *err_name, *err_message;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
-		ERR("Could not handle message %p", msg);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get signal: %s: %s", err_name, err_message);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &interface);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
+	if (!eldbus_message_arguments_get(msg, "sa{sv}as", &interface, &array1, &array2)) {
+		ERR("Could not get PropertiesChanged arguments");
+		return;
+	}
 
 	DBG("Locale property changed at %s", interface);
 	if (strcmp(interface, LOCALE_IFACE) == 0) {
@@ -219,7 +199,7 @@ static void _locale_connected(const char *id)
 	free(bus_id);
 	bus_id = strdup(id);
 
-	sig_locale_properties_changed = e_dbus_signal_handler_add(
+	sig_locale_properties_changed = eldbus_signal_handler_add(
 		bus_conn, bus_id, NULL,
 		LOCALE_PROPERTIES_IFACE,
 		"PropertiesChanged",
@@ -233,7 +213,7 @@ static void _locale_connected(const char *id)
 static void _locale_disconnected(void)
 {
 	if (sig_locale_properties_changed) {
-		e_dbus_signal_handler_del(bus_conn, sig_locale_properties_changed);
+		eldbus_signal_handler_del(sig_locale_properties_changed);
 		sig_locale_properties_changed = NULL;
 	}
 
@@ -244,20 +224,12 @@ static void _locale_disconnected(void)
 	}
 }
 
-static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _name_owner_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusError err;
 	const char *name, *from, *to;
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err,
-					DBUS_TYPE_STRING, &name,
-					DBUS_TYPE_STRING, &from,
-					DBUS_TYPE_STRING, &to,
-					DBUS_TYPE_INVALID)) {
-		ERR("Could not get NameOwnerChanged arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "sss", &name, &from, &to)) {
+		ERR("Could not get NameOwnerChanged arguments");
 		return;
 	}
 
@@ -275,21 +247,27 @@ static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
 	}
 }
 
-static void _locale_get_name_owner(void *data __UNUSED__, DBusMessage *msg, DBusError *err)
+static void _locale_get_name_owner(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusMessageIter itr;
 	const char *id;
+	const char *err_name, *err_message;
 
 	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &itr);
-	dbus_message_iter_get_basic(&itr, &id);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get name owner: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "s", &id)) {
+		ERR("Could not get arguments");
+		return;
+	}
+
 	if (!id || id[0] == '\0') {
 		ERR("No name owner fo %s!", bus_name);
 		return;
@@ -309,23 +287,23 @@ const char* locale_lang_get(void)
 
 Eina_Bool locale_init(void)
 {
-	if (!elm_need_e_dbus()) {
+	if (!elm_need_eldbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
 	}
 
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
+	bus_conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
 	if (!bus_conn) {
 		CRITICAL("Could not get DBus System Bus");
 		return EINA_FALSE;
 	}
 
-	e_dbus_signal_handler_add(bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
-					E_DBUS_FDO_INTERFACE,
+	eldbus_signal_handler_add(bus_conn, ELDBUS_FDO_BUS, ELDBUS_FDO_PATH,
+					ELDBUS_FDO_INTERFACE,
 					"NameOwnerChanged",
 					_name_owner_changed, NULL);
 
-	e_dbus_get_name_owner(bus_conn, bus_name, _locale_get_name_owner, NULL);
+	eldbus_name_owner_get(bus_conn, bus_name, _locale_get_name_owner, NULL);
 
 	return EINA_TRUE;
 }

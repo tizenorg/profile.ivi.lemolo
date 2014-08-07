@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 #include <Elementary.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 
 #include "ofono.h"
 #include "log.h"
@@ -16,17 +16,17 @@ static const char bus_name[] = "org.ofono";
 
 static const char *known_modem_types[] = {"hfp", "sap", "hardware", NULL};
 
-static E_DBus_Connection *bus_conn = NULL;
+static Eldbus_Connection *bus_conn = NULL;
 static char *bus_id = NULL;
 static Eina_Hash *modems = NULL;
 static OFono_Modem *modem_selected = NULL;
 static const char *modem_path_wanted = NULL;
 static unsigned int modem_api_mask = 0;
 static Eina_List *modem_types = NULL;
-static E_DBus_Signal_Handler *sig_modem_added = NULL;
-static E_DBus_Signal_Handler *sig_modem_removed = NULL;
-static E_DBus_Signal_Handler *sig_modem_prop_changed = NULL;
-static DBusPendingCall *pc_get_modems = NULL;
+static Eldbus_Signal_Handler *sig_modem_added = NULL;
+static Eldbus_Signal_Handler *sig_modem_removed = NULL;
+static Eldbus_Signal_Handler *sig_modem_prop_changed = NULL;
+static Eldbus_Pending *pc_get_modems = NULL;
 
 static void _ofono_call_volume_properties_get(OFono_Modem *m);
 static void _ofono_msg_waiting_properties_get(OFono_Modem *m);
@@ -147,13 +147,6 @@ static const struct API_Interface_Map {
 	{0, NULL, 0}
 };
 
-static Eina_Bool _dbus_bool_get(DBusMessageIter *itr)
-{
-	dbus_bool_t val;
-	dbus_message_iter_get_basic(itr, &val);
-	return val;
-}
-
 static const struct Error_Map {
 	OFono_Error id;
 	const char *name;
@@ -230,19 +223,25 @@ typedef struct _OFono_Simple_Cb_Context
 	const void *data;
 } OFono_Simple_Cb_Context;
 
-static void _ofono_simple_reply(void *data, DBusMessage *msg __UNUSED__,
-				DBusError *err)
+static void _ofono_simple_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Simple_Cb_Context *ctx = data;
-	OFono_Error e = OFONO_ERROR_NONE;
+	OFono_Error oe = OFONO_ERROR_NONE;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
-		e = _ofono_error_parse(err->name);
+	if (!msg) {
+		ERR("No message");
+		oe = OFONO_ERROR_FAILED;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s",	err_name, err_message);
+		oe = _ofono_error_parse(err_name);
 	}
 
 	if (ctx) {
-		ctx->cb((void *)ctx->data, e);
+		ctx->cb((void *)ctx->data, oe);
 		free(ctx);
 	}
 }
@@ -252,26 +251,35 @@ typedef struct _OFono_String_Cb_Context
 	OFono_String_Cb cb;
 	const void *data;
 	const char *name;
-	char *(*convert)(DBusMessage *msg);
+	char *(*convert)(Eldbus_Message *msg);
 } OFono_String_Cb_Context;
 
-static void _ofono_string_reply(void *data, DBusMessage *msg, DBusError *err)
+static void _ofono_string_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_String_Cb_Context *ctx = data;
-	OFono_Error e = OFONO_ERROR_NONE;
+	OFono_Error oe = OFONO_ERROR_NONE;
 	char *str = NULL;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
-		e = _ofono_error_parse(err->name);
+	EINA_SAFETY_ON_NULL_RETURN(data);
+
+	if (!msg) {
+		ERR("No message");
+		oe = OFONO_ERROR_FAILED;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s",	err_name, err_message);
+		oe = _ofono_error_parse(err_name);
 	} else {
 		str = ctx->convert(msg);
 		if (!str)
-			e = OFONO_ERROR_NOT_SUPPORTED;
+			oe = OFONO_ERROR_NOT_SUPPORTED;
 	}
 
 	if (ctx->cb)
-		ctx->cb((void *)ctx->data, e, str);
+		ctx->cb((void *)ctx->data, oe, str);
 	else
 		DBG("%s %s", ctx->name, str);
 
@@ -282,8 +290,8 @@ static void _ofono_string_reply(void *data, DBusMessage *msg, DBusError *err)
 struct _OFono_Pending
 {
 	EINA_INLIST;
-	DBusPendingCall *pending;
-	E_DBus_Method_Return_Cb cb;
+	Eldbus_Pending *pending;
+	Eldbus_Message_Cb cb;
 	void *data;
 	void *owner;
 };
@@ -292,7 +300,7 @@ struct _OFono_Bus_Object
 {
 	const char *path;
 	Eina_Inlist *dbus_pending; /* of OFono_Pending */
-	Eina_List *dbus_signals; /* of E_DBus_Signal_Handler */
+	Eina_List *dbus_signals; /* of Eldbus_Signal_Handler */
 };
 
 static void _notify_ofono_callbacks_call_list(Eina_Inlist *list,
@@ -330,7 +338,7 @@ static void _notify_ofono_callbacks_ussd_notify_list(Eina_Inlist *list,
 
 static void _bus_object_free(OFono_Bus_Object *o)
 {
-	E_DBus_Signal_Handler *sh;
+	Eldbus_Signal_Handler *sh;
 
 	eina_stringshare_del(o->path);
 
@@ -341,28 +349,30 @@ static void _bus_object_free(OFono_Bus_Object *o)
 	}
 
 	EINA_LIST_FREE(o->dbus_signals, sh)
-		e_dbus_signal_handler_del(bus_conn, sh);
+		eldbus_signal_handler_del(sh);
 
 	free(o);
 }
 
-static void _bus_object_message_send_reply(void *data, DBusMessage *reply,
-						DBusError *err)
+static void _bus_object_message_send_reply(void *data, Eldbus_Message *reply,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Pending *p = data;
 	OFono_Bus_Object *o = p->owner;
 
 	if (p->cb)
-		p->cb(p->data, reply, err);
+		p->cb(p->data, reply, NULL);
 
-	o->dbus_pending = eina_inlist_remove(o->dbus_pending,
-						EINA_INLIST_GET(p));
+	if (!o->dbus_pending)
+		return;
+
+	o->dbus_pending = eina_inlist_remove(o->dbus_pending, EINA_INLIST_GET(p));
 	free(p);
 }
 
 static OFono_Pending *_bus_object_message_send(OFono_Bus_Object *o,
-						DBusMessage *msg,
-						E_DBus_Method_Return_Cb cb,
+						Eldbus_Message *msg,
+						Eldbus_Message_Cb cb,
 						void *data)
 {
 	OFono_Pending *p;
@@ -376,25 +386,22 @@ static OFono_Pending *_bus_object_message_send(OFono_Bus_Object *o,
 	p->cb = cb;
 	p->data = data;
 
-	p->pending = e_dbus_message_send(
-		bus_conn, msg, _bus_object_message_send_reply, -1, p);
+	p->pending = eldbus_connection_send(
+		bus_conn, msg, _bus_object_message_send_reply, p, -1);
 	EINA_SAFETY_ON_NULL_GOTO(p->pending, error_send);
 
 	o->dbus_pending = eina_inlist_append(o->dbus_pending,
 						EINA_INLIST_GET(p));
-	dbus_message_unref(msg);
+
 	return p;
 
 error_send:
 	free(p);
 error:
 	if (cb) {
-		DBusError err;
-		dbus_error_init(&err);
-		dbus_set_error(&err, "Failed", "call setup failed.");
-		cb(data, NULL, &err);
+		cb(data, NULL, NULL);
 	}
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 	return NULL;
 }
 
@@ -405,26 +412,20 @@ void ofono_pending_cancel(OFono_Pending *p)
 	EINA_SAFETY_ON_NULL_RETURN(p);
 
 	o = p->owner;
-	o->dbus_pending = eina_inlist_remove(o->dbus_pending,
-						EINA_INLIST_GET(p));
+	o->dbus_pending = eina_inlist_remove(o->dbus_pending, EINA_INLIST_GET(p));
 
-	if (p->cb) {
-		DBusError err;
+	if (p->cb)
+		p->cb(p->data, NULL, NULL);
 
-		dbus_error_init(&err);
-		dbus_set_error(&err, "Canceled",
-				"Pending method call was canceled.");
-		p->cb(p->data, NULL, &err);
-	}
-	dbus_pending_call_cancel(p->pending);
+	eldbus_pending_cancel(p->pending);
 	free(p);
 }
 
 static void _bus_object_signal_listen(OFono_Bus_Object *o, const char *iface,
-					const char *name, E_DBus_Signal_Cb cb,
+					const char *name, Eldbus_Signal_Cb cb,
 					void *data)
 {
-	E_DBus_Signal_Handler *sh = e_dbus_signal_handler_add(
+	Eldbus_Signal_Handler *sh = eldbus_signal_handler_add(
 		bus_conn, bus_id, o->path, iface, name, cb, data);
 	EINA_SAFETY_ON_NULL_RETURN(sh);
 
@@ -565,22 +566,22 @@ static time_t _ofono_time_parse(const char *str)
 }
 
 static void _call_property_update(OFono_Call *c, const char *key,
-					DBusMessageIter *value)
+					Eldbus_Message_Iter *value)
 {
 	if (strcmp(key, "LineIdentification") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(value, &str);
+		eldbus_message_iter_basic_get(value, &str);
 		DBG("%s LineIdentification %s", c->base.path, str);
 		eina_stringshare_replace(&c->line_id, str);
 	} else if (strcmp(key, "IncomingLine") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(value, &str);
+		eldbus_message_iter_basic_get(value, &str);
 		DBG("%s IncomingLine %s", c->base.path, str);
 		eina_stringshare_replace(&c->incoming_line, str);
 	} else if (strcmp(key, "State") == 0) {
 		const char *str;
 		OFono_Call_State state;
-		dbus_message_iter_get_basic(value, &str);
+		eldbus_message_iter_basic_get(value, &str);
 		state = _call_state_parse(str);
 		DBG("%s State %s (%d)", c->base.path, str, state);
 		c->state = state;
@@ -592,24 +593,24 @@ static void _call_property_update(OFono_Call *c, const char *key,
 		}
 	} else if (strcmp(key, "Name") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(value, &str);
+		eldbus_message_iter_basic_get(value, &str);
 		DBG("%s Name %s", c->base.path, str);
 		eina_stringshare_replace(&c->name, str);
 	} else if (strcmp(key, "Multiparty") == 0) {
-		dbus_bool_t v;
-		dbus_message_iter_get_basic(value, &v);
+		Eina_Bool v;
+		eldbus_message_iter_basic_get(value, &v);
 		DBG("%s Multiparty %d", c->base.path, v);
 		c->multiparty = v;
 	} else if (strcmp(key, "Emergency") == 0) {
-		dbus_bool_t v;
-		dbus_message_iter_get_basic(value, &v);
+		Eina_Bool v;
+		eldbus_message_iter_basic_get(value, &v);
 		DBG("%s Emergency %d", c->base.path, v);
 		c->emergency = v;
 	} else if (strcmp(key, "StartTime") == 0) {
 		const char *ts = NULL;
 		time_t st, ut;
 		double lt;
-		dbus_message_iter_get_basic(value, &ts);
+		eldbus_message_iter_basic_get(value, &ts);
 
 		st = _ofono_time_parse(ts);
 		ut = time(NULL);
@@ -621,31 +622,32 @@ static void _call_property_update(OFono_Call *c, const char *key,
 		DBG("%s %s (unused property)", c->base.path, key);
 }
 
-static void _call_property_changed(void *data, DBusMessage *msg)
+static void _call_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Call *c = data;
-	DBusMessageIter iter, value;
+	Eldbus_Message_Iter *value;
 	const char *key;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
 	DBG("path=%s", c->base.path);
 
-	dbus_message_iter_get_basic(&iter, &key);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
-	_call_property_update(c, key, &value);
+	if (!eldbus_message_arguments_get(msg, "sv", &key, &value)) {
+		ERR("Could not get call PropertyChanged arguments");
+		return;
+	}
+
+	_call_property_update(c, key, value);
 
 	_notify_ofono_callbacks_call_list(cbs_call_changed, c);
 }
 
-static void _call_disconnect_reason(void *data, DBusMessage *msg)
+static void _call_disconnect_reason(void *data, Eldbus_Message *msg)
 {
 	OFono_Call *c = data;
-	DBusError err;
 	const char *reason;
 
 	if (!msg) {
@@ -656,12 +658,8 @@ static void _call_disconnect_reason(void *data, DBusMessage *msg)
 	DBG("path=%s", c->base.path);
 	c->state = OFONO_CALL_STATE_DISCONNECTED;
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &reason,
-					DBUS_TYPE_INVALID)) {
-		ERR("Could not get DisconnectReason arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "s", &reason)) {
+		ERR("Could not get DisconnectReason arguments");
 		return;
 	}
 
@@ -698,10 +696,11 @@ static OFono_Call *_call_pending_add(OFono_Modem *m, const char *path,
 	return c;
 }
 
-static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
+static void _call_add(OFono_Modem *m, const char *path, Eldbus_Message_Iter *prop)
 {
 	OFono_Call *c;
 	Eina_Bool needs_cb_added;
+	Eldbus_Message_Iter *dict_entry;
 
 	DBG("path=%s, prop=%p", path, prop);
 
@@ -714,18 +713,16 @@ static void _call_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 		EINA_SAFETY_ON_NULL_RETURN(c);
 	}
 
-	for (; dbus_message_iter_get_arg_type(prop) == DBUS_TYPE_DICT_ENTRY;
-			dbus_message_iter_next(prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
 
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-
-		_call_property_update(c, key, &value);
+		_call_property_update(c, key, value);
 	}
 
 	if (c->pending_dial) {
@@ -749,29 +746,10 @@ static void _call_remove(OFono_Modem *m, const char *path)
 	eina_hash_del_by_key(m->calls, path);
 }
 
-static void _call_added(void *data, DBusMessage *msg)
+static void _call_added(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, properties;
-	const char *path;
-
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
-		ERR("Could not handle message %p", msg);
-		return;
-	}
-
-	dbus_message_iter_get_basic(&iter, &path);
-
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &properties);
-
-	_call_add(m, path, &properties);
-}
-
-static void _call_removed(void *data, DBusMessage *msg)
-{
-	OFono_Modem *m = data;
-	DBusError err;
+	Eldbus_Message_Iter *properties;
 	const char *path;
 
 	if (!msg) {
@@ -779,12 +757,26 @@ static void _call_removed(void *data, DBusMessage *msg)
 		return;
 	}
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_OBJECT_PATH,
-					&path, NULL)) {
-		ERR("Could not get CallRemoved arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "oa{sv}", &path, &properties)) {
+		ERR("Could not get CallAdded arguments");
+		return;
+	}
+
+	_call_add(m, path, properties);
+}
+
+static void _call_removed(void *data, Eldbus_Message *msg)
+{
+	OFono_Modem *m = data;
+	const char *path;
+
+	if (!msg) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "o", &path)) {
+		ERR("Could not get CallRemoved arguments");
 		return;
 	}
 
@@ -852,7 +844,7 @@ static OFono_Pending *_ofono_multiparty(const char *method,
 {
 
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Modem *m = _modem_selected_get();
 
@@ -865,7 +857,7 @@ static OFono_Pending *_ofono_multiparty(const char *method,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 				bus_id, m->base.path,
 				OFONO_PREFIX OFONO_VOICE_IFACE,
 				method);
@@ -873,16 +865,11 @@ static OFono_Pending *_ofono_multiparty(const char *method,
 	if (!msg)
 		goto error_no_message;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_INVALID))
-		goto error_message_append;
-
 	INF("%s()", method);
 	p = _bus_object_message_send(&m->base, msg, _ofono_simple_reply, ctx);
 
 	return p;
 
-error_message_append:
-	dbus_message_unref(msg);
 error_no_message:
 	if (cb)
 		cb((void *)data, OFONO_ERROR_FAILED);
@@ -895,7 +882,7 @@ OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
 {
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 
@@ -906,7 +893,7 @@ OFono_Pending *ofono_call_hangup(OFono_Call *c, OFono_Simple_Cb cb,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, c->base.path, OFONO_PREFIX "VoiceCall", "Hangup");
 	if (!msg)
 		goto error;
@@ -927,7 +914,7 @@ OFono_Pending *ofono_call_answer(OFono_Call *c, OFono_Simple_Cb cb,
 {
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(c, NULL);
 
@@ -938,7 +925,7 @@ OFono_Pending *ofono_call_answer(OFono_Call *c, OFono_Simple_Cb cb,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, c->base.path, OFONO_PREFIX "VoiceCall", "Answer");
 	if (!msg)
 		goto error;
@@ -990,46 +977,48 @@ time_t ofono_call_full_start_time_get(const OFono_Call *c)
 	return c->full_start_time;
 }
 
-static void _ofono_calls_get_reply(void *data, DBusMessage *msg,
-					DBusError *err)
+static void _ofono_calls_get_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
+	Eldbus_Message_Iter *array, *dict_entry;
+	const char *err_name, *err_message;
+
+	EINA_SAFETY_ON_NULL_RETURN(data);
 	OFono_Modem *m = data;
-	DBusMessageIter array, dict;
 
 	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
+		ERR("No message");
+		return;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get reply: %s: %s", err_name, err_message);
 		return;
 	}
 
 	eina_hash_free_buckets(m->calls);
 
-	if (!dbus_message_iter_init(msg, &array)) {
+	if (!eldbus_message_arguments_get(msg, "a(oa{sv})", &array)) {
 		ERR("Could not get calls");
 		return;
 	}
 
-	dbus_message_iter_recurse(&array, &dict);
-	for (; dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_STRUCT;
-			dbus_message_iter_next(&dict)) {
-		DBusMessageIter value, properties;
+	while (eldbus_message_iter_get_and_next(array, 'r', &dict_entry)) {
+		Eldbus_Message_Iter *properties;
 		const char *path;
 
-		dbus_message_iter_recurse(&dict, &value);
-		dbus_message_iter_get_basic(&value, &path);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "oa{sv}", &path, &properties)) {
+			ERR("Could not get CallAdded arguments");
+			return;
+		}
 
-		dbus_message_iter_next(&value);
-		dbus_message_iter_recurse(&value, &properties);
-
-		_call_add(m, path, &properties);
+		_call_add(m, path, properties);
 	}
 }
 
 static void _modem_calls_load(OFono_Modem *m)
 {
-	DBusMessage *msg = dbus_message_new_method_call(
+	Eldbus_Message *msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_VOICE_IFACE,
 		"GetCalls");
 
@@ -1107,37 +1096,41 @@ static void _modem_free(OFono_Modem *m)
 
 
 static void _call_volume_property_update(OFono_Modem *m, const char *prop_name,
-						DBusMessageIter *iter)
+						Eldbus_Message_Iter *iter)
 {
 
 	if (strcmp(prop_name, "Muted") == 0) {
-		m->muted = _dbus_bool_get(iter);
+		Eina_Bool b;
+		eldbus_message_iter_basic_get(iter, &b);
+		m->muted = b;
 		DBG("%s Muted %d", m->base.path, m->muted);
 	} else if (strcmp(prop_name, "SpeakerVolume") == 0) {
-		dbus_message_iter_get_basic(iter, &m->speaker_volume);
+		eldbus_message_iter_basic_get(iter, &m->speaker_volume);
 		DBG("%s Speaker Volume %hhu", m->base.path, m->speaker_volume);
 	} else if (strcmp(prop_name, "MicrophoneVolume") == 0) {
-		dbus_message_iter_get_basic(iter, &m->microphone_volume);
+		eldbus_message_iter_basic_get(iter, &m->microphone_volume);
 		DBG("%s Microphone Volume %hhu", m->base.path, m->speaker_volume);
 	} else
 		DBG("%s %s (unused property)", m->base.path, prop_name);
 }
 
 static void _msg_waiting_property_update(OFono_Modem *m, const char *prop_name,
-						DBusMessageIter *iter)
+						Eldbus_Message_Iter *iter)
 {
 
 	if (strcmp(prop_name, "VoicemailWaiting") == 0) {
-		m->voicemail_waiting = _dbus_bool_get(iter);
+		Eina_Bool b;
+		eldbus_message_iter_basic_get(iter, &b);
+		m->voicemail_waiting = b;
 		DBG("%s VoicemailWaiting %d",
 			m->base.path, m->voicemail_waiting);
 	} else if (strcmp(prop_name, "VoicemailMessageCount") == 0) {
-		dbus_message_iter_get_basic(iter, &m->voicemail_count);
+		eldbus_message_iter_basic_get(iter, &m->voicemail_count);
 		DBG("%s VoicemailMessageCount %hhu",
 			m->base.path, m->voicemail_count);
 	} else if (strcmp(prop_name, "VoicemailMailboxNumber") == 0) {
 		const char *s;
-		dbus_message_iter_get_basic(iter, &s);
+		eldbus_message_iter_basic_get(iter, &s);
 		eina_stringshare_replace(&(m->voicemail_number), s);
 		DBG("%s VoicemailMailboxNumber %s",
 			m->base.path, m->voicemail_number);
@@ -1160,12 +1153,12 @@ static OFono_USSD_State _suppl_serv_state_parse(const char *s)
 }
 
 static void _suppl_serv_property_update(OFono_Modem *m, const char *prop_name,
-					DBusMessageIter *iter)
+					Eldbus_Message_Iter *iter)
 {
 
 	if (strcmp(prop_name, "State") == 0) {
 		const char *s;
-		dbus_message_iter_get_basic(iter, &s);
+		eldbus_message_iter_basic_get(iter, &s);
 		m->ussd_state = _suppl_serv_state_parse(s);
 		DBG("%s USSD.State %d",	m->base.path, m->ussd_state);
 	} else
@@ -1173,26 +1166,28 @@ static void _suppl_serv_property_update(OFono_Modem *m, const char *prop_name,
 }
 
 static void _msg_property_update(OFono_Modem *m, const char *prop_name,
-					DBusMessageIter *iter)
+					Eldbus_Message_Iter *iter)
 {
 
 	if (strcmp(prop_name, "ServiceCenterAddress") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(iter, &str);
+		eldbus_message_iter_arguments_get(iter, "s", &str);
 		DBG("%s ServiceCenterAddress %s", m->base.path, str);
 		eina_stringshare_replace(&(m->serv_center_addr), str);
 	} else if (strcmp(prop_name, "UseDeliveryReports") == 0) {
-		m->use_delivery_reports = _dbus_bool_get(iter);
+		Eina_Bool b;
+		eldbus_message_iter_arguments_get(iter, "b", &b);
+		m->use_delivery_reports = b;
 		DBG("%s UseDeliveryReports %hhu", m->base.path,
 			m->use_delivery_reports);
 	} else if (strcmp(prop_name, "Bearer") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(iter, &str);
+		eldbus_message_iter_arguments_get(iter, "s", &str);
 		DBG("%s Bearer %s", m->base.path, str);
 		eina_stringshare_replace(&(m->msg_bearer), str);
 	} else if (strcmp(prop_name, "Alphabet") == 0) {
 		const char *str;
-		dbus_message_iter_get_basic(iter, &str);
+		eldbus_message_iter_arguments_get(iter, "s", &str);
 		DBG("%s Alphabet %s", m->base.path, str);
 		eina_stringshare_replace(&(m->msg_alphabet), str);
 	} else
@@ -1207,110 +1202,121 @@ static void _notify_ofono_callbacks_modem_list(Eina_Inlist *list)
 		node->cb((void *) node->cb_data);
 }
 
-static void _call_volume_property_changed(void *data, DBusMessage *msg)
+static void _call_volume_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, variant_iter;
+	Eldbus_Message_Iter *variant_iter;
 	const char *prop_name;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &prop_name);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &variant_iter);
-	_call_volume_property_update(m, prop_name, &variant_iter);
+	if (!eldbus_message_arguments_get(msg, "sv", &prop_name, &variant_iter)) {
+		ERR("Could not get volume PropertyChanged arguments");
+		return;
+	}
+
+	_call_volume_property_update(m, prop_name, variant_iter);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
-static void _msg_waiting_property_changed(void *data, DBusMessage *msg)
+static void _msg_waiting_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, variant_iter;
+	Eldbus_Message_Iter *variant_iter;
 	const char *prop_name;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &prop_name);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &variant_iter);
-	_msg_waiting_property_update(m, prop_name, &variant_iter);
+	if (!eldbus_message_arguments_get(msg, "sv", &prop_name, &variant_iter)) {
+		ERR("Could not get message waiting PropertyChanged arguments");
+		return;
+	}
+
+	_msg_waiting_property_update(m, prop_name, variant_iter);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
-static void _suppl_serv_property_changed(void *data, DBusMessage *msg)
+static void _suppl_serv_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, variant_iter;
+	Eldbus_Message_Iter *variant_iter;
 	const char *prop_name;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &prop_name);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &variant_iter);
-	_suppl_serv_property_update(m, prop_name, &variant_iter);
+	if (!eldbus_message_arguments_get(msg, "sv", &prop_name, &variant_iter)) {
+		ERR("Could not get supplicant service PropertyChanged arguments");
+		return;
+	}
+
+	_suppl_serv_property_update(m, prop_name, variant_iter);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _suppl_serv_notification_recv(void *data __UNUSED__,
-						DBusMessage *msg)
+						Eldbus_Message *msg)
 {
-	DBusMessageIter iter;
 	const char *s;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &s);
+	if (!eldbus_message_arguments_get(msg, "s", &s)) {
+		ERR("Could not get supplementary respond arguments");
+		return;
+	}
 
 	_notify_ofono_callbacks_ussd_notify_list(
 		cbs_ussd_notify, EINA_FALSE, s);
 }
 
-static void _suppl_serv_request_recv(void *data __UNUSED__, DBusMessage *msg)
+static void _suppl_serv_request_recv(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusMessageIter iter;
 	const char *s;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &s);
+	if (!eldbus_message_arguments_get(msg, "s", &s)) {
+		ERR("Could not get supplementary service request arguments");
+		return;
+	}
 
 	_notify_ofono_callbacks_ussd_notify_list(cbs_ussd_notify, EINA_TRUE, s);
 }
 
-static void _msg_property_changed(void *data, DBusMessage *msg)
+static void _msg_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, variant_iter;
+	Eldbus_Message_Iter *variant_iter;
 	const char *prop_name;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &prop_name);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &variant_iter);
-	_msg_property_update(m, prop_name, &variant_iter);
+	if (!eldbus_message_arguments_get(msg, "sv", &prop_name, &variant_iter)) {
+		ERR("Could not get message PropertyChanged arguments");
+		return;
+	}
+	_msg_property_update(m, prop_name, variant_iter);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
@@ -1329,12 +1335,12 @@ static OFono_Sent_SMS_State _sent_sms_state_parse(const char *str)
 }
 
 static void _sent_sms_property_update(OFono_Sent_SMS *sms, const char *key,
-					DBusMessageIter *value)
+					Eldbus_Message_Iter *value)
 {
 	if (strcmp(key, "State") == 0) {
 		const char *str;
 		OFono_Sent_SMS_State state;
-		dbus_message_iter_get_basic(value, &str);
+		eldbus_message_iter_arguments_get(value, "s", &str);;
 		state = _sent_sms_state_parse(str);
 		DBG("%s State %d %s", sms->base.path, state, str);
 		sms->state = state;
@@ -1351,23 +1357,25 @@ static void _notify_ofono_callbacks_sent_sms(OFono_Error err,
 		node->cb((void *) node->cb_data, err, sms);
 }
 
-static void _sent_sms_property_changed(void *data, DBusMessage *msg)
+static void _sent_sms_property_changed(void *data, Eldbus_Message *msg)
 {
 	OFono_Sent_SMS *sms = data;
-	DBusMessageIter iter, value;
+	Eldbus_Message_Iter *value;
 	const char *key;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
 	DBG("path=%s", sms->base.path);
 
-	dbus_message_iter_get_basic(&iter, &key);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
-	_sent_sms_property_update(sms, key, &value);
+	if (!eldbus_message_arguments_get(msg, "sv", &key, &value)) {
+		ERR("Could not get sent sms PropertyChanged arguments");
+		return;
+	}
+
+	_sent_sms_property_update(sms, key, value);
 
 	_notify_ofono_callbacks_sent_sms(OFONO_ERROR_NONE, sms);
 }
@@ -1385,40 +1393,42 @@ static void _notify_ofono_callbacks_incoming_sms(unsigned int sms_class,
 	}
 }
 
-static void _msg_notify(unsigned int sms_class, DBusMessageIter *iter)
+static void _msg_notify(unsigned int sms_class, Eldbus_Message_Iter *iter)
 {
-	DBusMessageIter info;
+	Eldbus_Message_Iter *info, *dict_entry;
 	const char *message = NULL;
 	const char *sender = NULL;
 	const char *orig_timestamp = NULL;
 	const char *local_timestamp = NULL;
 	time_t timestamp;
 
-	dbus_message_iter_get_basic(iter, &message);
+	EINA_SAFETY_ON_NULL_RETURN(iter);
+
+	if (!eldbus_message_iter_arguments_get(iter, "sa{sv}", &message, &info)) {
+		ERR("Could not get message notify arguments");
+		return;
+	}
+
 	EINA_SAFETY_ON_NULL_RETURN(message);
 	DBG("Message '%s'", message);
 
-	dbus_message_iter_next(iter);
-	dbus_message_iter_recurse(iter, &info);
-	for (; dbus_message_iter_get_arg_type(&info) == DBUS_TYPE_DICT_ENTRY;
-			dbus_message_iter_next(&info)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(info, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(&info, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get ModemAdded arguments");
+			return;
+		}
 
 		if (strcmp(key, "Sender") == 0) {
-			dbus_message_iter_get_basic(&value, &sender);
+			eldbus_message_iter_basic_get(value, &sender);
 			DBG("Sender %s", sender);
 		} else if (strcmp(key, "SentTime") == 0) {
-			dbus_message_iter_get_basic(&value, &orig_timestamp);
+			eldbus_message_iter_basic_get(value, &orig_timestamp);
 			DBG("SentTime %s", orig_timestamp);
 		} else if (strcmp(key, "LocalSentTime") == 0) {
-			dbus_message_iter_get_basic(&value, &local_timestamp);
+			eldbus_message_iter_basic_get(value, &local_timestamp);
 			DBG("LocalSentTime %s", local_timestamp);
 		} else
 			DBG("%s (unused property)", key);
@@ -1432,32 +1442,36 @@ static void _msg_notify(unsigned int sms_class, DBusMessageIter *iter)
 						message);
 }
 
-static void _msg_immediate(void *data, DBusMessage *msg)
+static void _msg_immediate(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter;
+	Eldbus_Message_Iter *iter;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
+	iter = eldbus_message_iter_get(msg);
+
 	DBG("path=%s", m->base.path);
-	_msg_notify(0, &iter);
+	_msg_notify(0, iter);
 }
 
-static void _msg_incoming(void *data, DBusMessage *msg)
+static void _msg_incoming(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter;
+	Eldbus_Message_Iter *iter;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	iter = eldbus_message_iter_get(msg);
+
+	if (!iter) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
 	DBG("path=%s", m->base.path);
-	_msg_notify(1, &iter);
+	_msg_notify(1, iter);
 }
 
 static OFono_Sent_SMS *_sent_sms_common_add(OFono_Modem *m, const char *path)
@@ -1485,8 +1499,9 @@ static OFono_Sent_SMS *_sent_sms_pending_add(OFono_Modem *m, const char *path,
 	return sms;
 }
 
-static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
+static void _msg_add(OFono_Modem *m, const char *path, Eldbus_Message_Iter *prop)
 {
+	Eldbus_Message_Iter *dict_entry;
 	OFono_Sent_SMS *sms;
 
 	DBG("path=%s, prop=%p", path, prop);
@@ -1499,18 +1514,16 @@ static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 		EINA_SAFETY_ON_NULL_RETURN(sms);
 	}
 
-	for (; dbus_message_iter_get_arg_type(prop) == DBUS_TYPE_DICT_ENTRY;
-			dbus_message_iter_next(prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
 
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-
-		_sent_sms_property_update(sms, key, &value);
+		_sent_sms_property_update(sms, key, value);
 	}
 
 	if (sms->pending_send) {
@@ -1527,23 +1540,23 @@ static void _msg_add(OFono_Modem *m, const char *path, DBusMessageIter *prop)
 	_notify_ofono_callbacks_sent_sms(OFONO_ERROR_NONE, sms);
 }
 
-static void _msg_added(void *data, DBusMessage *msg)
+static void _msg_added(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, properties;
+	Eldbus_Message_Iter *properties;
 	const char *path;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &path);
+	if (!eldbus_message_arguments_get(msg, "oa{sv}", &path, &properties)) {
+		ERR("Could not get MessageAdded arguments");
+		return;
+	}
 
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &properties);
-
-	_msg_add(m, path, &properties);
+	_msg_add(m, path, properties);
 }
 
 static void _msg_remove(OFono_Modem *m, const char *path)
@@ -1552,10 +1565,9 @@ static void _msg_remove(OFono_Modem *m, const char *path)
 	eina_hash_del_by_key(m->sent_sms, path);
 }
 
-static void _msg_removed(void *data, DBusMessage *msg)
+static void _msg_removed(void *data, Eldbus_Message *msg)
 {
 	OFono_Modem *m = data;
-	DBusError err;
 	const char *path;
 
 	if (!msg) {
@@ -1563,31 +1575,28 @@ static void _msg_removed(void *data, DBusMessage *msg)
 		return;
 	}
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_OBJECT_PATH,
-					&path, NULL)) {
-		ERR("Could not get MessageRemoved arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "o", &path)) {
+		ERR("Could not get MessageRemoved arguments");
 		return;
 	}
 
 	_msg_remove(m, path);
 }
 
-static unsigned int _modem_interfaces_extract(DBusMessageIter *array)
+static unsigned int _modem_interfaces_extract(Eldbus_Message_Iter *iter)
 {
-	DBusMessageIter entry;
+	Eldbus_Message_Iter *array;
+	const char* name;
 	unsigned int interfaces = 0;
 
-	dbus_message_iter_recurse(array, &entry);
-	for (; dbus_message_iter_get_arg_type(&entry) == DBUS_TYPE_STRING;
-			dbus_message_iter_next(&entry)) {
-		const struct API_Interface_Map *itr;
-		const char *name;
-		size_t namelen;
+	if (!eldbus_message_iter_arguments_get(iter, "as", &array)) {
+		ERR("Could not get modem interfaces arguments");
+		return;
+	}
 
-		dbus_message_iter_get_basic(&entry, &name);
+	while (eldbus_message_iter_get_and_next(array, 's', &name)) {
+		const struct API_Interface_Map *itr;
+		size_t namelen;
 
 		if (strncmp(name, OFONO_PREFIX, strlen(OFONO_PREFIX)) != 0)
 			continue;
@@ -1631,13 +1640,17 @@ static void _modem_update_interfaces(OFono_Modem *m, unsigned int ifaces)
 }
 
 static void _modem_property_update(OFono_Modem *m, const char *key,
-					DBusMessageIter *value)
+					Eldbus_Message_Iter *value)
 {
 	if (strcmp(key, "Powered") == 0) {
-		m->powered = _dbus_bool_get(value);
+		Eina_Bool b;
+		eldbus_message_iter_basic_get(value, &b);
+		m->powered = b;
 		DBG("%s Powered %d", m->base.path, m->powered);
 	} else if (strcmp(key, "Online") == 0) {
-		m->online = _dbus_bool_get(value);
+		Eina_Bool b;
+		eldbus_message_iter_basic_get(value, &b);
+		m->online = b;
 		DBG("%s Online %d", m->base.path, m->online);
 	} else if (strcmp(key, "Interfaces") == 0) {
 		unsigned int ifaces = _modem_interfaces_extract(value);
@@ -1652,12 +1665,12 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 		}
 	} else if (strcmp(key, "Serial") == 0) {
 		const char *serial;
-		dbus_message_iter_get_basic(value, &serial);
+		eldbus_message_iter_basic_get(value, &serial);
 		DBG("%s Serial %s", m->base.path, serial);
 		eina_stringshare_replace(&m->serial, serial);
 	} else if (strcmp(key, "Type") == 0) {
 		const char *type;
-		dbus_message_iter_get_basic(value, &type);
+		eldbus_message_iter_basic_get(value, &type);
 		DBG("%s Type %s", m->base.path, type);
 
 		if (!modem_types)
@@ -1681,32 +1694,38 @@ static void _modem_property_update(OFono_Modem *m, const char *key,
 }
 
 static void _ofono_call_volume_properties_get_reply(void *data,
-							DBusMessage *msg,
-							DBusError *err)
+						Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, prop;
+	Eldbus_Message_Iter *prop, *dict_entry;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &prop);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Call volume reply error %s: %s",	err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "a{sv}", &prop)) {
+		ERR("Could not get call volume arguments");
+		return;
+	}
 
 	DBG("m=%s", m->base.path);
-	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
-	     dbus_message_iter_next(&prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(&prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-		_call_volume_property_update(m, key, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
+		_call_volume_property_update(m, key, value);
 	}
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
@@ -1714,8 +1733,8 @@ static void _ofono_call_volume_properties_get_reply(void *data,
 
 static void _ofono_call_volume_properties_get(OFono_Modem *m)
 {
-	DBusMessage *msg;
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	Eldbus_Message *msg;
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 						OFONO_PREFIX
 						OFONO_CALL_VOL_IFACE,
 						"GetProperties");
@@ -1727,32 +1746,38 @@ static void _ofono_call_volume_properties_get(OFono_Modem *m)
 }
 
 static void _ofono_msg_waiting_properties_get_reply(void *data,
-							DBusMessage *msg,
-							DBusError *err)
+						Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, prop;
+	Eldbus_Message_Iter *prop, *dict_entry;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &prop);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s",	err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "a{sv}", &prop)) {
+		ERR("Could not get message waiting properties arguments");
+		return;
+	}
 
 	DBG("m=%s", m->base.path);
-	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
-	     dbus_message_iter_next(&prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(&prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-		_msg_waiting_property_update(m, key, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
+		_msg_waiting_property_update(m, key, value);
 	}
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
@@ -1760,8 +1785,8 @@ static void _ofono_msg_waiting_properties_get_reply(void *data,
 
 static void _ofono_msg_waiting_properties_get(OFono_Modem *m)
 {
-	DBusMessage *msg;
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	Eldbus_Message *msg;
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 						OFONO_PREFIX
 						OFONO_MSG_WAITING_IFACE,
 						"GetProperties");
@@ -1773,32 +1798,38 @@ static void _ofono_msg_waiting_properties_get(OFono_Modem *m)
 }
 
 static void _ofono_suppl_serv_properties_get_reply(void *data,
-							DBusMessage *msg,
-							DBusError *err)
+						Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, prop;
+	Eldbus_Message_Iter *prop, *dict_entry;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &prop);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("SS service properties reply error %s: %s",	err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "a{sv}", &prop)) {
+		ERR("Could not get supplementary service properties arguments");
+		return;
+	}
 
 	DBG("m=%s", m->base.path);
-	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
-	     dbus_message_iter_next(&prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(&prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-		_suppl_serv_property_update(m, key, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
+		_suppl_serv_property_update(m, key, value);
 	}
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
@@ -1806,8 +1837,8 @@ static void _ofono_suppl_serv_properties_get_reply(void *data,
 
 static void _ofono_suppl_serv_properties_get(OFono_Modem *m)
 {
-	DBusMessage *msg;
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	Eldbus_Message *msg;
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 						OFONO_PREFIX
 						OFONO_SUPPL_SERV_IFACE,
 						"GetProperties");
@@ -1819,32 +1850,38 @@ static void _ofono_suppl_serv_properties_get(OFono_Modem *m)
 }
 
 
-static void _ofono_msg_properties_get_reply(void *data,	DBusMessage *msg,
-						DBusError *err)
+static void _ofono_msg_properties_get_reply(void *data,	Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Modem *m = data;
-	DBusMessageIter iter, prop;
+	Eldbus_Message_Iter *prop, *dict_entry;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		DBG("%s: %s", err->name, err->message);
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &iter);
-	dbus_message_iter_recurse(&iter, &prop);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Message properties reply error %s: %s",	err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "a{sv}", &prop)) {
+		ERR("Could not get message properties arguments");
+		return;
+	}
 
 	DBG("m=%s", m->base.path);
-	for (; dbus_message_iter_get_arg_type(&prop) == DBUS_TYPE_DICT_ENTRY;
-	     dbus_message_iter_next(&prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(&prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-		_msg_property_update(m, key, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get arguments");
+			return;
+		}
+		_msg_property_update(m, key, value);
 	}
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
@@ -1852,8 +1889,8 @@ static void _ofono_msg_properties_get_reply(void *data,	DBusMessage *msg,
 
 static void _ofono_msg_properties_get(OFono_Modem *m)
 {
-	DBusMessage *msg;
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	Eldbus_Message *msg;
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 						OFONO_PREFIX
 						OFONO_MSG_IFACE,
 						"GetProperties");
@@ -1864,9 +1901,10 @@ static void _ofono_msg_properties_get(OFono_Modem *m)
 				_ofono_msg_properties_get_reply, m);
 }
 
-static void _modem_add(const char *path, DBusMessageIter *prop)
+static void _modem_add(const char *path, Eldbus_Message_Iter *prop)
 {
 	OFono_Modem *m;
+	Eldbus_Message_Iter *dict_entry;
 
 	DBG("path=%s", path);
 
@@ -1925,18 +1963,16 @@ static void _modem_add(const char *path, DBusMessageIter *prop)
 update_properties:
 	if (!prop)
 		return;
-	for (; dbus_message_iter_get_arg_type(prop) == DBUS_TYPE_DICT_ENTRY;
-			dbus_message_iter_next(prop)) {
-		DBusMessageIter entry, value;
+	while (eldbus_message_iter_get_and_next(prop, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
 		const char *key;
 
-		dbus_message_iter_recurse(prop, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get ModemAdded arguments");
+			return;
+		}
 
-		dbus_message_iter_next(&entry);
-		dbus_message_iter_recurse(&entry, &value);
-
-		_modem_property_update(m, key, &value);
+		_modem_property_update(m, key, value);
 	}
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
@@ -1951,42 +1987,42 @@ static void _modem_remove(const char *path)
 	eina_hash_del_by_key(modems, path);
 }
 
-static void _ofono_modems_get_reply(void *data __UNUSED__, DBusMessage *msg,
-					DBusError *err)
+static void _ofono_modems_get_reply(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusMessageIter array, dict;
+	Eldbus_Message_Iter *array, *dict_entry;
+	const char *err_name, *err_message;
 
 	pc_get_modems = NULL;
 
 	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
+		ERR("No message");
+		return;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get modems: %s: %s", err_name, err_message);
 		return;
 	}
 
 	EINA_SAFETY_ON_NULL_RETURN(modems);
 	eina_hash_free_buckets(modems);
 
-	if (!dbus_message_iter_init(msg, &array)) {
+	if (!eldbus_message_arguments_get(msg, "a(oa{sv})", &array)) {
 		ERR("Could not get modems");
 		return;
 	}
 
-	dbus_message_iter_recurse(&array, &dict);
-	for (; dbus_message_iter_get_arg_type(&dict) == DBUS_TYPE_STRUCT;
-			dbus_message_iter_next(&dict)) {
-		DBusMessageIter value, properties;
+	while (eldbus_message_iter_get_and_next(array, 'r', &dict_entry)) {
+		Eldbus_Message_Iter *properties;
 		const char *path;
 
-		dbus_message_iter_recurse(&dict, &value);
-		dbus_message_iter_get_basic(&value, &path);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "oa{sv}", &path, &properties)) {
+			ERR("Could not get ModemAdded arguments");
+			return;
+		}
 
-		dbus_message_iter_next(&value);
-		dbus_message_iter_recurse(&value, &properties);
-
-		_modem_add(path, &properties);
+		_modem_add(path, properties);
 	}
 
 	if (!ofono_voice_is_online()) {
@@ -1995,27 +2031,9 @@ static void _ofono_modems_get_reply(void *data __UNUSED__, DBusMessage *msg,
 	}
 }
 
-static void _modem_added(void *data __UNUSED__, DBusMessage *msg)
+static void _modem_added(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusMessageIter iter, properties;
-	const char *path;
-
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
-		ERR("Could not handle message %p", msg);
-		return;
-	}
-
-	dbus_message_iter_get_basic(&iter, &path);
-
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &properties);
-
-	_modem_add(path, &properties);
-}
-
-static void _modem_removed(void *data __UNUSED__, DBusMessage *msg)
-{
-	DBusError err;
+	Eldbus_Message_Iter *properties;
 	const char *path;
 
 	if (!msg) {
@@ -2023,31 +2041,44 @@ static void _modem_removed(void *data __UNUSED__, DBusMessage *msg)
 		return;
 	}
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err, DBUS_TYPE_OBJECT_PATH,
-					&path, NULL)) {
-		ERR("Could not get ModemRemoved arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "sa{sv}", &path, &properties)) {
+		ERR("Could not get ModemAdded arguments");
+		return;
+	}
+
+	_modem_add(path, properties);
+}
+
+static void _modem_removed(void *data __UNUSED__, Eldbus_Message *msg)
+{
+	const char *path;
+
+	if (!msg) {
+		ERR("Could not handle message %p", msg);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "o", &path)) {
+		ERR("Could not get ModemRemoved arguments");
 		return;
 	}
 
 	_modem_remove(path);
 }
 
-static void _modem_property_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _modem_property_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
 	const char *path;
 	OFono_Modem *m;
-	DBusMessageIter iter, value;
+	Eldbus_Message_Iter *value;
 	const char *key;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return;
 	}
 
-	path = dbus_message_get_path(msg);
+	path = eldbus_message_path_get(msg);
 	DBG("path=%s", path);
 
 	m = eina_hash_find(modems, path);
@@ -2056,26 +2087,27 @@ static void _modem_property_changed(void *data __UNUSED__, DBusMessage *msg)
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &key);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
-	_modem_property_update(m, key, &value);
+	if (!eldbus_message_arguments_get(msg, "sv", &key, &value)) {
+		ERR("Could not get modem PropertyChanged arguments");
+		return;
+	}
+
+	_modem_property_update(m, key, value);
 
 	_notify_ofono_callbacks_modem_list(cbs_modem_changed);
 }
 
 static void _modems_load(void)
 {
-	DBusMessage *msg = dbus_message_new_method_call(
+	Eldbus_Message *msg = eldbus_message_method_call_new(
 		bus_id, "/", OFONO_PREFIX OFONO_MANAGER_IFACE, "GetModems");
 
 	if (pc_get_modems)
-		dbus_pending_call_cancel(pc_get_modems);
+		eldbus_pending_cancel(pc_get_modems);
 
 	DBG("Get modems");
-	pc_get_modems = e_dbus_message_send(
-		bus_conn, msg, _ofono_modems_get_reply, -1, NULL);
-	dbus_message_unref(msg);
+	pc_get_modems = eldbus_connection_send(
+		bus_conn, msg, _ofono_modems_get_reply, NULL, -1);
 }
 
 static void _ofono_connected(const char *id)
@@ -2083,19 +2115,19 @@ static void _ofono_connected(const char *id)
 	free(bus_id);
 	bus_id = strdup(id);
 
-	sig_modem_added = e_dbus_signal_handler_add(
+	sig_modem_added = eldbus_signal_handler_add(
 		bus_conn, bus_id, "/",
 		OFONO_PREFIX OFONO_MANAGER_IFACE,
 		"ModemAdded",
 		_modem_added, NULL);
 
-	sig_modem_removed = e_dbus_signal_handler_add(
+	sig_modem_removed = eldbus_signal_handler_add(
 		bus_conn, bus_id, "/",
 		OFONO_PREFIX OFONO_MANAGER_IFACE,
 		"ModemRemoved",
 		_modem_removed, NULL);
 
-	sig_modem_prop_changed = e_dbus_signal_handler_add(
+	sig_modem_prop_changed = eldbus_signal_handler_add(
 		bus_conn, bus_id, NULL,
 		OFONO_PREFIX OFONO_MODEM_IFACE,
 		"PropertyChanged",
@@ -2111,17 +2143,17 @@ static void _ofono_disconnected(void)
 	eina_hash_free_buckets(modems);
 
 	if (sig_modem_added) {
-		e_dbus_signal_handler_del(bus_conn, sig_modem_added);
+		eldbus_signal_handler_del(sig_modem_added);
 		sig_modem_added = NULL;
 	}
 
 	if (sig_modem_removed) {
-		e_dbus_signal_handler_del(bus_conn, sig_modem_removed);
+		eldbus_signal_handler_del(sig_modem_removed);
 		sig_modem_removed = NULL;
 	}
 
 	if (sig_modem_prop_changed) {
-		e_dbus_signal_handler_del(bus_conn, sig_modem_prop_changed);
+		eldbus_signal_handler_del(sig_modem_prop_changed);
 		sig_modem_prop_changed = NULL;
 	}
 
@@ -2132,20 +2164,12 @@ static void _ofono_disconnected(void)
 	}
 }
 
-static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _name_owner_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusError err;
 	const char *name, *from, *to;
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err,
-					DBUS_TYPE_STRING, &name,
-					DBUS_TYPE_STRING, &from,
-					DBUS_TYPE_STRING, &to,
-					DBUS_TYPE_INVALID)) {
-		ERR("Could not get NameOwnerChanged arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "sss", &name, &from, &to)) {
+		ERR("Could not get NameOwnerChanged arguments");
 		return;
 	}
 
@@ -2163,21 +2187,26 @@ static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
 	}
 }
 
-static void _ofono_get_name_owner(void *data __UNUSED__, DBusMessage *msg, DBusError *err)
+static void _ofono_get_name_owner(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusMessageIter itr;
-	const char *id;
+	const char *id, *err_name, *err_message;
 
 	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &itr);
-	dbus_message_iter_get_basic(&itr, &id);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get name owner: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "s", &id)) {
+		ERR("Could not get arguments");
+		return;
+	}
+
 	if (!id || id[0] == '\0') {
 		ERR("No name owner fo %s!", bus_name);
 		return;
@@ -2194,7 +2223,7 @@ OFono_Pending *ofono_modem_change_pin(const char *what, const char *old,
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 	EINA_SAFETY_ON_NULL_GOTO(what, error);
@@ -2212,16 +2241,13 @@ OFono_Pending *ofono_modem_change_pin(const char *what, const char *old,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_SIM_IFACE,
 		"ChangePin");
 	if (!msg)
 		goto error;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &what,
-					DBUS_TYPE_STRING, &old,
-					DBUS_TYPE_STRING, &new,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "sss", what, old, new))
 		goto error_message;
 
 	INF("ChangePin(%s, %s, %s)", what, old, new);
@@ -2229,7 +2255,7 @@ OFono_Pending *ofono_modem_change_pin(const char *what, const char *old,
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error:
 	if (cb)
 		cb((void *)data, err);
@@ -2244,7 +2270,7 @@ OFono_Pending *ofono_modem_reset_pin(const char *what, const char *puk,
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 	EINA_SAFETY_ON_NULL_GOTO(what, error);
@@ -2262,15 +2288,12 @@ OFono_Pending *ofono_modem_reset_pin(const char *what, const char *puk,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_SIM_IFACE, "ResetPin");
 	if (!msg)
 		goto error;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &what,
-					DBUS_TYPE_STRING, &puk,
-					DBUS_TYPE_STRING, &new,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "sss", what, puk, new))
 		goto error_message;
 
 	INF("ResetPin(%s, %s, %s)", what, puk, new);
@@ -2278,7 +2301,7 @@ OFono_Pending *ofono_modem_reset_pin(const char *what, const char *puk,
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error:
 	if (cb)
 		cb((void *)data, err);
@@ -2286,15 +2309,16 @@ error:
 	return NULL;
 }
 
-static OFono_Pending *_ofono_modem_property_set(char *property,
-                                                int type, void *value,
-                                                OFono_Simple_Cb cb,
-                                                const void *data)
+static OFono_Pending *_ofono_modem_property_set(const char *property,
+						int type,
+						void *value,
+						OFono_Simple_Cb cb,
+						const void *data)
 {
 	OFono_Pending *p;
 	OFono_Simple_Cb_Context *ctx = NULL;
-	DBusMessage *msg;
-	DBusMessageIter iter, variant;
+	Eldbus_Message *msg;
+	Eldbus_Message_Iter *iter, *variant;
 	OFono_Modem *found_path = NULL, *found_hfp = NULL, *m;
 	Eina_Iterator *itr;
 
@@ -2332,8 +2356,6 @@ static OFono_Pending *_ofono_modem_property_set(char *property,
 	if (!m)
 		return NULL;
 
-	char type_to_send[2] = { type , DBUS_TYPE_INVALID };
-
 	EINA_SAFETY_ON_NULL_GOTO(m, error_no_dbus_message);
 
 	if (cb) {
@@ -2343,26 +2365,29 @@ static OFono_Pending *_ofono_modem_property_set(char *property,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 										OFONO_PREFIX OFONO_MODEM_IFACE,
 										"SetProperty");
 	if (!msg)
 		goto error_no_dbus_message;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &property,
-									DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "s", property))
 		goto error_message_args;
 
-	dbus_message_iter_init_append(msg, &iter);
+	iter = eldbus_message_iter_get(msg);
 
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-											type_to_send, &variant))
+	variant = eldbus_message_iter_container_new(iter, 'v', (const char*) &type);
+
+	if (!variant)
 		goto error_message_args;
 
-	if (!dbus_message_iter_append_basic(&variant, type, value) ||
-			!dbus_message_iter_close_container(&iter, &variant)) {
-		dbus_message_iter_abandon_container(&iter, &variant);
-		goto error_message_args;
+	if (strcmp(property, "Powered") == 0) {
+		if (!eldbus_message_iter_basic_append(variant, type, *(Eina_Bool *) value) ||
+			!eldbus_message_iter_container_close(iter, variant)) {
+			goto error_message_args;
+		}
+	} else {
+		ERR("Unsupported property: %s", property);
 	}
 
  	INF("%s.SetProperty(%s)", OFONO_MODEM_IFACE, property);
@@ -2370,7 +2395,7 @@ static OFono_Pending *_ofono_modem_property_set(char *property,
 	return p;
 
 error_message_args:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 
 error_no_dbus_message:
 	if (cb)
@@ -2382,9 +2407,9 @@ error_no_dbus_message:
 OFono_Pending *ofono_powered_set(Eina_Bool powered, OFono_Simple_Cb cb,
                                 const void *data)
 {
-	dbus_bool_t dbus_powered = !!powered;
+	Eina_Bool dbus_powered = !!powered;
 
-	return  _ofono_modem_property_set("Powered", DBUS_TYPE_BOOLEAN,
+	return  _ofono_modem_property_set("Powered", 'b',
 		&dbus_powered, cb, data);
 }
 
@@ -2396,73 +2421,55 @@ Eina_Bool ofono_powered_get(void)
 }
 
 static char *_ss_initiate_convert_ussd(const char *type __UNUSED__,
-					DBusMessageIter *itr)
+					Eldbus_Message_Iter *itr)
 {
 	const char *ussd_response;
 
-	if (dbus_message_iter_get_arg_type(itr) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(itr), DBUS_TYPE_STRING);
-		return NULL;
-	}
-	dbus_message_iter_get_basic(itr, &ussd_response);
+	eldbus_message_iter_basic_get(itr, &ussd_response);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(ussd_response, NULL);
 	return strdup(ussd_response);
 }
 
 static void _ss_initiate_cb_dict_convert(Eina_Strbuf *buf,
-						DBusMessageIter *dict)
+						Eldbus_Message_Iter *dict)
 {
-	for (; dbus_message_iter_get_arg_type(dict) == DBUS_TYPE_DICT_ENTRY;
-			dbus_message_iter_next(dict)) {
-		DBusMessageIter e, v;
-		const char *key, *value;
+	Eldbus_Message_Iter *dict_entry;
 
-		dbus_message_iter_recurse(dict, &e);
-		dbus_message_iter_get_basic(&e, &key);
+	while (eldbus_message_iter_get_and_next(dict, 'e', &dict_entry)) {
+		Eldbus_Message_Iter *value;
+		const char *key;
 
-		dbus_message_iter_next(&e);
-		dbus_message_iter_recurse(&e, &v);
-		dbus_message_iter_get_basic(&v, &value);
+		if (!eldbus_message_iter_arguments_get(dict_entry, "sv", &key, &value)) {
+			ERR("Could not get ss init dictionary arguments");
+			return;
+		}
 
 		eina_strbuf_append_printf(buf, "&nbsp;&nbsp;&nbsp;%s=%s<br>",
 						key, value);
 	}
 }
 
-static char *_ss_initiate_convert_call1(const char *type, DBusMessageIter *itr)
+static char *_ss_initiate_convert_call1(const char *type, Eldbus_Message_Iter *itr)
 {
-	DBusMessageIter array, dict;
+	Eldbus_Message_Iter *array, *dict, *entry;
 	const char *ss_op, *service;
 	Eina_Strbuf *buf;
 	char *str;
 
-	dbus_message_iter_recurse(itr, &array);
-
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
+	if (!eldbus_message_iter_arguments_get(itr, "(ssa{sv})", &array)) {
+		ERR("Could not get call1 array");
 		return NULL;
 	}
-	dbus_message_iter_get_basic(&array, &ss_op);
+
+	if (!eldbus_message_iter_arguments_get(array, "ssa{sv}", &ss_op, &service, &dict)) {
+		ERR("Could not get call1 arguments");
+		return NULL;
+	}
+
 	EINA_SAFETY_ON_NULL_RETURN_VAL(ss_op, NULL);
-
-	if (!dbus_message_iter_next(&array)) {
-		ERR("Missing %s service", type);
-		return NULL;
-	}
-
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
-		return NULL;
-	}
-	dbus_message_iter_get_basic(&array, &service);
 	EINA_SAFETY_ON_NULL_RETURN_VAL(service, NULL);
 
-	if (!dbus_message_iter_next(&array)) {
+	if (!eldbus_message_iter_get_and_next(array, 'e', &entry)){
 		ERR("Missing %s information", type);
 		return NULL;
 	}
@@ -2471,7 +2478,6 @@ static char *_ss_initiate_convert_call1(const char *type, DBusMessageIter *itr)
 	eina_strbuf_append_printf(buf, "<b>%s %s=%s</b><br><br>",
 					type, ss_op, service);
 
-	dbus_message_iter_recurse(&array, &dict);
 	_ss_initiate_cb_dict_convert(buf, &dict);
 
 	str = eina_strbuf_string_steal(buf);
@@ -2480,34 +2486,29 @@ static char *_ss_initiate_convert_call1(const char *type, DBusMessageIter *itr)
 }
 
 static char *_ss_initiate_convert_call_waiting(const char *type,
-						DBusMessageIter *itr)
+						Eldbus_Message_Iter *itr)
 {
-	DBusMessageIter array, dict;
+	Eldbus_Message_Iter *array, *dict;
 	const char *ss_op;
 	Eina_Strbuf *buf;
 	char *str;
 
-	dbus_message_iter_recurse(itr, &array);
-
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
+	if (!eldbus_message_iter_arguments_get(itr, "(sa{sv})", &array)) {
+		ERR("Could not get call waiting array");
 		return NULL;
 	}
-	dbus_message_iter_get_basic(&array, &ss_op);
+
+	if (!eldbus_message_iter_arguments_get(array, "sa{sv}", &ss_op, &dict)) {
+		ERR("Could not get CallWaiting arguments");
+		return NULL;
+	}
+
 	EINA_SAFETY_ON_NULL_RETURN_VAL(ss_op, NULL);
-
-	if (!dbus_message_iter_next(&array)) {
-		ERR("Missing %s information", type);
-		return NULL;
-	}
 
 	buf = eina_strbuf_new();
 	eina_strbuf_append_printf(buf, "<b>%s %s</b><br><br>",
 					type, ss_op);
 
-	dbus_message_iter_recurse(&array, &dict);
 	_ss_initiate_cb_dict_convert(buf, &dict);
 
 	str = eina_strbuf_string_steal(buf);
@@ -2516,36 +2517,23 @@ static char *_ss_initiate_convert_call_waiting(const char *type,
 }
 
 static char *_ss_initiate_convert_call2(const char *type,
-						DBusMessageIter *itr)
+						Eldbus_Message_Iter *itr)
 {
-	DBusMessageIter array;
+	Eldbus_Message_Iter *array;
 	const char *ss_op, *status;
 	Eina_Strbuf *buf;
 	char *str;
 
-	dbus_message_iter_recurse(itr, &array);
-
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
-		return NULL;
-	}
-	dbus_message_iter_get_basic(&array, &ss_op);
-	EINA_SAFETY_ON_NULL_RETURN_VAL(ss_op, NULL);
-
-	if (!dbus_message_iter_next(&array)) {
-		ERR("Missing %s status", type);
+	if (!eldbus_message_iter_arguments_get(itr, "(ss)", &array)) {
+		ERR("Could not get call2 array");
 		return NULL;
 	}
 
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
+	if (!eldbus_message_iter_arguments_get(array, "ss", &ss_op, &status)) {
+		ERR("Could not get call2 arguments");
 		return NULL;
 	}
-	dbus_message_iter_get_basic(&array, &status);
+
 	EINA_SAFETY_ON_NULL_RETURN_VAL(status, NULL);
 
 	buf = eina_strbuf_new();
@@ -2560,7 +2548,7 @@ static char *_ss_initiate_convert_call2(const char *type,
 static const struct SS_Initiate_Convert_Map {
 	const char *type;
 	size_t typelen;
-	char *(*convert)(const char *type, DBusMessageIter *itr);
+	char *(*convert)(const char *type, Eldbus_Message_Iter *itr);
 } ss_initiate_convert_map[] = {
 #define MAP(type, conv) {type, sizeof(type) - 1, conv}
 	MAP("USSD", _ss_initiate_convert_ussd),
@@ -2575,34 +2563,18 @@ static const struct SS_Initiate_Convert_Map {
 	{NULL, 0, NULL}
 };
 
-static char *_ss_initiate_convert(DBusMessage *msg)
+static char *_ss_initiate_convert(Eldbus_Message *msg)
 {
-	DBusMessageIter array, variant;
+	Eldbus_Message_Iter *variant;
 	const struct SS_Initiate_Convert_Map *citr;
 	const char *type = NULL;
 	size_t typelen;
 
-	if (!dbus_message_iter_init(msg, &array))
-		goto error;
-
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_STRING) {
-		ERR("Invalid type for first argument: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&array),
-			DBUS_TYPE_STRING);
+	if (!eldbus_message_arguments_get(msg, "sv", &type, &variant)) {
+		ERR("Couldn't get supplementary service nitiate arguments");
 		goto error;
 	}
-	dbus_message_iter_get_basic(&array, &type);
-	if (!type) {
-		ERR("Couldn't get SupplementaryServices.Initiate type");
-		goto error;
-	}
-	DBG("type: %s", type);
-
-	if (!dbus_message_iter_next(&array)) {
-		ERR("Couldn't get SupplementaryServices.Initiate payload");
-		goto error;
-	}
-	dbus_message_iter_recurse(&array, &variant);
+	DBG("SupplementaryServices.Initiate type: %s", type);
 
 	typelen = strlen(type);
 	for (citr = ss_initiate_convert_map; citr->type != NULL; citr++) {
@@ -2622,7 +2594,7 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 	OFono_String_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 	EINA_SAFETY_ON_NULL_GOTO(command, error);
@@ -2638,14 +2610,13 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 	ctx->name = OFONO_PREFIX OFONO_SUPPL_SERV_IFACE ".Initiate";
 	ctx->convert = _ss_initiate_convert;
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_SUPPL_SERV_IFACE,
 		"Initiate");
 	if (!msg)
 		goto error;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &command,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "s", command))
 		goto error_message;
 
 	INF("SupplementaryServices.Initiate(%s)", command);
@@ -2653,7 +2624,7 @@ OFono_Pending *ofono_ss_initiate(const char *command, OFono_String_Cb cb, const 
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error:
 	if (cb)
 		cb((void *)data, err, NULL);
@@ -2661,22 +2632,20 @@ error:
 	return NULL;
 }
 
-static char *_ussd_respond_convert(DBusMessage *msg)
+static char *_ussd_respond_convert(Eldbus_Message *msg)
 {
-	DBusMessageIter itr;
 	const char *s;
 
-	if (!msg || !dbus_message_iter_init(msg, &itr)) {
+	if (!msg) {
 		ERR("Could not handle message %p", msg);
 		return NULL;
 	}
 
-	if (dbus_message_iter_get_arg_type(&itr) != DBUS_TYPE_STRING) {
-		ERR("Invalid type: %c (expected: %c)",
-			dbus_message_iter_get_arg_type(&itr), DBUS_TYPE_STRING);
+	if (!eldbus_message_arguments_get(msg, "s", &s)) {
+		ERR("Could not get ussd respond arguments");
 		return NULL;
 	}
-	dbus_message_iter_get_basic(&itr, &s);
+
 	EINA_SAFETY_ON_NULL_RETURN_VAL(s, NULL);
 	return strdup(s);
 }
@@ -2687,7 +2656,7 @@ OFono_Pending *ofono_ussd_respond(const char *string,
 	OFono_String_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 	EINA_SAFETY_ON_NULL_GOTO(string, error);
@@ -2703,14 +2672,13 @@ OFono_Pending *ofono_ussd_respond(const char *string,
 	ctx->name = OFONO_PREFIX OFONO_SUPPL_SERV_IFACE ".Initiate";
 	ctx->convert = _ussd_respond_convert;
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_SUPPL_SERV_IFACE,
 		"Respond");
 	if (!msg)
 		goto error;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &string,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "s", string))
 		goto error_message;
 
 	INF("SupplementaryServices.Respond(%s)", string);
@@ -2718,7 +2686,7 @@ OFono_Pending *ofono_ussd_respond(const char *string,
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error:
 	if (cb)
 		cb((void *)data, err, NULL);
@@ -2731,24 +2699,28 @@ OFono_Pending *ofono_ussd_cancel(OFono_Simple_Cb cb, const void *data)
 	return _ofono_simple_do(OFONO_API_SUPPL_SERV, "Cancel", cb, data);
 }
 
-static void _ofono_dial_reply(void *data, DBusMessage *msg, DBusError *err)
+static void _ofono_dial_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Call_Cb_Context *ctx = data;
 	OFono_Call *c = NULL;
 	OFono_Error oe = OFONO_ERROR_NONE;
+	const char *err_name, *err_message;
+
+	EINA_SAFETY_ON_NULL_RETURN(data);
 
 	if (!msg) {
-		DBG("%s: %s", err->name, err->message);
-		oe = _ofono_error_parse(err->name);
+		ERR("No message");
+		oe = OFONO_ERROR_FAILED;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s",	err_name, err_message);
+		oe = _ofono_error_parse(err_name);
 	} else {
-		DBusError e;
 		const char *path;
-		dbus_error_init(&e);
-		if (!dbus_message_get_args(msg, &e, DBUS_TYPE_OBJECT_PATH,
-						&path, DBUS_TYPE_INVALID)) {
-			ERR("Could not get Dial reply: %s: %s",
-				e.name, e.message);
-			dbus_error_free(&e);
+		if (!eldbus_message_arguments_get(msg, "o", &path)) {
+			ERR("Could not get Dial reply");
 			oe = OFONO_ERROR_FAILED;
 		} else {
 			c = eina_hash_find(ctx->modem->calls, path);
@@ -2780,7 +2752,7 @@ OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 	OFono_Call_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 
@@ -2799,14 +2771,12 @@ OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 	ctx->name = OFONO_PREFIX OFONO_VOICE_IFACE ".Dial";
 	ctx->modem = m;
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_VOICE_IFACE, "Dial");
 	if (!msg)
 		goto error;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &number,
-					DBUS_TYPE_STRING, &hide_callerid,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "ss", number, hide_callerid))
 		goto error_message;
 
 	INF("Dial(%s, %s)", number, hide_callerid);
@@ -2814,7 +2784,7 @@ OFono_Pending *ofono_dial(const char *number, const char *hide_callerid,
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error:
 	if (cb)
 		cb((void *)data, err, NULL);
@@ -2828,7 +2798,7 @@ static OFono_Pending *_ofono_simple_do(OFono_API api, const char *method,
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	char iface[128] = "";
 	const struct API_Interface_Map *itr;
 	OFono_Modem *m = _modem_selected_get();
@@ -2858,7 +2828,7 @@ static OFono_Pending *_ofono_simple_do(OFono_API api, const char *method,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(bus_id, m->base.path, iface, method);
+	msg = eldbus_message_method_call_new(bus_id, m->base.path, iface, method);
 	if (!msg)
 		goto error;
 
@@ -3035,12 +3005,12 @@ Eina_Bool ofono_init(void)
 {
 	tzset();
 
-	if (!elm_need_e_dbus()) {
+	if (!elm_need_eldbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
 	}
 
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
+	bus_conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
 	if (!bus_conn) {
 		CRITICAL("Could not get DBus System Bus");
 		return EINA_FALSE;
@@ -3049,12 +3019,12 @@ Eina_Bool ofono_init(void)
 	modems = eina_hash_string_small_new(EINA_FREE_CB(_modem_free));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(modems, EINA_FALSE);
 
-	e_dbus_signal_handler_add(bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
-					E_DBUS_FDO_INTERFACE,
+	eldbus_signal_handler_add(bus_conn, ELDBUS_FDO_BUS, ELDBUS_FDO_PATH,
+					ELDBUS_FDO_INTERFACE,
 					"NameOwnerChanged",
 					_name_owner_changed, NULL);
 
-	e_dbus_get_name_owner(bus_conn, bus_name, _ofono_get_name_owner, NULL);
+	eldbus_name_owner_get(bus_conn, bus_name, _ofono_get_name_owner, NULL);
 
 	return EINA_TRUE;
 }
@@ -3062,7 +3032,7 @@ Eina_Bool ofono_init(void)
 void ofono_shutdown(void)
 {
 	if (pc_get_modems) {
-		dbus_pending_call_cancel(pc_get_modems);
+		eldbus_pending_cancel(pc_get_modems);
 		pc_get_modems = NULL;
 	}
 
@@ -3075,17 +3045,17 @@ void ofono_shutdown(void)
 	eina_list_free(modem_types);
 }
 
-static OFono_Pending *_ofono_call_volume_property_set(char *property,
-							int type, void *value,
-							OFono_Simple_Cb cb,
-							const void *data)
+static OFono_Pending *_ofono_call_volume_property_set(const char *property,
+						int type,
+						void *value,
+						OFono_Simple_Cb cb,
+						const void *data)
 {
 	OFono_Pending *p;
 	OFono_Simple_Cb_Context *ctx = NULL;
-	DBusMessage *msg;
-	DBusMessageIter iter, variant;
+	Eldbus_Message *msg;
+	Eldbus_Message_Iter *iter, *variant;
 	OFono_Modem *m = _modem_selected_get();
-	char type_to_send[2] = { type , DBUS_TYPE_INVALID };
 
 	EINA_SAFETY_ON_NULL_GOTO(m, error_no_dbus_message);
 
@@ -3096,26 +3066,34 @@ static OFono_Pending *_ofono_call_volume_property_set(char *property,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(bus_id, m->base.path,
+	msg = eldbus_message_method_call_new(bus_id, m->base.path,
 					   OFONO_PREFIX OFONO_CALL_VOL_IFACE,
 					   "SetProperty");
 	if (!msg)
 		goto error_no_dbus_message;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &property,
-				 DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "s", property))
 		goto error_message_args;
 
-	dbus_message_iter_init_append(msg, &iter);
+	iter = eldbus_message_iter_get(msg);
 
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					 type_to_send, &variant))
+	variant = eldbus_message_iter_container_new(iter, 'v', (const char*) &type);
+
+	if (!variant)
 		goto error_message_args;
 
-	if (!dbus_message_iter_append_basic(&variant, type, value) ||
-			!dbus_message_iter_close_container(&iter, &variant)) {
-		dbus_message_iter_abandon_container(&iter, &variant);
-		goto error_message_args;
+	if (strcmp(property, "Muted") == 0) {
+		if (!eldbus_message_iter_basic_append(variant, type, *(Eina_Bool *) value) ||
+			!eldbus_message_iter_container_close(iter, variant)) {
+			goto error_message_args;
+		}
+	} else if (strcmp(property, "SpeakerVolume") == 0 || strcmp(property, "MicrophoneVolume") == 0) {
+		if (!eldbus_message_iter_basic_append(variant, type, *(char *) value) ||
+			!eldbus_message_iter_container_close(iter, variant)) {
+			goto error_message_args;
+		}
+	} else {
+		ERR("Unsupported property: %s", property);
 	}
 
 	INF("%s.SetProperty(%s)", OFONO_CALL_VOL_IFACE, property);
@@ -3123,7 +3101,7 @@ static OFono_Pending *_ofono_call_volume_property_set(char *property,
 	return p;
 
 error_message_args:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 
 error_no_dbus_message:
 	if (cb)
@@ -3135,9 +3113,9 @@ error_no_dbus_message:
 OFono_Pending *ofono_mute_set(Eina_Bool mute, OFono_Simple_Cb cb,
 				const void *data)
 {
-	dbus_bool_t dbus_mute = !!mute;
+	Eina_Bool dbus_mute = !!mute;
 
-	return  _ofono_call_volume_property_set("Muted", DBUS_TYPE_BOOLEAN,
+	return  _ofono_call_volume_property_set("Muted", 'b',
 						&dbus_mute, cb, data);
 }
 
@@ -3153,7 +3131,7 @@ OFono_Pending *ofono_volume_speaker_set(unsigned char volume,
 					const void *data)
 {
 
-	return _ofono_call_volume_property_set("SpeakerVolume", DBUS_TYPE_BYTE,
+	return _ofono_call_volume_property_set("SpeakerVolume", 'y',
 						&volume, cb, data);
 }
 
@@ -3169,7 +3147,7 @@ OFono_Pending *ofono_volume_microphone_set(unsigned char volume,
 						const void *data)
 {
 	return _ofono_call_volume_property_set("MicrophoneVolume",
-						DBUS_TYPE_BYTE, &volume, cb,
+						'y', &volume, cb,
 						data);
 }
 
@@ -3266,7 +3244,7 @@ OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb,
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 
 	if (cb) {
 		ctx = calloc(1, sizeof(OFono_Simple_Cb_Context));
@@ -3275,7 +3253,7 @@ OFono_Pending *ofono_sent_sms_cancel(OFono_Sent_SMS *sms, OFono_Simple_Cb cb,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(bus_id, sms->base.path,
+	msg = eldbus_message_method_call_new(bus_id, sms->base.path,
 						OFONO_PREFIX "Message",
 						"Cancel");
 	if (!msg)
@@ -3292,24 +3270,28 @@ error:
 	return NULL;
 }
 
-static void _ofono_sms_send_reply(void *data, DBusMessage *msg, DBusError *err)
+static void _ofono_sms_send_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
 	OFono_Sent_SMS_Cb_Context *ctx = data;
 	OFono_Sent_SMS *sms = NULL;
 	OFono_Error oe = OFONO_ERROR_NONE;
+	const char *err_name, *err_message;
+
+	EINA_SAFETY_ON_NULL_RETURN(data);
 
 	if (!msg) {
-		DBG("%s: %s", err->name, err->message);
-		oe = _ofono_error_parse(err->name);
+		ERR("No message");
+		oe = OFONO_ERROR_FAILED;
+	}
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s", err_name, err_message);
+		oe = _ofono_error_parse(err_name);
 	} else {
-		DBusError e;
 		const char *path;
-		dbus_error_init(&e);
-		if (!dbus_message_get_args(msg, &e, DBUS_TYPE_OBJECT_PATH,
-						&path, DBUS_TYPE_INVALID)) {
-			ERR("Could not get SendMessage reply: %s: %s",
-				e.name, e.message);
-			dbus_error_free(&e);
+		if (!eldbus_message_arguments_get(msg, "o", &path)) {
+			ERR("Could not get SendMessage reply");
 			oe = OFONO_ERROR_FAILED;
 		} else {
 			sms = eina_hash_find(ctx->modem->sent_sms, path);
@@ -3344,7 +3326,7 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 	OFono_Sent_SMS_Cb_Context *ctx = NULL;
 	OFono_Error err = OFONO_ERROR_OFFLINE;
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Modem *m = _modem_selected_get();
 	EINA_SAFETY_ON_NULL_GOTO(m, error);
 	EINA_SAFETY_ON_NULL_GOTO(number, error);
@@ -3362,15 +3344,13 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 	ctx->destination = eina_stringshare_add(number);
 	ctx->message = eina_stringshare_add(message);
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, m->base.path, OFONO_PREFIX OFONO_MSG_IFACE,
 		"SendMessage");
 	if (!msg)
 		goto error_setup;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &number,
-					DBUS_TYPE_STRING, &message,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "ss", number, message))
 		goto error_message;
 
 	INF("SendMessage(%s, %s)", number, message);
@@ -3378,7 +3358,7 @@ OFono_Pending *ofono_sms_send(const char *number, const char *message,
 	return p;
 
 error_message:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error_setup:
 	eina_stringshare_del(ctx->destination);
 	eina_stringshare_del(ctx->message);
@@ -3394,7 +3374,7 @@ OFono_Pending *ofono_tones_send(const char *tones,
 						const void *data)
 {
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Modem *m = _modem_selected_get();
 
@@ -3407,15 +3387,14 @@ OFono_Pending *ofono_tones_send(const char *tones,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 				bus_id, m->base.path,
 				OFONO_PREFIX OFONO_VOICE_IFACE,
 				"SendTones");
 	if (!msg)
 		goto error_no_dbus_message;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &tones,
-				      DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "s", tones))
 		goto error_message_args;
 
 	INF("SendTones(%s)", tones);
@@ -3423,7 +3402,7 @@ OFono_Pending *ofono_tones_send(const char *tones,
 	return p;
 
 error_message_args:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 
 error_no_dbus_message:
 	if (cb)
@@ -3447,7 +3426,7 @@ OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
 					const void *data)
 {
 	OFono_Pending *p;
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	OFono_Simple_Cb_Context *ctx = NULL;
 	OFono_Modem *m = _modem_selected_get();
 
@@ -3461,7 +3440,7 @@ OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
 		ctx->data = data;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 				bus_id, m->base.path,
 				OFONO_PREFIX OFONO_VOICE_IFACE,
 				"PrivateChat");
@@ -3469,8 +3448,7 @@ OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
 	if (!msg)
 		goto error_no_message;
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_OBJECT_PATH,
-					&(c->base.path), DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg, "o", c->base.path))
 		goto error_message_append;
 
 	INF("PrivateChat(%s)", c->base.path);
@@ -3478,7 +3456,7 @@ OFono_Pending *ofono_private_chat(OFono_Call *c, OFono_Simple_Cb cb,
 	return p;
 
 error_message_append:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 error_no_message:
 	if (cb)
 		cb((void *)data, OFONO_ERROR_FAILED);

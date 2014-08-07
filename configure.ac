@@ -28,7 +28,7 @@ EFL_COMPILER_FLAG([-fvisibility=hidden])
 PKG_CHECK_MODULES([EFL],
 	[
 		elementary
-		edbus
+		eldbus
 		dbus-1
 	 ])
 

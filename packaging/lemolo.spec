@@ -8,7 +8,7 @@ URL:        http://www.tizen.org
 Source0:    %{name}-%{version}.tar.bz2
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(evas)
-BuildRequires:  pkgconfig(edbus)
+BuildRequires:  pkgconfig(eldbus)
 BuildRequires:  pkgconfig(elementary)
 BuildRequires:  pkgconfig(ofono)
 BuildRequires:  pkgconfig(appcore-efl)

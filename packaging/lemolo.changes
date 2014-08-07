@@ -1,3 +1,6 @@
+* Thu Aug 07 2014 Jimmy Huang <jimmy.huang@intel.com>
+- Porting Lemolo to use new Eldbus library
+
 * Thu Mar 06 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20140305.222432@d2468d5
 - Bump version to 1.1.6
 - Implements TIVI-1126 - Support ringtone for incoming call

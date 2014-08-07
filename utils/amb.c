@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 #include <Elementary.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 
 #include "amb.h"
 #include "log.h"
@@ -12,10 +12,10 @@ typedef struct _AMB_Bus_Object AMB_Bus_Object;
 
 static const char bus_name[] = "org.automotive.message.broker";
 
-static E_DBus_Connection *bus_conn = NULL;
+static Eldbus_Connection *bus_conn = NULL;
 static char *bus_id = NULL;
 static AMB_Manager *amb_manager = NULL;
-static E_DBus_Signal_Handler *sig_amb_properties_changed = NULL;
+static Eldbus_Signal_Handler *sig_amb_properties_changed = NULL;
 
 struct _AMB_Callback_List_Node
 {
@@ -33,27 +33,20 @@ static Eina_Inlist *cbs_amb_properties_changed = NULL;
 #define AMB_NIGHT_MODE_IFACE			"org.automotive.NightMode"
 #define PROP_NIGHT_MODE_STRING			"NightMode"
 
-static Eina_Bool _dbus_bool_get(DBusMessageIter *itr)
-{
-	dbus_bool_t val;
-	dbus_message_iter_get_basic(itr, &val);
-	return val;
-}
-
 struct _AMB_Bus_Object
 {
 	const char *path;
-	Eina_List *dbus_signals; /* of E_DBus_Signal_Handler */
+	Eina_List *dbus_signals; /* of Eldbus_Signal_Handler */
 };
 
 static void _bus_object_free(AMB_Bus_Object *o)
 {
-	E_DBus_Signal_Handler *sh;
+	Eldbus_Signal_Handler *sh;
 
 	eina_stringshare_del(o->path);
 
 	EINA_LIST_FREE(o->dbus_signals, sh)
-		e_dbus_signal_handler_del(bus_conn, sh);
+		eldbus_signal_handler_del(sh);
 }
 
 struct _AMB_Manager
@@ -63,30 +56,6 @@ struct _AMB_Manager
 	unsigned int interfaces;
 	Eina_Bool night_mode;
 };
-
-static void _amb_property_update(AMB_Manager *m, const char *interface,
-					DBusMessageIter *property)
-{
-	if (strcmp(interface, AMB_NIGHT_MODE_IFACE) == 0) {
-		DBusMessageIter entry, variant;
-		const char *key;
-
-		dbus_message_iter_recurse(property, &entry);
-		dbus_message_iter_get_basic(&entry, &key);
-
-		if (strcmp(key, PROP_NIGHT_MODE_STRING) == 0) {
-
-			dbus_message_iter_next(&entry);
-			dbus_message_iter_recurse(&entry, &variant);
-			m->night_mode = _dbus_bool_get(&variant);
-			DBG("NightMode updated: %d", m->night_mode);
-		} else {
-			DBG("invalid key: %s", key);
-		}
-	} else {
-		DBG("%s (unused property)", interface);
-	}
-}
 
 static AMB_Manager *_amb_get(void)
 {
@@ -101,40 +70,34 @@ static void _notify_amb_callbacks_list(Eina_Inlist *list)
 		node->cb((void *) node->cb_data);
 }
 
-static void _amb_get_property_reply(void *data __UNUSED__, DBusMessage *msg,
-					DBusError *err)
+static void _amb_get_property_reply(void *data, const Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
-		return;
-	}
+	Eldbus_Message_Iter *variant;
+	const char *err_name, *err_message;
 
 	EINA_SAFETY_ON_NULL_RETURN(data);
 
-	DBusError e;
-	dbus_error_init(&e);
-	DBusMessageIter iter;
-	DBusMessageIter variant;
-
-	if (dbus_message_iter_init(msg, &iter) == FALSE) {
-		ERR("Invalid dbus response");
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_VARIANT) {
-		ERR("Unexpected dbus response type");
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get property: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "v", &variant)) {
+		ERR("Could not get arguments");
 		return;
 	}
 
 	char *property_name = (char*) data;
 	AMB_Manager *m = _amb_get();
-	dbus_message_iter_recurse(&iter, &variant);
 
 	if (strcmp(property_name, PROP_NIGHT_MODE_STRING) == 0) {
-		m->night_mode = _dbus_bool_get(&variant);
+		eldbus_message_iter_arguments_get(variant, "b", &m->night_mode);
 		DBG("NightMode is set to: %d", m->night_mode);
 	} else {
 		return;
@@ -143,9 +106,9 @@ static void _amb_get_property_reply(void *data __UNUSED__, DBusMessage *msg,
 	_notify_amb_callbacks_list(cbs_amb_properties_changed);
 }
 
-static void _amb_manager_property_get(char *property, char *path, E_DBus_Method_Return_Cb cb, void *data)
+static void _amb_manager_property_get(const char *property, const char *path, Eldbus_Message_Cb cb, void *data)
 {
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	char *interface_name;
 
 	EINA_SAFETY_ON_NULL_RETURN(property);
@@ -157,75 +120,53 @@ static void _amb_manager_property_get(char *property, char *path, E_DBus_Method_
 		return;
 	}
 
-	msg = dbus_message_new_method_call(
+	msg = eldbus_message_method_call_new(
 		bus_id, path, AMB_PROPERTIES_IFACE, "Get");
 
-	dbus_message_append_args(msg,
-		DBUS_TYPE_STRING, &interface_name,
-		DBUS_TYPE_STRING, &property,
-		DBUS_TYPE_INVALID);
-
-	e_dbus_message_send(bus_conn, msg, cb, -1, data);
-
-	dbus_message_unref(msg);
+	eldbus_message_arguments_append(msg,"ss", interface_name, property);
+	eldbus_connection_send(bus_conn, msg, cb, data, -1);
 }
 
-static void _amb_get_property_path_reply(void *data, DBusMessage *msg,
-					DBusError *err)
+static void _amb_get_property_path_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusError e;
-	DBusMessageIter iter, array;
-	char *path;
-
-	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
-		return;
-	}
+	Eldbus_Message_Iter *ao;
+	const char *path, *err_name, *err_message;
 
 	EINA_SAFETY_ON_NULL_RETURN(data);
 
-	dbus_error_init(&e);
-	dbus_message_get_args(msg, &e, DBUS_TYPE_OBJECT_PATH, &path, DBUS_TYPE_INVALID);
-	if (!dbus_message_iter_init(msg, &iter)) {
-                ERR("Could not handle message %p", msg);
-                return;
-        }
-
-	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_ARRAY) {
-                ERR("Could not handle message %p", msg);
-                return;
-        }
-
-	dbus_message_iter_recurse(&iter, &array);
-	if (dbus_message_iter_get_arg_type(&array) != DBUS_TYPE_OBJECT_PATH) {
-		ERR("Message does not contain object path");
+	if (!msg) {
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_get_basic(&array, &path);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get property path: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "ao", &ao)) {
+		ERR("Could not get arguments");
+		return;
+	}
+
+	eldbus_message_iter_get_and_next(ao, 'o', &path);
+
 	if(!path) { 
 		ERR("Could not get object path");
 		return;
 	}
 
-	_amb_manager_property_get((char*) data, path, _amb_get_property_reply, data);
+	_amb_manager_property_get((const char*) data, path, _amb_get_property_reply, data);
 }
 
-static void _amb_get_property_path(const char *property, E_DBus_Method_Return_Cb cb)
+static void _amb_get_property_path(const char *property, Eldbus_Message_Cb cb)
 {
-        DBusMessage *msg = dbus_message_new_method_call(
-                bus_id, "/", AMB_MANAGER_IFACE, "FindObject");
+	Eldbus_Message *msg = eldbus_message_method_call_new(
+				bus_id, "/", AMB_MANAGER_IFACE, "FindObject");
 
-        dbus_message_append_args(msg,
-                DBUS_TYPE_STRING, &property,
-                DBUS_TYPE_INVALID);
-
-        e_dbus_message_send(bus_conn, msg, cb, -1, (void*) property);
-
-        dbus_message_unref(msg);
+	eldbus_message_arguments_append(msg, "s", property);
+	eldbus_connection_send(bus_conn, msg, cb, (void*) property, -1);
 }
 
 static void _amb_get_property(const char *property)
@@ -256,26 +197,42 @@ static void _amb_free(AMB_Manager *m)
 	free(m);
 }
 
-static void _amb_properties_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _amb_properties_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	AMB_Manager *m = _amb_get();
-	DBusMessageIter iter, value;
-	const char *interface;
+	Eina_Bool changed = EINA_FALSE;
+	Eldbus_Message_Iter *array1, *array2, *dict;
+	const char *interface, *err_name, *err_message;
 
-	if (!msg || !dbus_message_iter_init(msg, &iter)) {
-		ERR("Could not handle message %p", msg);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get signal: %s: %s", err_name, err_message);
 		return;
 	}
 
-	dbus_message_iter_get_basic(&iter, &interface);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &value);
-
-	DBG("AMB property changed at %s", interface);
-	if (strcmp(interface, AMB_NIGHT_MODE_IFACE) == 0) {
-		_amb_property_update(m, interface, &value);
-		_notify_amb_callbacks_list(cbs_amb_properties_changed);
+	if (!eldbus_message_arguments_get(msg, "sa{sv}as", &interface, &array1, &array2)) {
+		ERR("Could not get PropertiesChanged arguments");
+		return;
 	}
+
+	AMB_Manager *m = _amb_get();
+
+	while (eldbus_message_iter_get_and_next(array1, 'e', &dict)) {
+		Eldbus_Message_Iter *variant;
+		const char *property;
+
+		if (!eldbus_message_iter_arguments_get(dict, "sv", &property, &variant))
+			continue;
+
+		DBG("AMB property changed at %s: %s", interface, property);
+		if (strcmp(interface, AMB_NIGHT_MODE_IFACE) == 0 &&
+			strcmp(property, PROP_NIGHT_MODE_STRING) == 0) {
+			eldbus_message_iter_arguments_get(variant, "b", &m->night_mode);
+			changed = EINA_TRUE;
+			DBG("NightMode updated: %d", m->night_mode);
+		}
+	}
+
+	if (changed)
+		_notify_amb_callbacks_list(cbs_amb_properties_changed);
 }
 
 static void _amb_load(void)
@@ -291,7 +248,7 @@ static void _amb_connected(const char *id)
 	free(bus_id);
 	bus_id = strdup(id);
 
-	sig_amb_properties_changed = e_dbus_signal_handler_add(
+	sig_amb_properties_changed = eldbus_signal_handler_add(
 		bus_conn, bus_id, NULL,
 		AMB_PROPERTIES_IFACE,
 		"PropertiesChanged",
@@ -305,7 +262,7 @@ static void _amb_connected(const char *id)
 static void _amb_disconnected(void)
 {
 	if (sig_amb_properties_changed) {
-		e_dbus_signal_handler_del(bus_conn, sig_amb_properties_changed);
+		eldbus_signal_handler_del(sig_amb_properties_changed);
 		sig_amb_properties_changed = NULL;
 	}
 
@@ -316,20 +273,12 @@ static void _amb_disconnected(void)
 	}
 }
 
-static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
+static void _name_owner_changed(void *data __UNUSED__, Eldbus_Message *msg)
 {
-	DBusError err;
 	const char *name, *from, *to;
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err,
-					DBUS_TYPE_STRING, &name,
-					DBUS_TYPE_STRING, &from,
-					DBUS_TYPE_STRING, &to,
-					DBUS_TYPE_INVALID)) {
-		ERR("Could not get NameOwnerChanged arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "sss", &name, &from, &to)) {
+		ERR("Could not get NameOwnerChanged arguments");
 		return;
 	}
 
@@ -347,21 +296,26 @@ static void _name_owner_changed(void *data __UNUSED__, DBusMessage *msg)
 	}
 }
 
-static void _amb_get_name_owner(void *data __UNUSED__, DBusMessage *msg, DBusError *err)
+static void _amb_get_name_owner(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	DBusMessageIter itr;
-	const char *id;
+	const char *id, *err_name, *err_message;
 
 	if (!msg) {
-		if (err)
-			ERR("%s: %s", err->name, err->message);
-		else
-			ERR("No message");
+		ERR("No message");
 		return;
 	}
 
-	dbus_message_iter_init(msg, &itr);
-	dbus_message_iter_get_basic(&itr, &id);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Failed to get name owner: %s: %s", err_name, err_message);
+		return;
+	}
+
+	if (!eldbus_message_arguments_get(msg, "s", &id)) {
+		ERR("Could not get arguments");
+		return;
+	}
+
 	if (!id || id[0] == '\0') {
 		ERR("No name owner fo %s!", bus_name);
 		return;
@@ -380,23 +334,23 @@ Eina_Bool amb_night_mode_get(void)
 
 Eina_Bool amb_init(void)
 {
-	if (!elm_need_e_dbus()) {
+	if (!elm_need_eldbus()) {
 		CRITICAL("Elementary does not support DBus.");
 		return EINA_FALSE;
 	}
 
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SYSTEM);
+	bus_conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SYSTEM);
 	if (!bus_conn) {
 		CRITICAL("Could not get DBus System Bus");
 		return EINA_FALSE;
 	}
 
-	e_dbus_signal_handler_add(bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
-					E_DBUS_FDO_INTERFACE,
+	eldbus_signal_handler_add(bus_conn, ELDBUS_FDO_BUS, ELDBUS_FDO_PATH,
+					ELDBUS_FDO_INTERFACE,
 					"NameOwnerChanged",
 					_name_owner_changed, NULL);
 
-	e_dbus_get_name_owner(bus_conn, bus_name, _amb_get_name_owner, NULL);
+	eldbus_name_owner_get(bus_conn, bus_name, _amb_get_name_owner, NULL);
 
 	return EINA_TRUE;
 }

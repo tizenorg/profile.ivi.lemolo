@@ -4,7 +4,7 @@
 #include <Elementary.h>
 #include <appcore-efl.h>
 #include <Eina.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 #include <notification.h>
 #include <vconf.h>
 #include <vconf-keys.h>
@@ -135,14 +135,14 @@ int main(int argc, char **argv)
 	ops.data = NULL;
 
 	eina_init();
-	e_dbus_init();
+	eldbus_init();
 
 	_log_domain = eina_log_domain_register("answer_daemon", NULL);
 
 	r = appcore_efl_main(APP_NAME, &argc, &argv, &ops);
 
 	eina_shutdown();
-	e_dbus_shutdown();
+	eldbus_shutdown();
 
 	return r;
 }

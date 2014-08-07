@@ -7,7 +7,7 @@
 #include <Eina.h>
 #include <Evas.h>
 #include <Elementary.h>
-#include <E_DBus.h>
+#include <Eldbus.h>
 
 #ifdef HAVE_TIZEN
 #include <vconf.h>
@@ -20,14 +20,15 @@
 #define APP_NAME "org.tizen.answer"
 #define BUS_NAME "org.tizen.dialer"
 #define PATH "/"
-#define IFACE "org.tizen.dialer.Control"
+#define RC_IFACE "org.tizen.dialer.Control"
+#define FREEDESKTOP_IFACE "org.freedesktop.DBus"
 
 static int _log_domain = -1;
 #define ERR(...)      EINA_LOG_DOM_ERR(_log_domain, __VA_ARGS__)
 #define INF(...)      EINA_LOG_DOM_INFO(_log_domain, __VA_ARGS__)
 #define DBG(...)      EINA_LOG_DOM_DBG(_log_domain, __VA_ARGS__)
 
-static E_DBus_Connection *bus_conn = NULL;
+static Eldbus_Connection *bus_conn = NULL;
 
 typedef struct _Call {
 	const char *line_id, *img, *type, *name;
@@ -37,9 +38,9 @@ typedef struct _Call_Screen {
 	Evas_Object *win, *layout;
 	Call *call;
 	Eina_Bool screen_visible;
-	E_DBus_Signal_Handler *sig_call_add;
-	E_DBus_Signal_Handler *sig_call_removed;
-	E_DBus_Signal_Handler *sig_name_changed;
+	Eldbus_Signal_Handler *sig_call_add;
+	Eldbus_Signal_Handler *sig_call_removed;
+	Eldbus_Signal_Handler *sig_name_changed;
 } Call_Screen;
 
 static void _set_notification_type(Evas_Object *win, Eina_Bool high)
@@ -64,23 +65,18 @@ static Eina_Bool _phone_locked(void)
 #endif
 }
 
-static Call *_call_create(DBusMessage *msg)
+static Call *_call_create(Eldbus_Message *msg)
 {
-	DBusError err;
-	const char *img, *name, *id, *type;
 	Call *call;
+	const char *img, *name, *id, *type;
 
-	dbus_error_init(&err);
-	dbus_message_get_args(msg, &err, DBUS_TYPE_STRING, &img,
-				DBUS_TYPE_STRING, &id, DBUS_TYPE_STRING,
-				&name, DBUS_TYPE_STRING, &type,
-				DBUS_TYPE_INVALID);
+	EINA_SAFETY_ON_NULL_RETURN_VAL(msg, NULL);
 
-	if (dbus_error_is_set(&err)) {
-		ERR("Could not parse message: %s: %s", err.name,
-			err.message);
-		return NULL;
+	if (!eldbus_message_arguments_get(msg, "ssss", &img, &id, &name, &type)) {
+		ERR("Could not get call create arguments");
+		return;
 	}
+
 	call = calloc(1, sizeof(Call));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(call, NULL);
 	call->img = eina_stringshare_add(img);
@@ -140,7 +136,7 @@ static void _call_screen_show(Call_Screen *cs)
 #endif
 }
 
-static void _sig_call_added(void *data, DBusMessage *msg)
+static void _sig_call_added(void *data, Eldbus_Message *msg)
 {
 	Call_Screen *cs = data;
 	Eina_Bool locked = _phone_locked();
@@ -171,7 +167,7 @@ static void _call_screen_hide(Call_Screen *cs)
 #endif
 }
 
-static void _sig_call_removed(void *data, DBusMessage *msg __UNUSED__)
+static void _sig_call_removed(void *data, Eldbus_Message *msg __UNUSED__)
 {
 	Call_Screen *cs = data;
 
@@ -190,14 +186,14 @@ static void _sig_call_removed(void *data, DBusMessage *msg __UNUSED__)
 
 static void _signal_handlers_add(Call_Screen *cs)
 {
-	cs->sig_call_add = e_dbus_signal_handler_add(bus_conn, BUS_NAME,
-							PATH, IFACE,
+	cs->sig_call_add = eldbus_signal_handler_add(bus_conn, BUS_NAME,
+							PATH, RC_IFACE,
 							"AddedCall",
 							_sig_call_added,
 							cs);
-	cs->sig_call_removed = e_dbus_signal_handler_add(bus_conn,
+	cs->sig_call_removed = eldbus_signal_handler_add(bus_conn,
 								BUS_NAME, PATH,
-								IFACE,
+								RC_IFACE,
 								"RemovedCall",
 								_sig_call_removed,
 								cs);
@@ -206,39 +202,39 @@ static void _signal_handlers_add(Call_Screen *cs)
 static void _signal_handlers_del(Call_Screen *cs)
 {
 	if (cs->sig_call_add) {
-		e_dbus_signal_handler_del(bus_conn, cs->sig_call_add);
+		eldbus_signal_handler_del(cs->sig_call_add);
 		cs->sig_call_add = NULL;
 	}
 
 	if (cs->sig_call_removed) {
-		e_dbus_signal_handler_del(bus_conn, cs->sig_call_removed);
+		eldbus_signal_handler_del(cs->sig_call_removed);
 		cs->sig_call_removed = NULL;
 	}
 }
 
-static void _daemon_method_call_reply(void *data __UNUSED__,
-					DBusMessage *msg __UNUSED__,
-					DBusError *err)
+static void _daemon_method_call_reply(void *data __UNUSED__, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	if (dbus_error_is_set(err)) {
-		ERR("Error calling remote method: %s %s", err->name,
-			err->message);
+	const char *err_name, *err_message;
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Error calling remote method: %s: %s", err_name, err_message);
+		return;
 	}
 }
 
 static void _daemon_method_call_make_with_reply(const char *method,
-						E_DBus_Method_Return_Cb cb,
+						Eldbus_Message_Cb cb,
 						void *data)
 {
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 
-	msg = dbus_message_new_method_call(BUS_NAME, PATH, IFACE, method);
+	msg = eldbus_message_method_call_new(BUS_NAME, PATH, RC_IFACE, method);
 	INF("msg=%p name=%s, path=%s, %s.%s()",
-		msg, BUS_NAME, PATH, IFACE, method);
+		msg, BUS_NAME, PATH, RC_IFACE, method);
 	EINA_SAFETY_ON_NULL_RETURN(msg);
 
-	e_dbus_message_send(bus_conn, msg,  cb, -1, data);
-	dbus_message_unref(msg);
+	eldbus_connection_send(bus_conn, msg,  cb, data, -1);
 }
 
 static void _daemon_method_call_make(const char *method)
@@ -247,20 +243,18 @@ static void _daemon_method_call_make(const char *method)
 						NULL);
 }
 
-static void _daemon_available_call_reply(void *data, DBusMessage *msg,
-					DBusError *err)
+static void _daemon_available_call_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	Call_Screen *cs = data;
+	Call_Screen *cs;
+	const char *err_name, *err_message;
 
-	if (dbus_error_is_set(err)) {
-		const char *err_name = "org.tizen.dialer.error.NotAvailable";
-		if (strcmp(err_name, err->name) == 0) {
-			DBG("no incoming calls");
-			return;
-		}
+	EINA_SAFETY_ON_NULL_RETURN(data);
 
-		ERR("Error calling remote method: %s %s", err->name,
-			err->message);
+	cs = data;
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Available call reply error %s: %s",	err_name, err_message);
 		return;
 	}
 
@@ -271,40 +265,61 @@ static void _daemon_available_call_reply(void *data, DBusMessage *msg,
 	_call_screen_show(cs);
 }
 
-static void _service_start_reply(void *data, DBusMessage *msg __UNUSED__,
-					DBusError *err)
+static void _service_start_reply(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	Call_Screen *cs = data;
-	if (dbus_error_is_set(err)) {
-		ERR("Error: %s %s", err->name, err->message);
+	Call_Screen *cs;
+	const char *err_name, *err_message;
+
+	EINA_SAFETY_ON_NULL_RETURN(data);
+
+	cs = data;
+
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Ofono reply error %s: %s",	err_name, err_message);
 		return;
 	}
+
 	_signal_handlers_add(cs);
 	_daemon_method_call_make_with_reply("GetAvailableCall",
 						_daemon_available_call_reply,
 						cs);
 }
 
-static void _has_owner_cb(void *data, DBusMessage *msg __UNUSED__,
-				DBusError *error)
+static void _has_owner_cb(void *data, Eldbus_Message *msg,
+						Eldbus_Pending *pending __UNUSED__)
 {
-	dbus_bool_t online;
-	DBusError err;
-	Call_Screen *cs = data;
+	Eina_Bool online;
+	Call_Screen *cs;
+	const char *err_name, *err_message;
 
+	EINA_SAFETY_ON_NULL_RETURN(data);
 
-	if (dbus_error_is_set(error)) {
-		ERR("Error: %s %s", error->name, error->message);
+	if (eldbus_message_error_get(msg, &err_name, &err_message)) {
+		ERR("Error %s: %s",	err_name, err_message);
 		return;
 	}
-	dbus_error_init(&err);
-	dbus_message_get_args(msg, &err, DBUS_TYPE_BOOLEAN, &online,
-				DBUS_TYPE_INVALID);
+
+	cs = data;
+
+	if (!eldbus_message_arguments_get(msg, "b", &online)) {
+		ERR("Could not get arguments");
+		return;
+	}
 
 	if (!online) {
 		INF("no dialer, start it");
-		e_dbus_start_service_by_name(bus_conn, BUS_NAME, 0,
-						_service_start_reply, cs);
+		Eldbus_Message *send_msg = eldbus_message_method_call_new(
+			BUS_NAME, PATH, FREEDESKTOP_IFACE,
+			"StartServiceByName");
+
+		if (!send_msg)
+			return;
+
+		if (!eldbus_message_arguments_append(send_msg, "si", BUS_NAME, 0))
+			return;
+
+		eldbus_connection_send(bus_conn, send_msg, _service_start_reply, (void *) cs, -1);
 		return;
 	}
 
@@ -314,21 +329,13 @@ static void _has_owner_cb(void *data, DBusMessage *msg __UNUSED__,
 						cs);
 }
 
-static void _name_owner_changed(void *data, DBusMessage *msg)
+static void _name_owner_changed(void *data, Eldbus_Message *msg)
 {
 	Call_Screen *cs = data;
-	DBusError err;
 	const char *name, *from, *to;
 
-	dbus_error_init(&err);
-	if (!dbus_message_get_args(msg, &err,
-					DBUS_TYPE_STRING, &name,
-					DBUS_TYPE_STRING, &from,
-					DBUS_TYPE_STRING, &to,
-					DBUS_TYPE_INVALID)) {
-		ERR("Could not get NameOwnerChanged arguments: %s: %s",
-			err.name, err.message);
-		dbus_error_free(&err);
+	if (!eldbus_message_arguments_get(msg, "sss", &name, &from, &to)) {
+		ERR("Could not get NameOwnerChanged arguments");
 		return;
 	}
 
@@ -350,37 +357,35 @@ static void _name_owner_changed(void *data, DBusMessage *msg)
 
 static Eina_Bool _dbus_init(Call_Screen *cs)
 {
-	DBusMessage *msg;
+	Eldbus_Message *msg;
 	char *bus_name = BUS_NAME;
 
 	INF("Running on Session bus");
-	bus_conn = e_dbus_bus_get(DBUS_BUS_SESSION);
+	bus_conn = eldbus_connection_get(ELDBUS_CONNECTION_TYPE_SESSION);
 
 	if (!bus_conn) {
 		ERR("Could not fetch the DBus session");
 		return EINA_FALSE;
 	}
 
-	cs->sig_name_changed = e_dbus_signal_handler_add(
-		bus_conn, E_DBUS_FDO_BUS, E_DBUS_FDO_PATH, E_DBUS_FDO_INTERFACE,
+	cs->sig_name_changed = eldbus_signal_handler_add(
+		bus_conn, ELDBUS_FDO_BUS, ELDBUS_FDO_PATH, ELDBUS_FDO_INTERFACE,
 		"NameOwnerChanged", _name_owner_changed, cs);
 
-	msg = dbus_message_new_method_call(E_DBUS_FDO_BUS, E_DBUS_FDO_PATH,
-						E_DBUS_FDO_INTERFACE,
+	msg = eldbus_message_method_call_new(ELDBUS_FDO_BUS, ELDBUS_FDO_PATH,
+						ELDBUS_FDO_INTERFACE,
 						"NameHasOwner");
 
 	EINA_SAFETY_ON_NULL_RETURN_VAL(msg, EINA_FALSE);
 
-	if (!dbus_message_append_args(msg, DBUS_TYPE_STRING, &bus_name,
-					DBUS_TYPE_INVALID))
+	if (!eldbus_message_arguments_append(msg,"s", bus_name))
 		goto err_msg;
 
-	e_dbus_message_send(bus_conn, msg, _has_owner_cb, -1, cs);
-	dbus_message_unref(msg);
+	eldbus_connection_send(bus_conn, msg, _has_owner_cb, cs, -1);
 
 	return EINA_TRUE;
 err_msg:
-	dbus_message_unref(msg);
+	eldbus_message_unref(msg);
 	return EINA_FALSE;
 }
 
@@ -495,7 +500,7 @@ EAPI int elm_main(int argc __UNUSED__, char **argv __UNUSED__)
 {
 	Call_Screen *cs;
 
-	if (!elm_need_e_dbus()) {
+	if (!elm_need_eldbus()) {
 		ERR("Could not start E_dbus");
 		return -1;
 	}
@@ -512,7 +517,7 @@ EAPI int elm_main(int argc __UNUSED__, char **argv __UNUSED__)
 	_signal_handlers_del(cs);
 
 	if (cs->sig_name_changed)
-		e_dbus_signal_handler_del(bus_conn, cs->sig_name_changed);
+		eldbus_signal_handler_del(cs->sig_name_changed);
 
 	evas_object_del(cs->win);
 	if (cs->call)
