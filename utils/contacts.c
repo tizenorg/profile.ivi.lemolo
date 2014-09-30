@@ -877,6 +877,7 @@ Evas_Object *contacts_add(Evas_Object *parent)
 	Elm_Genlist_Item_Class *itc, *group;
 
 	eet_init();
+	efreet_init();
 	contacts = calloc(1, sizeof(Contacts));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(contacts, NULL);
 
@@ -964,6 +965,7 @@ err_obj:
 	free(details);
 err_layout:
 	free(contacts);
+	efreet_shutdown();
 	eet_shutdown();
 	return NULL;
 }

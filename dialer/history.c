@@ -833,6 +833,7 @@ Evas_Object *history_add(Evas_Object *parent)
 	Evas_Object *obj, *genlist_all, *genlist_missed;
 
 	eet_init();
+	efreet_init();
 	ecore_file_init();
 	history = calloc(1, sizeof(History));
 	EINA_SAFETY_ON_NULL_RETURN_VAL(history, NULL);
@@ -941,6 +942,7 @@ err_object_new:
 err_layout:
 	free(history);
 	ecore_file_shutdown();
+	efreet_shutdown();
 	eet_shutdown();
 	return NULL;
 }

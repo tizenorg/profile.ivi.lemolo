@@ -1,4 +1,7 @@
-* Thu Aug 07 2014 Jimmy Huang <jimmy.huang@intel.com>
+* Tue Sep 30 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20140808.112439-1-g6fc6220
+- Fixes TC-1616 - (null) directory generated
+
+* Thu Aug 07 2014 Jimmy Huang <jimmy.huang@intel.com> None
 - Version bump to 0.1.7
 - Porting Lemolo to use new Eldbus library
 

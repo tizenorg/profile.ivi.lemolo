@@ -245,6 +245,7 @@ Eina_Bool util_init(const char *theme)
 	char base_dir[PATH_MAX];
 
 	eet_init();
+	efreet_init();
 	config_path = efreet_config_home_get();
 	snprintf(base_dir, sizeof(base_dir), "%s/%s", config_path, PACKAGE_NAME);
 	ecore_file_mkpath(base_dir);
@@ -287,5 +288,6 @@ void util_shutdown(void)
 		free(_last_user_mode_config_path);
 	if (_last_user_mode_descriptor)
 		eet_data_descriptor_free(_last_user_mode_descriptor);
+	efreet_shutdown();
 	eet_shutdown();
 }

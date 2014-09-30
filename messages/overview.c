@@ -1025,6 +1025,7 @@ Evas_Object *overview_add(Evas_Object *parent)
 	Elm_Genlist_Item_Class *itc;
 
 	eet_init();
+	efreet_init();
 	ecore_file_init();
 
 	ov = calloc(1, sizeof(Overview));
@@ -1137,6 +1138,7 @@ err_obj:
 err_conversations:
 	free(ov);
 	ecore_file_shutdown();
+	efreet_shutdown();
 	eet_shutdown();
 	return NULL;
 }
