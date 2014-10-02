@@ -1,7 +1,7 @@
 Name:       lemolo
 Summary:    Ofono EFL Dialer
 Version:    0.1.7
-Release:    1
+Release:    0
 Group:      Applications/Telephony
 License:    Apache-2.0
 URL:        http://www.tizen.org
@@ -19,6 +19,7 @@ BuildRequires:  pkgconfig(aul)
 BuildRequires:  pkgconfig(appsvc)
 BuildRequires:  pkgconfig(notification)
 BuildRequires:  pkgconfig(libpulse)
+BuildRequires:  pkgconfig
 BuildRequires:  edje-tools
 BuildRequires:  gettext-tools
 Requires: ofono
@@ -38,7 +39,7 @@ handsfree profile over bluetooth.
 --enable-notification \
 --enable-tizen
 
-make %{?jobs:-j%jobs}
+%__make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
@@ -62,3 +63,4 @@ rm -rf %{buildroot}
 %{_datadir}/packages/org.tizen.dialer.xml
 %{_datadir}/icons/default/small/org.tizen.dialer.png
 %{_datadir}/dbus-1/services/org.tizen.dialer.service
+%license COPYING
