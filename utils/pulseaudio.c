@@ -116,18 +116,18 @@ Eina_Bool pa_init(void)
 				 "lemolo");
 
 	// connects to the pulse server
-	if (pa_context_connect(pa_ctx,
-				NULL,
-				PA_CONTEXT_NOFAIL, NULL) < 0)
+	error = pa_context_connect(pa_ctx, NULL, PA_CONTEXT_NOFAIL, NULL);
+	if (error < 0)
 	{
-		ERR("Failed to connect to pulseaudio daemon");
+		ERR("Failed to connect to pulseaudio daemon: %s", pa_strerror(error));
 		goto error;
 	}
 
 	// Creates a connection for ringtone
 #ifdef HAVE_TIZEN
 	proplist = pa_proplist_new();
-	if (pa_proplist_sets(proplist, PA_PROP_MEDIA_ROLE, "phone") < 0) {
+	error = pa_proplist_sets(proplist, PA_PROP_MEDIA_ROLE, "phone");
+	if (error < 0) {
 		DBG("pa_proplist_sets() failed: %s", pa_strerror(error));
 		goto error;
 	}
