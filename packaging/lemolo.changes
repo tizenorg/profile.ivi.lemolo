@@ -1,3 +1,6 @@
+* Tue Nov 25 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20141001.212916-3-g21f2413
+- Fixes TC-1775 - dbus command fails
+
 * Tue Nov 25 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20141001.212916-2-g7693afc
 - Fixes TC-2116 - Use uninitialized values
 

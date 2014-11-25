@@ -86,9 +86,9 @@ _rc_dial(Eldbus_Object *obj __UNUSED__, Eldbus_Message *msg)
 		return NULL;
 	}
 
-	if (!eldbus_message_arguments_get(pending_dial, "sb", &number, &do_auto)) {
+	if (!eldbus_message_arguments_get(msg, "sb", &number, &do_auto)) {
 		ERR("Could not get rc dial arguments");
-		return eldbus_message_error_new(pending_dial, "RC dial", "Invalid argument");
+		return eldbus_message_error_new(msg, "RC dial", "Invalid argument");
 	}
 
 	_dial_number(number, do_auto);
