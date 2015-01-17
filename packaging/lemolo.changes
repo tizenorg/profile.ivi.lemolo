@@ -1,3 +1,6 @@
+* Fri Jan 16 2015 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20141126.010954-1-gbf6136c
+- Fix TC-2372 Dialer crashes when BT phone is offline
+
 * Tue Nov 25 2014 Jimmy Huang <jimmy.huang@intel.com> accepted/tizen/ivi/20141001.212916-3-g21f2413
 - Fixes TC-1775 - dbus command fails
 

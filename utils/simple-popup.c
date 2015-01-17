@@ -12,7 +12,6 @@ typedef struct _Simple_Popup
 	Evas_Object *box;
 	Evas_Object *message;
 	Evas_Object *entry;
-	Ecore_Timer *recalc_timer; /* HACK */
 } Simple_Popup;
 
 static void _popup_close(void *data, Evas_Object *bt __UNUSED__,
@@ -33,35 +32,12 @@ void simple_popup_title_set(Evas_Object *p, const char *title)
 	}
 }
 
-/* HACK: force recalc from an idler to fix elm_entry problem */
-static Eina_Bool _simple_popup_entries_reeval(void *data)
-{
-	Simple_Popup *ctx = data;
-	if (ctx->message)
-		elm_entry_calc_force(ctx->message);
-	if (ctx->entry)
-		elm_entry_calc_force(ctx->entry);
-	ctx->recalc_timer = NULL;
-	return EINA_FALSE;
-}
-
-static void _simple_popup_timer_cancel_if_needed(Simple_Popup *ctx)
-{
-	if (!ctx->recalc_timer)
-		return;
-	if (ctx->message || ctx->entry)
-		return;
-	ecore_timer_del(ctx->recalc_timer);
-	ctx->recalc_timer = NULL;
-}
-
 static void _simple_popup_message_del(void *data, Evas *e __UNUSED__,
 						Evas_Object *en __UNUSED__,
 						void *einfo __UNUSED__)
 {
 	Simple_Popup *ctx = data;
 	ctx->message = NULL;
-	_simple_popup_timer_cancel_if_needed(ctx);
 }
 
 static void _simple_popup_entry_del(void *data, Evas *e __UNUSED__,
@@ -70,7 +46,6 @@ static void _simple_popup_entry_del(void *data, Evas *e __UNUSED__,
 {
 	Simple_Popup *ctx = data;
 	ctx->entry = NULL;
-	_simple_popup_timer_cancel_if_needed(ctx);
 }
 
 static void _simple_popup_reeval_content(Simple_Popup *ctx)
@@ -96,15 +71,6 @@ static void _simple_popup_reeval_content(Simple_Popup *ctx)
 	elm_object_part_content_set(ctx->popup, "elm.swallow.content",
 					ctx->box);
 	elm_object_signal_emit(ctx->popup, "show,content", "gui");
-
-	/* HACK: elm_entry is not evaluating properly and the text is
-	 * not centered as it should be. Then we must force a
-	 * calculation from an timer.
-	 */
-	if (ctx->recalc_timer)
-		ecore_timer_del(ctx->recalc_timer);
-	ctx->recalc_timer = ecore_timer_add(
-		0.02, _simple_popup_entries_reeval, ctx);
 }
 
 void simple_popup_message_set(Evas_Object *p, const char *msg)
